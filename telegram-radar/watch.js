@@ -1,0 +1,89 @@
+// Escuta canais do Telegram (contas que você já segue) e extrai menções de
+// tickers/palavras-chave pra uma watchlist local. Não decide nada sozinho — só
+// coleta. Rodar depois de gerar a sessão com login.js.
+require("dotenv").config({ path: __dirname + "/../.env" });
+const fs = require("fs");
+const path = require("path");
+const { TelegramClient } = require("telegram");
+const { StringSession } = require("telegram/sessions");
+const { NewMessage } = require("telegram/events");
+
+const apiId = Number(process.env.TELEGRAM_API_ID);
+const apiHash = process.env.TELEGRAM_API_HASH;
+const sessionString = process.env.TELEGRAM_SESSION || "";
+const targetChannelNames = (process.env.TELEGRAM_CHANNELS || "Velatrader Squad Oficial")
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+const DATA_DIR = path.join(__dirname, "data");
+const MENTIONS_FILE = path.join(DATA_DIR, "mentions.jsonl");
+
+if (!apiId || !apiHash || !sessionString) {
+  console.error("⚠️  Preencha TELEGRAM_API_ID, TELEGRAM_API_HASH e TELEGRAM_SESSION no .env (rode login.js primeiro).");
+  process.exit(1);
+}
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// Cashtags/hashtags tipo $BTC, #SOL, $1000PEPE — e algumas palavras-chave de calls.
+const TICKER_REGEX = /[$#]([A-Z][A-Z0-9]{1,9})\b/g;
+const KEYWORDS = ["breakout", "listing", "airdrop", "buy zone", "pump", "moon", "gem", "presale"];
+
+function extractSignals(text) {
+  if (!text) return { tickers: [], keywords: [] };
+  const tickers = [...new Set([...text.matchAll(TICKER_REGEX)].map((m) => m[1]))];
+  const lower = text.toLowerCase();
+  const keywords = KEYWORDS.filter((k) => lower.includes(k));
+  return { tickers, keywords };
+}
+
+async function main() {
+  ensureDataDir();
+  const client = new TelegramClient(new StringSession(sessionString), apiId, apiHash, { connectionRetries: 5 });
+  await client.connect();
+  console.log("✅ Conectado ao Telegram.");
+
+  const dialogs = await client.getDialogs({});
+  const targets = dialogs.filter((d) => {
+    const title = (d.title || "").trim().toLowerCase();
+    return targetChannelNames.some((name) => title.includes(name));
+  });
+
+  if (targets.length === 0) {
+    console.error(`⚠️  Nenhum canal encontrado com o nome: ${targetChannelNames.join(", ")}. Canais disponíveis:`);
+    dialogs.filter((d) => d.isChannel || d.isGroup).forEach((d) => console.error(`  - ${d.title}`));
+    process.exit(1);
+  }
+
+  console.log(`📡 Escutando: ${targets.map((t) => t.title).join(", ")}`);
+  const targetIds = new Set(targets.map((t) => t.id.toString()));
+
+  client.addEventHandler(async (event) => {
+    const message = event.message;
+    const chatId = message.chatId?.toString();
+    if (!chatId || !targetIds.has(chatId)) return;
+
+    const text = message.message || "";
+    const { tickers, keywords } = extractSignals(text);
+    if (tickers.length === 0 && keywords.length === 0) return;
+
+    const chat = targets.find((t) => t.id.toString() === chatId);
+    const entry = {
+      time: new Date().toISOString(),
+      channel: chat?.title || chatId,
+      tickers,
+      keywords,
+      text: text.slice(0, 500),
+    };
+    fs.appendFileSync(MENTIONS_FILE, JSON.stringify(entry) + "\n");
+    console.log(`📥 [${entry.channel}] tickers=${tickers.join(",")} keywords=${keywords.join(",")}`);
+  }, new NewMessage({}));
+}
+
+main().catch((err) => {
+  console.error("❌ Erro no radar de Telegram:", err.message);
+  process.exit(1);
+});

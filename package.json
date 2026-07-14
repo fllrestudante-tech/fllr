@@ -1,0 +1,26 @@
+{
+  "name": "bot-cripto10",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test",
+    "start": "node index.js",
+    "watch": "node scripts/watchdog.js",
+    "backtest": "node scripts/backtest.js",
+    "telegram:login1": "node telegram-radar/login-step1.js",
+    "telegram:login2": "node telegram-radar/login-step2.js",
+    "telegram:login3": "node telegram-radar/login-step3.js",
+    "telegram:watch": "node telegram-radar/watch.js",
+    "telegram:summary": "node telegram-radar/summarize.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.12.2",
+    "dotenv": "^16.4.5",
+    "input": "^1.0.1",
+    "telegram": "^2.26.22"
+  }
+}

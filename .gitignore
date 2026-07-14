@@ -1,0 +1,11 @@
+.env
+node_modules/
+data/*.jsonl
+data/state.json
+data/tuning.json
+*.csv
+npm-debug.log*
+telegram-radar/data/
+telegram-radar/.login-state.json
+logs_boot.txt
+cripto 10.txt
