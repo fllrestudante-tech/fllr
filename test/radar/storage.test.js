@@ -3,14 +3,15 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { openDb, getRecentHashes, insertMention } = require("../../telegram-radar/lib/db");
+const { openDb } = require("../../lib/infra/db");
+const { getRecentHashes, insertMention } = require("../../lib/collectors/telegramStore");
 const { hashText } = require("../../telegram-radar/lib/dedupe");
 
 function tmpDbPath() {
-  return path.join(os.tmpdir(), `bot-cripto10-radar-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  return path.join(os.tmpdir(), `bot-cripto10-market-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
 }
 
-test("openDb + insertMention: grava e lê de volta uma menção", () => {
+test("openDb + insertMention: grava e lê de volta uma menção em telegram_messages", () => {
   const dbPath = tmpDbPath();
   const db = openDb(dbPath);
   const now = Date.now();
@@ -26,11 +27,12 @@ test("openDb + insertMention: grava e lê de volta uma menção", () => {
     keywords: ["breakout"],
   });
 
-  const rows = db.prepare("SELECT * FROM mentions").all();
+  const rows = db.prepare("SELECT * FROM telegram_messages").all();
   db.close();
   fs.unlinkSync(dbPath);
 
   assert.equal(rows.length, 1);
+  assert.ok(rows[0].uuid);
   assert.equal(rows[0].ticker, "BTC");
   assert.equal(rows[0].channel, "Canal Teste");
   assert.equal(rows[0].sentiment, "bullish");
@@ -52,7 +54,7 @@ test("insertMention: ticker null é aceito (menção só por keyword, sem cashta
     keywords: ["pump"],
   });
 
-  const rows = db.prepare("SELECT * FROM mentions").all();
+  const rows = db.prepare("SELECT * FROM telegram_messages").all();
   db.close();
   fs.unlinkSync(dbPath);
 

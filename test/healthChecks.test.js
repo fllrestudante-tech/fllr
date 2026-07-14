@@ -3,7 +3,8 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { checkBybit, checkBacktest, checkTelegramRadar } = require("../lib/healthChecks");
+const { checkBybit, checkBacktest, checkTelegramRadar, checkDatabase } = require("../lib/healthChecks");
+const { openDb } = require("../lib/infra/db");
 
 function tmpFile(name) {
   return path.join(os.tmpdir(), `bot-cripto10-test-${Date.now()}-${name}`);
@@ -86,5 +87,33 @@ test("checkTelegramRadar: heartbeat velho (mais de 5min) reporta down", () => {
   fs.writeFileSync(file, JSON.stringify({ lastHeartbeatAt: new Date(now - 10 * 60 * 1000).toISOString() }));
   const result = checkTelegramRadar(file, now);
   fs.unlinkSync(file);
+  assert.equal(result.status, "down");
+});
+
+test("checkDatabase: arquivo inexistente reporta not_implemented", () => {
+  const result = checkDatabase(tmpFile("market-nao-existe.db"));
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkDatabase: banco válido (com migrações aplicadas) reporta ok", () => {
+  const dbPath = tmpFile("market-valido.db");
+  const db = openDb(dbPath);
+  db.close();
+
+  const result = checkDatabase(dbPath);
+  fs.unlinkSync(dbPath);
+  fs.rmSync(dbPath + "-wal", { force: true });
+  fs.rmSync(dbPath + "-shm", { force: true });
+
+  assert.equal(result.status, "ok");
+});
+
+test("checkDatabase: arquivo corrompido (não é SQLite) reporta down", () => {
+  const dbPath = tmpFile("market-corrompido.db");
+  fs.writeFileSync(dbPath, "isso nao e um banco sqlite");
+
+  const result = checkDatabase(dbPath);
+  fs.unlinkSync(dbPath);
+
   assert.equal(result.status, "down");
 });

@@ -9,7 +9,9 @@ const path = require("path");
 const { TelegramClient } = require("telegram");
 const { StringSession } = require("telegram/sessions");
 const { NewMessage } = require("telegram/events");
-const { openDb, getRecentHashes, insertMention } = require("./lib/db");
+const { openDb, insertEvent } = require("../lib/infra/db");
+const { createEventBus } = require("../lib/infra/eventBus");
+const { getRecentHashes, insertMention } = require("../lib/collectors/telegramStore");
 const { hashText, isDuplicate } = require("./lib/dedupe");
 const { classify } = require("./lib/classify");
 
@@ -56,7 +58,8 @@ function extractSignals(text) {
 
 async function main() {
   ensureDataDir();
-  const db = openDb();
+  const db = openDb(); // market.db único (lib/infra/db.js) -- não abre mais um banco isolado do radar
+  const eventBus = createEventBus({ persist: (event) => insertEvent(db, event) });
   const client = new TelegramClient(new StringSession(sessionString), apiId, apiHash, { connectionRetries: 5 });
   await client.connect();
   console.log("✅ Conectado ao Telegram.");
@@ -115,6 +118,7 @@ async function main() {
       });
     }
 
+    eventBus.emit("telegram.message.received", { channel, tickers, sentiment, confidence });
     console.log(`📥 [${channel}] tickers=${tickers.join(",")} sentiment=${sentiment}(${confidence.toFixed(2)}) keywords=${keywords.join(",")}`);
   }, new NewMessage({}));
 }

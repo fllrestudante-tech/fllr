@@ -2,7 +2,7 @@
 // score de frequência com decaimento — substitui reprocessar o mentions.jsonl
 // inteiro a cada chamada. Rodar sob demanda (node telegram-radar/summarize.js).
 const fs = require("fs");
-const { openDb, DEFAULT_DB_PATH } = require("./lib/db");
+const { openDb, DEFAULT_DB_PATH } = require("../lib/infra/db");
 const { scoreByTicker } = require("./lib/score");
 
 if (!fs.existsSync(DEFAULT_DB_PATH)) {
@@ -11,7 +11,7 @@ if (!fs.existsSync(DEFAULT_DB_PATH)) {
 }
 
 const db = openDb();
-const rows = db.prepare("SELECT ticker, time_ms as time, channel FROM mentions WHERE ticker IS NOT NULL").all();
+const rows = db.prepare("SELECT ticker, time_ms as time, channel FROM telegram_messages WHERE ticker IS NOT NULL").all();
 
 if (rows.length === 0) {
   console.log("Nenhuma menção com ticker coletada ainda.");

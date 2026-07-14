@@ -3,6 +3,9 @@ node_modules/
 data/*.jsonl
 data/state.json
 data/tuning.json
+data/market.db
+data/market.db-wal
+data/market.db-shm
 *.csv
 npm-debug.log*
 telegram-radar/data/
