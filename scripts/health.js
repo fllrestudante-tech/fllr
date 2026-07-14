@@ -11,7 +11,7 @@ async function main() {
   registry.registerCheck("backtest", checks.checkBacktest);
   registry.registerCheck("telegram_radar", checks.checkTelegramRadar);
   registry.registerCheck("scanner", checks.notImplemented);
-  registry.registerCheck("banco_de_dados", checks.notImplemented);
+  registry.registerCheck("banco_de_dados", checks.checkDatabase);
   registry.registerCheck("ia", checks.notImplemented);
   registry.registerCheck("workers", checks.notImplemented);
 

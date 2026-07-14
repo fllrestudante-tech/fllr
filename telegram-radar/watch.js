@@ -1,12 +1,17 @@
 // Escuta canais do Telegram (contas que você já segue) e extrai menções de
-// tickers/palavras-chave pra uma watchlist local. Não decide nada sozinho — só
-// coleta. Rodar depois de gerar a sessão com login.js.
+// tickers/palavras-chave pra uma base local (SQLite) — 100% determinístico,
+// sem chamada a nenhuma IA/LLM: só regex, dedup, classificação por
+// palavra-chave e score por frequência. Rodar depois de gerar a sessão com
+// login.js.
 require("dotenv").config({ path: __dirname + "/../.env" });
 const fs = require("fs");
 const path = require("path");
 const { TelegramClient } = require("telegram");
 const { StringSession } = require("telegram/sessions");
 const { NewMessage } = require("telegram/events");
+const { openDb, getRecentHashes, insertMention } = require("./lib/db");
+const { hashText, isDuplicate } = require("./lib/dedupe");
+const { classify } = require("./lib/classify");
 
 const apiId = Number(process.env.TELEGRAM_API_ID);
 const apiHash = process.env.TELEGRAM_API_HASH;
@@ -17,9 +22,9 @@ const targetChannelNames = (process.env.TELEGRAM_CHANNELS || "Velatrader Squad O
   .filter(Boolean);
 
 const DATA_DIR = path.join(__dirname, "data");
-const MENTIONS_FILE = path.join(DATA_DIR, "mentions.jsonl");
 const HEALTH_FILE = path.join(DATA_DIR, "health.json");
 const HEARTBEAT_INTERVAL_MS = 60000;
+const DEDUPE_WINDOW_MS = 10 * 60 * 1000; // mesmo "call" repostado em canais diferentes dentro de 10min conta uma vez só
 
 // lib/healthChecks.js (checkTelegramRadar) lê esse arquivo pra saber se o
 // radar está vivo — watch.js roda como processo separado do loop principal,
@@ -51,6 +56,7 @@ function extractSignals(text) {
 
 async function main() {
   ensureDataDir();
+  const db = openDb();
   const client = new TelegramClient(new StringSession(sessionString), apiId, apiHash, { connectionRetries: 5 });
   await client.connect();
   console.log("✅ Conectado ao Telegram.");
@@ -82,15 +88,34 @@ async function main() {
     if (tickers.length === 0 && keywords.length === 0) return;
 
     const chat = targets.find((t) => t.id.toString() === chatId);
-    const entry = {
-      time: new Date().toISOString(),
-      channel: chat?.title || chatId,
-      tickers,
-      keywords,
-      text: text.slice(0, 500),
-    };
-    fs.appendFileSync(MENTIONS_FILE, JSON.stringify(entry) + "\n");
-    console.log(`📥 [${entry.channel}] tickers=${tickers.join(",")} keywords=${keywords.join(",")}`);
+    const channel = chat?.title || chatId;
+    const now = Date.now();
+
+    const recentHashes = getRecentHashes(db, DEDUPE_WINDOW_MS, now);
+    if (isDuplicate(text, recentHashes, DEDUPE_WINDOW_MS, now)) {
+      console.log(`⏭️  [${channel}] mensagem duplicada (repost dentro de ${DEDUPE_WINDOW_MS / 60000}min), ignorada.`);
+      return;
+    }
+
+    const { sentiment, confidence, matchedKeywords } = classify(text);
+    const hash = hashText(text);
+    const truncatedText = text.slice(0, 500);
+    const tickerList = tickers.length > 0 ? tickers : [null];
+
+    for (const ticker of tickerList) {
+      insertMention(db, {
+        timeMs: now,
+        channel,
+        ticker,
+        text: truncatedText,
+        hash,
+        sentiment,
+        confidence,
+        keywords: matchedKeywords.length ? matchedKeywords : keywords,
+      });
+    }
+
+    console.log(`📥 [${channel}] tickers=${tickers.join(",")} sentiment=${sentiment}(${confidence.toFixed(2)}) keywords=${keywords.join(",")}`);
   }, new NewMessage({}));
 }
 

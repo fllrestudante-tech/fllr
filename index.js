@@ -19,7 +19,7 @@ healthRegistry.registerCheck("bybit", healthChecks.checkBybit);
 healthRegistry.registerCheck("backtest", healthChecks.checkBacktest);
 healthRegistry.registerCheck("telegram_radar", healthChecks.checkTelegramRadar);
 healthRegistry.registerCheck("scanner", healthChecks.notImplemented);
-healthRegistry.registerCheck("banco_de_dados", healthChecks.notImplemented);
+healthRegistry.registerCheck("banco_de_dados", healthChecks.checkDatabase);
 healthRegistry.registerCheck("ia", healthChecks.notImplemented);
 healthRegistry.registerCheck("workers", healthChecks.notImplemented);
 
