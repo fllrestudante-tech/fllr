@@ -29,6 +29,12 @@ const config = {
   targetReturnPerTradePct: num(process.env.TARGET_RETURN_PER_TRADE_PCT, 0.06),
 
   backtestIntervalHours: num(process.env.BACKTEST_INTERVAL_HOURS, 6),
+  healthCheckIntervalMs: num(process.env.HEALTH_CHECK_INTERVAL_MS, 60000),
+
+  alerts: {
+    telegramBotToken: process.env.TELEGRAM_ALERT_BOT_TOKEN || "",
+    telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",
+  },
 
   // Limites dentro dos quais o auto-tuning (lib/backtest.js) pode variar parâmetros.
   // Isso impede que o ajuste automático "invente" uma estratégia totalmente diferente.
@@ -50,6 +56,7 @@ const config = {
     stateFile: __dirname + "/data/state.json",
     tuningFile: __dirname + "/data/tuning.json",
     tradesLog: __dirname + "/data/trades.jsonl",
+    alertsLog: __dirname + "/data/alerts.jsonl",
   },
 };
 

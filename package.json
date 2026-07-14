@@ -7,6 +7,7 @@
     "test": "node --test",
     "start": "node index.js",
     "watch": "node scripts/watchdog.js",
+    "health": "node scripts/health.js",
     "backtest": "node scripts/backtest.js",
     "telegram:login1": "node telegram-radar/login-step1.js",
     "telegram:login2": "node telegram-radar/login-step2.js",

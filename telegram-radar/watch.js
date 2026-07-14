@@ -18,6 +18,15 @@ const targetChannelNames = (process.env.TELEGRAM_CHANNELS || "Velatrader Squad O
 
 const DATA_DIR = path.join(__dirname, "data");
 const MENTIONS_FILE = path.join(DATA_DIR, "mentions.jsonl");
+const HEALTH_FILE = path.join(DATA_DIR, "health.json");
+const HEARTBEAT_INTERVAL_MS = 60000;
+
+// lib/healthChecks.js (checkTelegramRadar) lê esse arquivo pra saber se o
+// radar está vivo — watch.js roda como processo separado do loop principal,
+// então essa marca de tempo em disco é a única forma de checar de fora.
+function writeHeartbeat(extra = {}) {
+  fs.writeFileSync(HEALTH_FILE, JSON.stringify({ lastHeartbeatAt: new Date().toISOString(), ...extra }));
+}
 
 if (!apiId || !apiHash || !sessionString) {
   console.error("⚠️  Preencha TELEGRAM_API_ID, TELEGRAM_API_HASH e TELEGRAM_SESSION no .env (rode login.js primeiro).");
@@ -45,6 +54,8 @@ async function main() {
   const client = new TelegramClient(new StringSession(sessionString), apiId, apiHash, { connectionRetries: 5 });
   await client.connect();
   console.log("✅ Conectado ao Telegram.");
+  writeHeartbeat({ status: "connected" });
+  setInterval(() => writeHeartbeat({ status: "connected" }), HEARTBEAT_INTERVAL_MS);
 
   const dialogs = await client.getDialogs({});
   const targets = dialogs.filter((d) => {

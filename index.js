@@ -6,10 +6,36 @@ const risk = require("./lib/risk");
 const logger = require("./lib/logger");
 const backtest = require("./lib/backtest");
 const backoff = require("./lib/backoff");
+const { createHealthRegistry } = require("./lib/health");
+const healthChecks = require("./lib/healthChecks");
+const alerts = require("./lib/alerts");
 
 let botState;
 let instrumentInfo;
 let consecutiveFailures = 0;
+
+const healthRegistry = createHealthRegistry();
+healthRegistry.registerCheck("bybit", healthChecks.checkBybit);
+healthRegistry.registerCheck("backtest", healthChecks.checkBacktest);
+healthRegistry.registerCheck("telegram_radar", healthChecks.checkTelegramRadar);
+healthRegistry.registerCheck("scanner", healthChecks.notImplemented);
+healthRegistry.registerCheck("banco_de_dados", healthChecks.notImplemented);
+healthRegistry.registerCheck("ia", healthChecks.notImplemented);
+healthRegistry.registerCheck("workers", healthChecks.notImplemented);
+
+async function runHealthChecks() {
+  const results = await healthRegistry.runChecks();
+  const transitions = healthRegistry.detectTransitions(results);
+  logger.log({ event: "health_check", results });
+
+  if (transitions.length > 0) {
+    logger.logAlert({ event: "status_transition", transitions });
+    transitions.forEach((t) => console.warn(`🚨 [${t.name}] ${t.from} → ${t.to}`));
+    await alerts.alertOnTransitions(transitions).catch((err) => {
+      console.error("⚠️  Falha ao enviar alerta:", err.message);
+    });
+  }
+}
 
 async function handleExternalClose(equity) {
   try {
@@ -225,6 +251,9 @@ async function boot() {
 
   await maybeRunBacktest();
   setInterval(maybeRunBacktest, config.backtestIntervalHours * 60 * 60 * 1000);
+
+  await runHealthChecks();
+  setInterval(runHealthChecks, config.healthCheckIntervalMs);
 
   loop();
 }
