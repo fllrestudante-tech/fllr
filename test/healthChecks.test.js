@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { checkBybit, checkBacktest, checkTelegramRadar, checkDatabase, checkCollector } = require("../lib/healthChecks");
+const { checkBybit, checkBacktest, checkTelegramRadar, checkDatabase, checkCollector, checkFearGreed } = require("../lib/healthChecks");
 const { openDb } = require("../lib/infra/db");
 
 function tmpFile(name) {
@@ -158,4 +158,21 @@ test("checkCollector: domínio com 3+ falhas consecutivas reporta degraded mesmo
   fs.unlinkSync(file);
   assert.equal(result.status, "degraded");
   assert.deepEqual(result.details.failingDomains, ["funding"]);
+});
+
+test("checkFearGreed: arquivo inexistente reporta not_implemented", () => {
+  const result = checkFearGreed(tmpFile("fear-greed-nao-existe.json"));
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkFearGreed: heartbeat recente sem falhas reporta ok", () => {
+  const file = tmpFile("fear-greed-ok.json");
+  const now = Date.now();
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ lastHeartbeatAt: new Date(now - 1000).toISOString(), metrics: { fear_greed: { consecutiveFailures: 0 } } })
+  );
+  const result = checkFearGreed(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "ok");
 });

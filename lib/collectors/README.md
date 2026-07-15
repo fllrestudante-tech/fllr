@@ -80,6 +80,20 @@ Streaming Collector):
   endpoint REST, mas fazem mais sentido como stream (alto volume, dado que
   perde valor rápido) — mesma fase de streaming das liquidações.
 
+## Fear & Greed Collector (`fearGreedCollector.js`) — v1
+
+Fonte pública sem chave (`alternative.me/fng/`), atualiza ~1x/dia. Único
+domínio (`fear_greed`), polling de hora em hora (`INSERT OR IGNORE`
+descarta o resto). Timestamp da API vem em **segundos**, convertido pra ms
+na gravação — todo o resto do banco usa ms epoch, atenção nisso ao integrar
+fontes novas. `checkFearGreed` reusa a mesma função genérica de heartbeat
+que `checkCollector` (`checkCollectorHeartbeat` em `lib/healthChecks.js`) —
+só muda o path do arquivo.
+
+Roda como processo próprio (`scripts/fearGreedCollector.js`, `npm run
+collect:fear-greed`) em vez de entrar no processo do Bybit Collector — fonte
+única e barata não justifica acoplar ao ciclo de vida de outro coletor.
+
 ## Como adicionar um coletor novo
 
 1. Migração nova em `lib/infra/migrations/000N_*.sql` (só as tabelas que

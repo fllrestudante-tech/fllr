@@ -9,6 +9,7 @@ async function main() {
   const registry = createHealthRegistry();
   registry.registerCheck("bybit", checks.checkBybit);
   registry.registerCheck("bybit_collector", checks.checkCollector);
+  registry.registerCheck("fear_greed_collector", checks.checkFearGreed);
   registry.registerCheck("backtest", checks.checkBacktest);
   registry.registerCheck("telegram_radar", checks.checkTelegramRadar);
   registry.registerCheck("scanner", checks.notImplemented);
