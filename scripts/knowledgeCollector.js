@@ -13,8 +13,9 @@ const coinMarketCalProvider = require("../lib/collectors/knowledge/providers/coi
 const fredClient = require("../lib/fred");
 const fredProvider = require("../lib/collectors/knowledge/providers/fredProvider");
 const fomcCalendarProvider = require("../lib/collectors/knowledge/providers/fomcCalendarProvider");
+const { DEFAULT_KNOWLEDGE_HEALTH_FILE } = require("../lib/healthChecks");
 
-const HEALTH_FILE = path.join(__dirname, "..", "data", "knowledge-collector-health.json");
+const HEALTH_FILE = DEFAULT_KNOWLEDGE_HEALTH_FILE;
 const HEARTBEAT_INTERVAL_MS = 60000;
 
 const db = openDb();
@@ -31,6 +32,7 @@ const collector = runCollector(db, eventBus, [
 ]);
 
 function writeHeartbeat() {
+  fs.mkdirSync(path.dirname(HEALTH_FILE), { recursive: true });
   fs.writeFileSync(
     HEALTH_FILE,
     JSON.stringify({ lastHeartbeatAt: new Date().toISOString(), metrics: collector.getMetrics() }, null, 2)

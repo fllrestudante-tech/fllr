@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test",
     "start": "node index.js",
-    "watch": "node scripts/watchdog.js",
+    "watch": "node scripts/supervisor.js",
     "health": "node scripts/health.js",
     "collect": "node scripts/collector.js",
     "collect:fear-greed": "node scripts/fearGreedCollector.js",

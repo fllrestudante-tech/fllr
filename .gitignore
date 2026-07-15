@@ -6,10 +6,9 @@ data/tuning.json
 data/market.db
 data/market.db-wal
 data/market.db-shm
-data/collector-health.json
-data/fear-greed-collector-health.json
-data/btc-dominance-collector-health.json
-data/knowledge-collector-health.json
+runtime/
+logs/
+backups/
 *.csv
 npm-debug.log*
 telegram-radar/data/

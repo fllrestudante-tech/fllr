@@ -8,8 +8,9 @@ const { openDb, insertEvent, DEFAULT_DB_PATH } = require("../lib/infra/db");
 const { createEventBus } = require("../lib/infra/eventBus");
 const bybitClient = require("../lib/bybit");
 const { runCollector } = require("../lib/collectors/bybitCollector");
+const { DEFAULT_COLLECTOR_HEALTH_FILE } = require("../lib/healthChecks");
 
-const HEALTH_FILE = path.join(__dirname, "..", "data", "collector-health.json");
+const HEALTH_FILE = DEFAULT_COLLECTOR_HEALTH_FILE;
 const HEARTBEAT_INTERVAL_MS = 60000;
 
 const db = openDb();
@@ -28,6 +29,7 @@ const collector = runCollector(db, eventBus, bybitClient, config);
 // como processo separado do loop principal e do npm run health, então essa
 // marca de tempo + métricas em disco é a única forma de checar de fora.
 function writeHeartbeat() {
+  fs.mkdirSync(path.dirname(HEALTH_FILE), { recursive: true });
   fs.writeFileSync(
     HEALTH_FILE,
     JSON.stringify({ lastHeartbeatAt: new Date().toISOString(), metrics: collector.getMetrics() }, null, 2)

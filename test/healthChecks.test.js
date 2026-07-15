@@ -12,6 +12,7 @@ const {
   checkFearGreed,
   checkBtcDominance,
   checkKnowledgeCollector,
+  checkSupervisor,
 } = require("../lib/healthChecks");
 const { openDb } = require("../lib/infra/db");
 
@@ -221,4 +222,43 @@ test("checkKnowledgeCollector: heartbeat recente sem falhas reporta ok", () => {
   const result = checkKnowledgeCollector(file, now);
   fs.unlinkSync(file);
   assert.equal(result.status, "ok");
+});
+
+test("checkSupervisor: arquivo inexistente reporta not_implemented", () => {
+  const result = checkSupervisor(tmpFile("supervisor-nao-existe.json"));
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkSupervisor: tick recente reporta ok e resume status dos filhos", () => {
+  const file = tmpFile("supervisor-ok.json");
+  const now = Date.now();
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      bot: { status: "running" },
+      bybit_collector: { status: "crashed" },
+      _meta: { lastTickAt: new Date(now - 1000).toISOString() },
+    })
+  );
+  const result = checkSupervisor(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "ok");
+  assert.deepEqual(result.details.children, { bot: "running", bybit_collector: "crashed" });
+});
+
+test("checkSupervisor: tick velho (mais de 90s) reporta down", () => {
+  const file = tmpFile("supervisor-velho.json");
+  const now = Date.now();
+  fs.writeFileSync(file, JSON.stringify({ bot: { status: "running" }, _meta: { lastTickAt: new Date(now - 5 * 60 * 1000).toISOString() } }));
+  const result = checkSupervisor(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "down");
+});
+
+test("checkSupervisor: state.json sem _meta.lastTickAt reporta degraded", () => {
+  const file = tmpFile("supervisor-sem-meta.json");
+  fs.writeFileSync(file, JSON.stringify({ bot: { status: "running" } }));
+  const result = checkSupervisor(file);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "degraded");
 });

@@ -6,8 +6,9 @@ const { openDb, insertEvent, DEFAULT_DB_PATH } = require("../lib/infra/db");
 const { createEventBus } = require("../lib/infra/eventBus");
 const coingeckoClient = require("../lib/coingecko");
 const { runCollector } = require("../lib/collectors/btcDominanceCollector");
+const { DEFAULT_BTC_DOMINANCE_HEALTH_FILE } = require("../lib/healthChecks");
 
-const HEALTH_FILE = path.join(__dirname, "..", "data", "btc-dominance-collector-health.json");
+const HEALTH_FILE = DEFAULT_BTC_DOMINANCE_HEALTH_FILE;
 const HEARTBEAT_INTERVAL_MS = 60000;
 
 const db = openDb();
@@ -19,6 +20,7 @@ console.log(`📡 BTC Dominance Collector iniciando — gravando em ${DEFAULT_DB
 const collector = runCollector(db, eventBus, coingeckoClient);
 
 function writeHeartbeat() {
+  fs.mkdirSync(path.dirname(HEALTH_FILE), { recursive: true });
   fs.writeFileSync(
     HEALTH_FILE,
     JSON.stringify({ lastHeartbeatAt: new Date().toISOString(), metrics: collector.getMetrics() }, null, 2)

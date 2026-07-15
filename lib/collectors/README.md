@@ -45,14 +45,32 @@ Genérico, não específico da Bybit — qualquer coletor novo usa o mesmo
 
 ## Monitoramento de integridade
 
-Cada processo de coleta escreve um heartbeat em disco (`data/*-health.json`)
-com timestamp + snapshot das métricas — é a única forma de `npm run health`
-(processo curto, à parte) saber se o coletor (processo longo, à parte) está
-vivo e coletando de verdade, não só rodando. `lib/healthChecks.js` lê esse
-arquivo: heartbeat velho (>5min) = `down`; algum domínio com 3+ falhas
-consecutivas = `degraded` mesmo com heartbeat fresco (processo vivo mas
-falhando contra a fonte); senão `ok`. Ver `checkCollector` (Bybit) e
-`checkTelegramRadar` (Telegram) como referência pro próximo coletor.
+Cada processo de coleta escreve um heartbeat em disco
+(`runtime/heartbeats/*.json`, via `lib/heartbeatWriter.js` — antes era
+`data/*-health.json`, migrado na Fase 0.3.1 pra separar estado de processo
+de dado persistente) com timestamp + snapshot das métricas — é a única forma
+de `npm run health` (processo curto, à parte) saber se o coletor (processo
+longo, à parte) está vivo e coletando de verdade, não só rodando.
+`lib/healthChecks.js` lê esse arquivo: heartbeat velho (>5min) = `down`;
+algum domínio com 3+ falhas consecutivas = `degraded` mesmo com heartbeat
+fresco (processo vivo mas falhando contra a fonte); senão `ok`. Ver
+`checkCollector` (Bybit) e `checkTelegramRadar` (Telegram) como referência
+pro próximo coletor.
+
+## Supervisor (`scripts/supervisor.js`, `lib/supervisor.js`)
+
+`npm run watch` sobe o bot principal + os 4 coletores como processos
+filhos e reinicia sozinho quem cair, com backoff exponencial por processo
+(`lib/backoff.js`). Estado (pid/status/restarts/motivo da última queda) fica
+em `runtime/processes/state.json`; um `.pid` por processo em `runtime/pids/`;
+`runtime/locks/supervisor.lock` impede subir 2 supervisores (2 bots) ao
+mesmo tempo. `lib/supervisor.js` é a máquina de estados pura (testável sem
+`child_process`); `scripts/supervisor.js` só faz a ligação com processos de
+verdade. `checkSupervisor` em `lib/healthChecks.js` lê `state.json` pra
+saber se o próprio supervisor está vivo (`_meta.lastTickAt`). Redirecionar
+stdout/stderr pra logs rotacionados e alertar no Telegram em cada queda são
+melhorias da próxima fase (Observability), ainda não implementadas — hoje o
+console dos filhos segue `stdio:"inherit"`.
 
 ## Retries
 

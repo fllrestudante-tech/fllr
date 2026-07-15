@@ -6,8 +6,9 @@ const { openDb, insertEvent, DEFAULT_DB_PATH } = require("../lib/infra/db");
 const { createEventBus } = require("../lib/infra/eventBus");
 const fearGreedClient = require("../lib/fearGreed");
 const { runCollector } = require("../lib/collectors/fearGreedCollector");
+const { DEFAULT_FEAR_GREED_HEALTH_FILE } = require("../lib/healthChecks");
 
-const HEALTH_FILE = path.join(__dirname, "..", "data", "fear-greed-collector-health.json");
+const HEALTH_FILE = DEFAULT_FEAR_GREED_HEALTH_FILE;
 const HEARTBEAT_INTERVAL_MS = 60000;
 
 const db = openDb();
@@ -19,6 +20,7 @@ console.log(`📡 Fear & Greed Collector iniciando — gravando em ${DEFAULT_DB_
 const collector = runCollector(db, eventBus, fearGreedClient);
 
 function writeHeartbeat() {
+  fs.mkdirSync(path.dirname(HEALTH_FILE), { recursive: true });
   fs.writeFileSync(
     HEALTH_FILE,
     JSON.stringify({ lastHeartbeatAt: new Date().toISOString(), metrics: collector.getMetrics() }, null, 2)
