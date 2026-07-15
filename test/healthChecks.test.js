@@ -3,7 +3,15 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { checkBybit, checkBacktest, checkTelegramRadar, checkDatabase, checkCollector, checkFearGreed } = require("../lib/healthChecks");
+const {
+  checkBybit,
+  checkBacktest,
+  checkTelegramRadar,
+  checkDatabase,
+  checkCollector,
+  checkFearGreed,
+  checkBtcDominance,
+} = require("../lib/healthChecks");
 const { openDb } = require("../lib/infra/db");
 
 function tmpFile(name) {
@@ -173,6 +181,23 @@ test("checkFearGreed: heartbeat recente sem falhas reporta ok", () => {
     JSON.stringify({ lastHeartbeatAt: new Date(now - 1000).toISOString(), metrics: { fear_greed: { consecutiveFailures: 0 } } })
   );
   const result = checkFearGreed(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "ok");
+});
+
+test("checkBtcDominance: arquivo inexistente reporta not_implemented", () => {
+  const result = checkBtcDominance(tmpFile("btc-dominance-nao-existe.json"));
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkBtcDominance: heartbeat recente sem falhas reporta ok", () => {
+  const file = tmpFile("btc-dominance-ok.json");
+  const now = Date.now();
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ lastHeartbeatAt: new Date(now - 1000).toISOString(), metrics: { btc_dominance: { consecutiveFailures: 0 } } })
+  );
+  const result = checkBtcDominance(file, now);
   fs.unlinkSync(file);
   assert.equal(result.status, "ok");
 });

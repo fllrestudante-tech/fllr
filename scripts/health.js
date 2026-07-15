@@ -10,6 +10,7 @@ async function main() {
   registry.registerCheck("bybit", checks.checkBybit);
   registry.registerCheck("bybit_collector", checks.checkCollector);
   registry.registerCheck("fear_greed_collector", checks.checkFearGreed);
+  registry.registerCheck("btc_dominance_collector", checks.checkBtcDominance);
   registry.registerCheck("backtest", checks.checkBacktest);
   registry.registerCheck("telegram_radar", checks.checkTelegramRadar);
   registry.registerCheck("scanner", checks.notImplemented);

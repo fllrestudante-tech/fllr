@@ -94,6 +94,17 @@ Roda como processo próprio (`scripts/fearGreedCollector.js`, `npm run
 collect:fear-greed`) em vez de entrar no processo do Bybit Collector — fonte
 única e barata não justifica acoplar ao ciclo de vida de outro coletor.
 
+## BTC Dominance Collector (`btcDominanceCollector.js`) — v1
+
+Fonte pública sem chave (CoinGecko `/api/v3/global`). O `updated_at` da
+resposta fica estável por alguns minutos (cache interno deles, confirmado
+testando duas chamadas seguidas) — por isso `snapshot_time` funciona como
+chave natural de idempotência (`UNIQUE INDEX`), igual funding/OI/Fear&Greed,
+diferente do `tickers_snapshot` da Bybit (que não tem timestamp por
+símbolo). Polling de 15min é suficiente (`INSERT OR IGNORE` descarta o
+resto enquanto o cache deles não vira). Também grava `eth_dominance_pct`,
+market cap e volume totais de brinde, já que vêm no mesmo call.
+
 ## Como adicionar um coletor novo
 
 1. Migração nova em `lib/infra/migrations/000N_*.sql` (só as tabelas que

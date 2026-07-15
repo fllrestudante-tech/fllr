@@ -8,6 +8,7 @@ data/market.db-wal
 data/market.db-shm
 data/collector-health.json
 data/fear-greed-collector-health.json
+data/btc-dominance-collector-health.json
 *.csv
 npm-debug.log*
 telegram-radar/data/

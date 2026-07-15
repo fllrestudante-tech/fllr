@@ -18,6 +18,7 @@ const healthRegistry = createHealthRegistry();
 healthRegistry.registerCheck("bybit", healthChecks.checkBybit);
 healthRegistry.registerCheck("bybit_collector", healthChecks.checkCollector);
 healthRegistry.registerCheck("fear_greed_collector", healthChecks.checkFearGreed);
+healthRegistry.registerCheck("btc_dominance_collector", healthChecks.checkBtcDominance);
 healthRegistry.registerCheck("backtest", healthChecks.checkBacktest);
 healthRegistry.registerCheck("telegram_radar", healthChecks.checkTelegramRadar);
 healthRegistry.registerCheck("scanner", healthChecks.notImplemented);
