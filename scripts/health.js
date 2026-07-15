@@ -8,6 +8,7 @@ const STATUS_ICON = { ok: "✅", degraded: "⚠️", down: "🔴", not_implement
 async function main() {
   const registry = createHealthRegistry();
   registry.registerCheck("bybit", checks.checkBybit);
+  registry.registerCheck("bybit_collector", checks.checkCollector);
   registry.registerCheck("backtest", checks.checkBacktest);
   registry.registerCheck("telegram_radar", checks.checkTelegramRadar);
   registry.registerCheck("scanner", checks.notImplemented);

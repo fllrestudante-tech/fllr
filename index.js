@@ -16,6 +16,7 @@ let consecutiveFailures = 0;
 
 const healthRegistry = createHealthRegistry();
 healthRegistry.registerCheck("bybit", healthChecks.checkBybit);
+healthRegistry.registerCheck("bybit_collector", healthChecks.checkCollector);
 healthRegistry.registerCheck("backtest", healthChecks.checkBacktest);
 healthRegistry.registerCheck("telegram_radar", healthChecks.checkTelegramRadar);
 healthRegistry.registerCheck("scanner", healthChecks.notImplemented);

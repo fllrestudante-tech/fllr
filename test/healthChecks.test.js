@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { checkBybit, checkBacktest, checkTelegramRadar, checkDatabase } = require("../lib/healthChecks");
+const { checkBybit, checkBacktest, checkTelegramRadar, checkDatabase, checkCollector } = require("../lib/healthChecks");
 const { openDb } = require("../lib/infra/db");
 
 function tmpFile(name) {
@@ -116,4 +116,46 @@ test("checkDatabase: arquivo corrompido (não é SQLite) reporta down", () => {
   fs.unlinkSync(dbPath);
 
   assert.equal(result.status, "down");
+});
+
+test("checkCollector: arquivo inexistente reporta not_implemented", () => {
+  const result = checkCollector(tmpFile("collector-nao-existe.json"));
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkCollector: heartbeat recente sem falhas reporta ok", () => {
+  const file = tmpFile("collector-ok.json");
+  const now = Date.now();
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ lastHeartbeatAt: new Date(now - 1000).toISOString(), metrics: { candles: { consecutiveFailures: 0 } } })
+  );
+  const result = checkCollector(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "ok");
+});
+
+test("checkCollector: heartbeat velho (mais de 5min) reporta down", () => {
+  const file = tmpFile("collector-velho.json");
+  const now = Date.now();
+  fs.writeFileSync(file, JSON.stringify({ lastHeartbeatAt: new Date(now - 10 * 60 * 1000).toISOString(), metrics: {} }));
+  const result = checkCollector(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "down");
+});
+
+test("checkCollector: domínio com 3+ falhas consecutivas reporta degraded mesmo com heartbeat fresco", () => {
+  const file = tmpFile("collector-degradado.json");
+  const now = Date.now();
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      lastHeartbeatAt: new Date(now - 1000).toISOString(),
+      metrics: { candles: { consecutiveFailures: 0 }, funding: { consecutiveFailures: 4 } },
+    })
+  );
+  const result = checkCollector(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "degraded");
+  assert.deepEqual(result.details.failingDomains, ["funding"]);
 });

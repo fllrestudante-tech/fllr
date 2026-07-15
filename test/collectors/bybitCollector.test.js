@@ -5,7 +5,7 @@ const os = require("os");
 const path = require("path");
 const { openDb } = require("../../lib/infra/db");
 const { createEventBus } = require("../../lib/infra/eventBus");
-const { collectCandles, collectFunding, collectOpenInterest } = require("../../lib/collectors/bybitCollector");
+const { collectCandles, collectFunding, collectOpenInterest, collectTicker, collectLongShortRatio } = require("../../lib/collectors/bybitCollector");
 
 function tmpDbPath() {
   return path.join(os.tmpdir(), `bot-cripto10-collector-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
@@ -155,4 +155,91 @@ test("collectFunding: lista vazia não grava nem emite", async () => {
 
   assert.equal(result.inserted, false);
   assert.equal(called, false);
+});
+
+test("collectTicker: grava snapshot e emite ticker.updated a cada chamada (sem chave de idempotência)", async () => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const eventBus = createEventBus();
+  const events = [];
+  eventBus.on("ticker.updated", (e) => events.push(e));
+
+  const fakeTicker = {
+    lastPrice: "65000",
+    markPrice: "65010",
+    indexPrice: "65005",
+    bid1Price: "64999",
+    ask1Price: "65001",
+    volume24h: "1000",
+    turnover24h: "65000000",
+    price24hPcnt: "0.02",
+    fundingRate: "0.0001",
+    openInterest: "500",
+  };
+  const fakeClient = { getTickers: async () => [fakeTicker] };
+  const opts = { exchange: "bybit", symbol: "BTCUSDT" };
+
+  await collectTicker(db, eventBus, fakeClient, opts);
+  await collectTicker(db, eventBus, fakeClient, opts); // segunda chamada -- observação nova, não duplicata
+
+  const rows = db.prepare("SELECT * FROM tickers_snapshot").all();
+  db.close();
+  cleanup(dbPath);
+
+  assert.equal(rows.length, 2); // ambas gravadas -- ticker não tem chave natural de idempotência
+  assert.equal(rows[0].last_price, 65000);
+  assert.equal(rows[0].mark_price, 65010);
+  assert.equal(events.length, 2);
+});
+
+test("collectTicker: lista vazia não grava nem emite", async () => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const eventBus = createEventBus();
+  let called = false;
+  eventBus.on("ticker.updated", () => (called = true));
+
+  const fakeClient = { getTickers: async () => [] };
+  const result = await collectTicker(db, eventBus, fakeClient, { exchange: "bybit", symbol: "BTCUSDT" });
+  db.close();
+  cleanup(dbPath);
+
+  assert.equal(result.inserted, false);
+  assert.equal(called, false);
+});
+
+test("collectLongShortRatio: grava e emite long_short_ratio.updated", async () => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const eventBus = createEventBus();
+  const events = [];
+  eventBus.on("long_short_ratio.updated", (e) => events.push(e));
+
+  const fakeClient = { getLongShortRatio: async () => [{ buyRatio: "0.55", sellRatio: "0.45", timestamp: "7000" }] };
+  const result = await collectLongShortRatio(db, eventBus, fakeClient, { exchange: "bybit", symbol: "BTCUSDT" });
+  const rows = db.prepare("SELECT * FROM long_short_ratio").all();
+  db.close();
+  cleanup(dbPath);
+
+  assert.equal(result.inserted, true);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].buy_ratio, 0.55);
+  assert.equal(events.length, 1);
+});
+
+test("collectLongShortRatio: mesmo snapshot_time não duplica", async () => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const eventBus = createEventBus();
+  const fakeClient = { getLongShortRatio: async () => [{ buyRatio: "0.55", sellRatio: "0.45", timestamp: "7000" }] };
+  const opts = { exchange: "bybit", symbol: "BTCUSDT" };
+
+  await collectLongShortRatio(db, eventBus, fakeClient, opts);
+  const second = await collectLongShortRatio(db, eventBus, fakeClient, opts);
+  const rows = db.prepare("SELECT * FROM long_short_ratio").all();
+  db.close();
+  cleanup(dbPath);
+
+  assert.equal(second.inserted, false);
+  assert.equal(rows.length, 1);
 });
