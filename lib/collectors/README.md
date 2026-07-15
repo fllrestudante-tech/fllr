@@ -105,6 +105,51 @@ símbolo). Polling de 15min é suficiente (`INSERT OR IGNORE` descarta o
 resto enquanto o cache deles não vira). Também grava `eth_dominance_pct`,
 market cap e volume totais de brinde, já que vêm no mesmo call.
 
+## Knowledge Collector (`lib/collectors/knowledge/`) — v1: eventos de mercado
+
+Primeiro capítulo de um conceito maior: "Knowledge Collector" é o nome
+guarda-chuva pra tudo que não é preço/mercado bruto -- eventos, e no futuro
+notícias, vídeos, tweets, pesquisas. Cada tipo de conhecimento tem seu
+próprio schema (não força tudo numa tabela só) e seus próprios providers.
+Hoje só existe a parte de **eventos estruturados** (`market_events` +
+`market_event_assets`, migração 0005).
+
+**Modelo de provider** (`lib/collectors/knowledge/providers/*.js`): cada
+fonte implementa `{ name, fetchRawEvents(client, opts), normalize(rawItem) }`.
+`fetchRawEvents` busca dado bruto na fonte; `normalize` mapeia pro formato
+comum (`sourceEventId, title, description, category, assets, eventTime,
+confirmed, sourceUrl`). O orquestrador (`eventsCollector.js`) aplica os
+defaults de severidade/volatilidade/janela de impacto por categoria
+(`marketEventCategories.js`) e infere `market_scope` a partir dos ativos —
+o provider não precisa saber nada disso, só extrair o dado bruto.
+
+**Upsert, não insert-or-ignore**: diferente dos outros coletores, eventos
+mudam depois de publicados (data reagendada, confirmação alterada) — `
+upsertEvent` insere se é novo, atualiza só se algo mudou de verdade
+(compara campo a campo), não toca se está idêntico. `updated_at` só avança
+em mudança real.
+
+**`market_phase` (pre-event/live-event/post-event) não é uma coluna** —
+calculada sob demanda (`marketPhase.js`) comparando `event_time` com o
+relógio atual. Persistir isso exigiria um job de fundo reclassificando
+linhas só pra acompanhar a passagem do tempo, sem ganho nenhum.
+
+**Providers do v1**: `coinmarketcal` (eventos cripto — ETF/hardfork/
+listing/unlock/governança/parceria, precisa de `COINMARKETCAL_API_KEY`
+grátis), `fred` (calendário de divulgação de CPI/payroll/GDP, dado oficial
+do Federal Reserve, precisa de `FRED_API_KEY` grátis), `fomc_calendar`
+(datas de reunião do FOMC, dado estático em `fomcCalendarData.js` — sem API
+oficial, precisa de atualização manual quando o Fed publicar o calendário
+do ano seguinte, normalmente em setembro/outubro).
+
+**Fora do v1** (pesquisa completa nas notas do projeto): TradingEconomics,
+CryptoPanic, Messari, DefiLlama-unlocks, TokenUnlocks — todos pagos ou com
+free tier inviável em 2026 (CryptoPanic descontinuou o free tier em
+abril/2026). `market_event_impacts` (impacto histórico observado por tipo
+de evento) e `market_regime` (bull/bear/lateral) são schema-alvo, não
+implementados ainda — dependem de meses de candles acumulados e de um job
+de análise que ainda não existe.
+
 ## Como adicionar um coletor novo
 
 1. Migração nova em `lib/infra/migrations/000N_*.sql` (só as tabelas que

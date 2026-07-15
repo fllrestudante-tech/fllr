@@ -36,6 +36,11 @@ const config = {
     telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",
   },
 
+  knowledge: {
+    coinMarketCalApiKey: process.env.COINMARKETCAL_API_KEY || "",
+    fredApiKey: process.env.FRED_API_KEY || "",
+  },
+
   // Limites dentro dos quais o auto-tuning (lib/backtest.js) pode variar parâmetros.
   // Isso impede que o ajuste automático "invente" uma estratégia totalmente diferente.
   tuningBounds: {

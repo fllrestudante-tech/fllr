@@ -11,6 +11,7 @@
     "collect": "node scripts/collector.js",
     "collect:fear-greed": "node scripts/fearGreedCollector.js",
     "collect:btc-dominance": "node scripts/btcDominanceCollector.js",
+    "collect:knowledge": "node scripts/knowledgeCollector.js",
     "backtest": "node scripts/backtest.js",
     "telegram:login1": "node telegram-radar/login-step1.js",
     "telegram:login2": "node telegram-radar/login-step2.js",

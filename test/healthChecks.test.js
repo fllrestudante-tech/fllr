@@ -11,6 +11,7 @@ const {
   checkCollector,
   checkFearGreed,
   checkBtcDominance,
+  checkKnowledgeCollector,
 } = require("../lib/healthChecks");
 const { openDb } = require("../lib/infra/db");
 
@@ -198,6 +199,26 @@ test("checkBtcDominance: heartbeat recente sem falhas reporta ok", () => {
     JSON.stringify({ lastHeartbeatAt: new Date(now - 1000).toISOString(), metrics: { btc_dominance: { consecutiveFailures: 0 } } })
   );
   const result = checkBtcDominance(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "ok");
+});
+
+test("checkKnowledgeCollector: arquivo inexistente reporta not_implemented", () => {
+  const result = checkKnowledgeCollector(tmpFile("knowledge-nao-existe.json"));
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkKnowledgeCollector: heartbeat recente sem falhas reporta ok", () => {
+  const file = tmpFile("knowledge-ok.json");
+  const now = Date.now();
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      lastHeartbeatAt: new Date(now - 1000).toISOString(),
+      metrics: { coinmarketcal: { consecutiveFailures: 0 }, fred: { consecutiveFailures: 0 }, fomc_calendar: { consecutiveFailures: 0 } },
+    })
+  );
+  const result = checkKnowledgeCollector(file, now);
   fs.unlinkSync(file);
   assert.equal(result.status, "ok");
 });
