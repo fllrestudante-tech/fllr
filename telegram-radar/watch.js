@@ -78,7 +78,20 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`📡 Escutando: ${targets.map((t) => t.title).join(", ")}`);
+  // Casamento é por substring contra os dialogs que a conta já segue -- não
+  // entra em canal novo sozinho. Se algum nome pedido não bateu com nada,
+  // avisa qual (senão fica silenciosamente incompleto quando pelo menos 1
+  // dos N nomes bate e os outros não).
+  const unmatched = targetChannelNames.filter(
+    (name) => !targets.some((t) => (t.title || "").trim().toLowerCase().includes(name))
+  );
+  if (unmatched.length > 0) {
+    console.warn(
+      `⚠️  ${unmatched.length} canal(is) pedido(s) no TELEGRAM_CHANNELS não foram encontrados nos diálogos da conta (provavelmente ainda não seguidos/entrou no grupo): ${unmatched.join(", ")}`
+    );
+  }
+
+  console.log(`📡 Escutando (${targets.length}/${targetChannelNames.length} pedidos): ${targets.map((t) => t.title).join(", ")}`);
   const targetIds = new Set(targets.map((t) => t.id.toString()));
 
   client.addEventHandler(async (event) => {

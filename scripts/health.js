@@ -3,7 +3,7 @@
 const { createHealthRegistry } = require("../lib/health");
 const checks = require("../lib/healthChecks");
 
-const STATUS_ICON = { ok: "✅", degraded: "⚠️", down: "🔴", not_implemented: "⬜" };
+const STATUS_ICON = { ok: "✅", degraded: "⚠️", down: "🔴", stopped: "⏹️", disabled: "⬜", not_implemented: "⬜" };
 
 async function main() {
   const registry = createHealthRegistry();

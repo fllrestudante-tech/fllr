@@ -77,9 +77,9 @@ test("checkBacktest: arquivo corrompido reporta down", () => {
   assert.equal(result.status, "down");
 });
 
-test("checkTelegramRadar: arquivo de heartbeat inexistente reporta not_implemented", () => {
+test("checkTelegramRadar: arquivo de heartbeat inexistente reporta disabled (coletor manual, não supervisionado)", () => {
   const result = checkTelegramRadar(tmpFile("nao-existe.json"));
-  assert.equal(result.status, "not_implemented");
+  assert.equal(result.status, "disabled");
 });
 
 test("checkTelegramRadar: heartbeat recente reporta ok", () => {
@@ -91,11 +91,19 @@ test("checkTelegramRadar: heartbeat recente reporta ok", () => {
   assert.equal(result.status, "ok");
 });
 
-test("checkTelegramRadar: heartbeat velho (mais de 5min) reporta down", () => {
+test("checkTelegramRadar: heartbeat velho (mais de 5min) reporta stopped, não down (coletor manual, staleness não é alarme)", () => {
   const file = tmpFile("health-velho.json");
   const now = Date.now();
   fs.writeFileSync(file, JSON.stringify({ lastHeartbeatAt: new Date(now - 10 * 60 * 1000).toISOString() }));
   const result = checkTelegramRadar(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "stopped");
+});
+
+test("checkTelegramRadar: arquivo corrompido reporta down (isso sim é anômalo, mesmo sendo manual)", () => {
+  const file = tmpFile("health-corrompido.json");
+  fs.writeFileSync(file, "{ nao e json");
+  const result = checkTelegramRadar(file);
   fs.unlinkSync(file);
   assert.equal(result.status, "down");
 });
