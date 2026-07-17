@@ -21,6 +21,17 @@ const { sampleDatabaseHealth } = require("../lib/databaseHealth");
 const { computeTradingHealth } = require("../lib/tradingHealth");
 const { sampleProcessResources } = require("../lib/processResourceUsage");
 const { createAlertManager } = require("../lib/alertManager");
+const { DOMAIN_TABLES, sampleCoverage } = require("../lib/dataCoverage");
+const { sampleGaps } = require("../lib/temporalGaps");
+const { sampleSanityChecks } = require("../lib/sanityChecks");
+const { computeDataConfidenceScore } = require("../lib/dataConfidenceScore");
+const { compareProviders } = require("../lib/crossSourceValidation");
+const { buildSourceReliabilityRegistry } = require("../lib/sourceReliability");
+
+// Domínios de mercado que teriam um equivalente em outra exchange (Binance,
+// quando existir) -- só esses fazem sentido pra Cross-Source Validation.
+// Fear&Greed/BTC Dominance/Knowledge não têm "segunda fonte" no roadmap.
+const CROSS_SOURCE_DOMAINS = ["candles", "funding", "open_interest"];
 
 const SLOW_SAMPLE_INTERVAL_MS = 15 * 60 * 1000; // database.json: integrity_check é O(n), não roda no ritmo rápido dos outros domínios
 
@@ -266,6 +277,70 @@ function runDatabaseSample() {
   eventBus.emit("runtime_metrics.database.updated", { sampledAt });
 }
 
+/**
+ * Market Quality Engine (Fase B.5): "os dados são confiáveis e
+ * consistentes?" -- diferente do Freshness Score, que só responde "é
+ * recente?". Cobertura, gaps temporais e sanity checks por domínio viram um
+ * Data Confidence Score; junto com API Health e Freshness (já calculados em
+ * runCollectorsSample), viram o registro de Source Reliability (Operational
+ * Reliability agora, Predictive Reliability reservado pra fase futura).
+ * Cross-Source Validation fica em N/A honesto pros 3 domínios de mercado até
+ * o Binance Collector existir -- a lógica de comparação já está pronta e
+ * testada com dado fake, só falta um segundo provider real.
+ */
+function runQualitySample() {
+  const { collectors, apiHealthByDomain } = sampleCollectors();
+
+  const freshnessByDomain = {};
+  for (const c of Object.values(collectors)) {
+    for (const [domain, d] of Object.entries(c.domains)) {
+      freshnessByDomain[domain] = d.freshness;
+    }
+  }
+
+  const quality = {};
+  const dataConfidenceByDomain = {};
+  for (const domain of Object.keys(DOMAIN_TABLES)) {
+    const sla = config.sla.domains[domain] || { expectedIntervalMs: config.sla.defaultExpectedIntervalMs };
+    const windowMs = Math.max(sla.expectedIntervalMs * 20, 60 * 60 * 1000);
+
+    const coverage = sampleCoverage(domain, db);
+    const gaps = sampleGaps(domain, db, { windowMs, expectedIntervalMs: sla.expectedIntervalMs });
+    const sanity = sampleSanityChecks(domain, db, { windowMs });
+    const confidence = computeDataConfidenceScore({
+      coveragePct: coverage.coveragePct,
+      gapsCount: gaps.gapsCount,
+      sanityPassRate: sanity.passRate,
+    });
+    dataConfidenceByDomain[domain] = confidence;
+    quality[domain] = { coverage, gaps, sanity, dataConfidence: confidence };
+
+    if (typeof confidence.score === "number" && confidence.score < 70) {
+      alertManager.fire(`quality_${domain}`, "WARNING", `${domain}: Data Confidence Score baixo (${confidence.score})`).catch((err) => console.error("⚠️  Falha ao disparar alerta:", err.message));
+    }
+    if (sanity.checks?.ohlc && !sanity.checks.ohlc.pass) {
+      alertManager.fire(`quality_${domain}_ohlc`, "ERROR", `${domain}: ${sanity.checks.ohlc.violations} vela(s) com OHLC inválido`).catch((err) => console.error("⚠️  Falha ao disparar alerta:", err.message));
+    }
+  }
+
+  // Cross-Source Validation: só Bybit existe hoje (providersAvailable=1) --
+  // sempre N/A, nunca vira erro/warning por causa disso (regra explícita).
+  const crossSourceValidation = {};
+  for (const domain of CROSS_SOURCE_DOMAINS) {
+    crossSourceValidation[domain] = compareProviders([], [], { providersAvailable: 1, providersOperational: 1 });
+  }
+
+  const sourceReliability = buildSourceReliabilityRegistry({ apiHealthByDomain, freshnessByDomain, dataConfidenceByDomain });
+
+  const sampledAt = new Date().toISOString();
+  writeJsonSnapshot(path.join(METRICS_DIR, "quality.json"), { quality, crossSourceValidation, sourceReliability, sampledAt });
+  appendHistory("quality", {
+    dataConfidenceByDomain: Object.fromEntries(Object.entries(dataConfidenceByDomain).map(([d, c]) => [d, c.score])),
+    sourceReliabilitySummary: Object.fromEntries(Object.entries(sourceReliability).map(([p, s]) => [p, s.operationalReliability.score])),
+  });
+  eventBus.emit("runtime_metrics.quality.updated", { sampledAt });
+}
+
 function runTradingSample() {
   const tradingHealth = computeTradingHealth();
   const sampledAt = new Date().toISOString();
@@ -319,6 +394,15 @@ function runSlow() {
   } catch (err) {
     samplerMetrics.recordFailure("trading_sample", err, { latencyMs: Date.now() - tradingStartedAt });
     console.error("⚠️  metricsSampler: falha ao amostrar trading:", err.message);
+  }
+
+  const qualityStartedAt = Date.now();
+  try {
+    runQualitySample();
+    samplerMetrics.recordSuccess("quality_sample", { inserted: true, latencyMs: Date.now() - qualityStartedAt });
+  } catch (err) {
+    samplerMetrics.recordFailure("quality_sample", err, { latencyMs: Date.now() - qualityStartedAt });
+    console.error("⚠️  metricsSampler: falha ao amostrar quality:", err.message);
   }
 }
 

@@ -51,7 +51,12 @@ const config = {
     toleranceMultiplier: 2,
     domains: {
       candles: { expectedIntervalMs: 60 * 1000, provider: "bybit" },
-      funding: { expectedIntervalMs: 5 * 60 * 1000, provider: "bybit" },
+      // funding: o coletor faz poll a cada 5min, mas o Bybit só assenta um
+      // funding rate NOVO a cada 8h (00:00/08:00/16:00 UTC) -- confirmado
+      // contra o market.db real (delta constante de 8h entre linhas). Usar
+      // o intervalo de poll aqui fazia o Coverage Score reportar 0% mesmo
+      // com o coletor saudável -- achado real via lib/dataCoverage.js.
+      funding: { expectedIntervalMs: 8 * 60 * 60 * 1000, provider: "bybit" },
       open_interest: { expectedIntervalMs: 5 * 60 * 1000, provider: "bybit" },
       ticker: { expectedIntervalMs: 60 * 1000, provider: "bybit" },
       long_short_ratio: { expectedIntervalMs: 5 * 60 * 1000, provider: "bybit" },

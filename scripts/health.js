@@ -70,6 +70,7 @@ async function main() {
   const processesSnapshot = readJsonIfExists(path.join(METRICS_DIR, "processes.json"));
   const databaseSnapshot = readJsonIfExists(path.join(METRICS_DIR, "database.json"));
   const tradingSnapshot = readJsonIfExists(path.join(METRICS_DIR, "trading.json"));
+  const qualitySnapshot = readJsonIfExists(path.join(METRICS_DIR, "quality.json"));
 
   console.log("\nDomínios (freshness / SLA / throughput / API health):\n");
   dashboard.formatDomainsTable(collectorsSnapshot).forEach((l) => console.log(l));
@@ -82,6 +83,15 @@ async function main() {
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
+
+  console.log("\nMarket Quality (Coverage / Gaps / Sanity / Data Confidence Score):\n");
+  dashboard.formatQualityTable(qualitySnapshot).forEach((l) => console.log(l));
+
+  console.log("\nCross-Source Validation:\n");
+  dashboard.formatCrossSourceSection(qualitySnapshot).forEach((l) => console.log(l));
+
+  console.log("\nSource Reliability:\n");
+  dashboard.formatSourceReliabilitySection(qualitySnapshot).forEach((l) => console.log(l));
 }
 
 const watchArg = process.argv.find((a) => a.startsWith("--watch"));
