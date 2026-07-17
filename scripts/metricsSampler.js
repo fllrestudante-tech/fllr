@@ -20,6 +20,7 @@ const { deriveOperationalState } = require("../lib/operationalState");
 const { sampleDatabaseHealth } = require("../lib/databaseHealth");
 const { computeTradingHealth } = require("../lib/tradingHealth");
 const { sampleProcessResources } = require("../lib/processResourceUsage");
+const { createAlertManager } = require("../lib/alertManager");
 
 const SLOW_SAMPLE_INTERVAL_MS = 15 * 60 * 1000; // database.json: integrity_check é O(n), não roda no ritmo rápido dos outros domínios
 
@@ -54,6 +55,7 @@ const CHILD_HEALTH_CHECKS = {
 
 const db = openDb();
 const eventBus = createEventBus({ persist: (event) => insertEvent(db, event) });
+const alertManager = createAlertManager({ db });
 
 function readHeartbeat(filePath) {
   if (!fs.existsSync(filePath)) return null;
@@ -178,10 +180,30 @@ function runProcessesSample() {
   eventBus.emit("runtime_metrics.processes.updated", { sampledAt });
 }
 
+/**
+ * Freshness "late" vira WARNING (ex: "Funding atrasado"), "stale" vira ERROR
+ * (coletor parou de coletar de verdade -- score 0, bem além da tolerância).
+ * "fresh"/"never_succeeded" (esse último já é not_implemented/normal antes
+ * do primeiro sucesso) não geram alerta.
+ */
+function alertOnFreshness(collectors) {
+  for (const c of Object.values(collectors)) {
+    for (const [domain, d] of Object.entries(c.domains)) {
+      if (!d.freshness) continue;
+      if (d.freshness.state === "late") {
+        alertManager.fire(domain, "WARNING", `${domain} atrasado (freshness ${d.freshness.score}%)`).catch((err) => console.error("⚠️  Falha ao disparar alerta:", err.message));
+      } else if (d.freshness.state === "stale") {
+        alertManager.fire(domain, "ERROR", `${domain} parou de coletar (freshness 0%, idade ${Math.round(d.freshness.ageMs / 60000)}min)`).catch((err) => console.error("⚠️  Falha ao disparar alerta:", err.message));
+      }
+    }
+  }
+}
+
 function runCollectorsSample() {
   const { collectors, apiHealthByDomain } = sampleCollectors();
   const providerHealth = aggregateProviderHealth(apiHealthByDomain);
   const sampledAt = new Date().toISOString();
+  alertOnFreshness(collectors);
 
   writeJsonSnapshot(path.join(METRICS_DIR, "collectors.json"), { collectors, sampledAt });
   writeJsonSnapshot(path.join(METRICS_DIR, "sla.json"), { registry: config.sla, apiHealthByProvider: providerHealth, sampledAt });
@@ -208,6 +230,13 @@ function runCollectorsSample() {
 function runDatabaseSample() {
   const dbHealth = sampleDatabaseHealth(undefined, { runIntegrityCheck: true });
   const { collectors } = sampleCollectors();
+
+  if (dbHealth.integrity && !dbHealth.integrity.ok) {
+    alertManager.fire("market_db", "CRITICAL", `market.db corrompido: ${dbHealth.integrity.detail}`).catch((err) => console.error("⚠️  Falha ao disparar alerta:", err.message));
+  }
+  if (dbHealth.vacuumNeeded) {
+    alertManager.fire("market_db_vacuum", "WARNING", `market.db precisa de VACUUM (fragmentação ${(dbHealth.fragmentationRatio * 100).toFixed(1)}%)`).catch((err) => console.error("⚠️  Falha ao disparar alerta:", err.message));
+  }
 
   let insertedPerMinTotal = 0;
   for (const c of Object.values(collectors)) {
@@ -269,6 +298,8 @@ function run() {
     samplerMetrics.recordFailure("processes_sample", err, { latencyMs: Date.now() - processesStartedAt });
     console.error("⚠️  metricsSampler: falha ao amostrar processes:", err.message);
   }
+
+  alertManager.flush().catch((err) => console.error("⚠️  Falha ao consolidar alertas:", err.message));
 }
 
 function runSlow() {
@@ -304,5 +335,6 @@ process.on("SIGINT", () => {
   clearInterval(sampleTimer);
   clearInterval(slowSampleTimer);
   heartbeat.stop();
+  db.close();
   process.exit(0);
 });

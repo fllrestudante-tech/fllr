@@ -8,6 +8,10 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { createSupervisorState, recordSpawn, recordExit, markStopped, touchTick } = require("../lib/supervisor");
+const { createRotatingWriter } = require("../lib/logRotation");
+const { openDb, insertEvent } = require("../lib/infra/db");
+const { createEventBus } = require("../lib/infra/eventBus");
+const { createAlertManager } = require("../lib/alertManager");
 
 const RUNTIME_DIR = path.join(__dirname, "..", "runtime");
 const LOCK_FILE = path.join(RUNTIME_DIR, "locks", "supervisor.lock");
@@ -66,6 +70,18 @@ const restartTimers = {};
 let shuttingDown = false;
 let tickTimer = null;
 
+// Um writer por nome de filho, reaproveitado entre reinícios do mesmo
+// processo -- não recria o arquivo a cada restart, só continua escrevendo
+// (cada restart já fica registrado como uma linha "encerrou/reiniciando").
+const logWriters = Object.fromEntries(CHILDREN.map((c) => [c.name, createRotatingWriter(c.name)]));
+
+// Conexão própria (mesmo padrão de todo processo já supervisionado) só pra
+// alertas: grava em events_log (via eventBus) e em alerts_history (via
+// alertManager) -- não lê/escreve nada do Market Database em si.
+const db = openDb();
+const eventBus = createEventBus({ persist: (event) => insertEvent(db, event) });
+const alertManager = createAlertManager({ db });
+
 function persistState() {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 }
@@ -73,8 +89,21 @@ function persistState() {
 function startChild(spec) {
   if (shuttingDown) return;
   console.log(`🐕 Supervisor iniciando ${spec.name} (tentativa ${state[spec.name].totalRestarts + 1})...`);
-  // stdio:"inherit" mantido por enquanto -- redirecionar pra logs rotacionados é Fase B (Observability).
-  const child = spawn(process.execPath, [spec.script], { stdio: "inherit" });
+  // stdout/stderr vão pro terminal (tee, visibilidade imediata) E pro log
+  // rotacionado do dia (persistência real -- antes, com stdio:"inherit",
+  // fechar o terminal perdia tudo). Um arquivo por componente por dia, sem
+  // separar stdout/stderr -- é a informação mais simples que resolve o
+  // problema de verdade.
+  const child = spawn(process.execPath, [spec.script], { stdio: ["ignore", "pipe", "pipe"] });
+  const logWriter = logWriters[spec.name];
+  child.stdout.on("data", (chunk) => {
+    process.stdout.write(chunk);
+    logWriter.write(chunk);
+  });
+  child.stderr.on("data", (chunk) => {
+    process.stderr.write(chunk);
+    logWriter.write(chunk);
+  });
 
   recordSpawn(state, spec.name, child.pid, Date.now());
   fs.writeFileSync(pidFile(spec.name), String(child.pid));
@@ -94,6 +123,14 @@ function startChild(spec) {
     console.warn(
       `🐕 ${spec.name} encerrou (code=${code} signal=${signal}, falhas seguidas=${consecutiveRestarts}). Reiniciando em ${Math.round(delayMs / 1000)}s...`
     );
+    // 5+ falhas seguidas sem conseguir ficar de pé (uptime < 60s cada vez) é
+    // sinal de algo mais sério que uma queda isolada -- CRITICAL em vez de
+    // ERROR. O alertManager já deduplica sozinho se isso continuar batendo.
+    const severity = consecutiveRestarts >= 5 ? "CRITICAL" : "ERROR";
+    alertManager.fire(spec.name, severity, `${spec.name} caiu (code=${code} signal=${signal})`).catch((err) => {
+      console.error("🐕 Falha ao disparar alerta:", err.message);
+    });
+    eventBus.emit("supervisor.child_crashed", { name: spec.name, code, signal, consecutiveRestarts });
     restartTimers[spec.name] = setTimeout(() => startChild(spec), delayMs);
   });
 
@@ -127,7 +164,11 @@ function shutdown(signal) {
   }
 
   releaseLock();
-  setTimeout(() => process.exit(0), 500); // dá um instante pros children saírem antes de soltar o terminal
+  setTimeout(() => {
+    for (const writer of Object.values(logWriters)) writer.close();
+    db.close();
+    process.exit(0);
+  }, 500); // dá um instante pros children saírem antes de soltar o terminal
 }
 
 ensureDirs();
@@ -137,6 +178,7 @@ for (const spec of CHILDREN) startChild(spec);
 tickTimer = setInterval(() => {
   touchTick(state, Date.now());
   persistState();
+  alertManager.flush().catch((err) => console.error("🐕 Falha ao consolidar alertas:", err.message));
 }, TICK_INTERVAL_MS);
 
 process.on("SIGINT", () => shutdown("SIGINT"));
