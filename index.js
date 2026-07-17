@@ -20,6 +20,7 @@ healthRegistry.registerCheck("bybit_collector", healthChecks.checkCollector);
 healthRegistry.registerCheck("fear_greed_collector", healthChecks.checkFearGreed);
 healthRegistry.registerCheck("btc_dominance_collector", healthChecks.checkBtcDominance);
 healthRegistry.registerCheck("knowledge_collector", healthChecks.checkKnowledgeCollector);
+healthRegistry.registerCheck("metrics_sampler", healthChecks.checkMetricsSampler);
 healthRegistry.registerCheck("supervisor", healthChecks.checkSupervisor);
 healthRegistry.registerCheck("backtest", healthChecks.checkBacktest);
 healthRegistry.registerCheck("telegram_radar", healthChecks.checkTelegramRadar);
@@ -49,7 +50,9 @@ async function handleExternalClose(equity) {
     if (!last) return;
     const pnlUsd = parseFloat(last.closedPnl);
     const pnlPct = equity > 0 ? pnlUsd / equity : 0;
+    const holdMs = botState.openedAt ? Date.now() - botState.openedAt : null; // openedAt some se o bot reiniciou entre a abertura e o fechamento -- honesto reportar null, não fabricar
     risk.registerTradeResult(botState, pnlPct);
+    botState.openedAt = null;
     state.save(botState);
     logger.log({
       event: "position_closed_externally",
@@ -58,6 +61,7 @@ async function handleExternalClose(equity) {
       avgEntryPrice: last.avgEntryPrice,
       avgExitPrice: last.avgExitPrice,
       side: last.side,
+      holdMs,
     });
     console.log(`ℹ️  Posição fechada por SL/TP. PnL: $${pnlUsd.toFixed(2)} (${(pnlPct * 100).toFixed(2)}%)`);
   } catch (err) {
@@ -103,6 +107,7 @@ async function openPosition(side, analysis, equity) {
   botState.qty = plan.qty;
   botState.lastSignal = side;
   botState.lastTradeTime = Date.now();
+  botState.openedAt = Date.now(); // só pra computar hold time no fechamento (Trading Health) -- não influencia nenhuma decisão
   state.save(botState);
 
   logger.log({
@@ -120,6 +125,7 @@ async function openPosition(side, analysis, equity) {
 async function closePosition(reasonSide, equity) {
   const bybitSide = reasonSide === "buy" ? "Sell" : "Buy"; // ordem oposta à posição atual, reduceOnly
   console.log(`🔁 Sinal reverteu — fechando posição ${botState.side} manualmente.`);
+  const holdMs = botState.openedAt ? Date.now() - botState.openedAt : null; // capturado antes do reset abaixo limpar openedAt
 
   const res = await bybit.placeOrder({
     side: bybitSide,
@@ -134,6 +140,7 @@ async function closePosition(reasonSide, equity) {
   botState.qty = null;
   botState.entryPrice = null;
   botState.lastTradeTime = Date.now();
+  botState.openedAt = null;
   state.save(botState);
 
   // Fechamento por reversão de sinal também precisa alimentar o circuit breaker
@@ -147,6 +154,20 @@ async function closePosition(reasonSide, equity) {
       const pnlPct = equity > 0 ? pnlUsd / equity : 0;
       risk.registerTradeResult(botState, pnlPct);
       state.save(botState);
+      // Antes só dava console.log -- o pnl era calculado mas nunca gravado no
+      // log, então fechamentos manuais/por reversão ficavam invisíveis pra
+      // qualquer agregação de Trading Health (só position_closed_externally
+      // tinha pnl no trades.jsonl). Puramente completude de dado, não muda
+      // o que dispara o fechamento nem o tamanho da posição.
+      logger.log({
+        event: "order_closed_manually_pnl",
+        pnlUsd,
+        pnlPct,
+        avgEntryPrice: last.avgEntryPrice,
+        avgExitPrice: last.avgExitPrice,
+        side: last.side,
+        holdMs,
+      });
       console.log(`ℹ️  PnL da posição fechada: $${pnlUsd.toFixed(2)} (${(pnlPct * 100).toFixed(2)}%)`);
     }
   } catch (err) {

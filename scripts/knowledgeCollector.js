@@ -2,8 +2,6 @@
 // no Market Database (data/market.db). Primeiro capítulo do "Knowledge
 // Collector": hoje só cobre eventos estruturados (market_events); notícias,
 // vídeos, tweets viram providers/tabelas próprias no futuro.
-const fs = require("fs");
-const path = require("path");
 const { openDb, insertEvent, DEFAULT_DB_PATH } = require("../lib/infra/db");
 const { createEventBus } = require("../lib/infra/eventBus");
 const { runCollector } = require("../lib/collectors/knowledge/eventsCollector");
@@ -14,9 +12,9 @@ const fredClient = require("../lib/fred");
 const fredProvider = require("../lib/collectors/knowledge/providers/fredProvider");
 const fomcCalendarProvider = require("../lib/collectors/knowledge/providers/fomcCalendarProvider");
 const { DEFAULT_KNOWLEDGE_HEALTH_FILE } = require("../lib/healthChecks");
+const { startHeartbeat } = require("../lib/heartbeatWriter");
 
 const HEALTH_FILE = DEFAULT_KNOWLEDGE_HEALTH_FILE;
-const HEARTBEAT_INTERVAL_MS = 60000;
 
 const db = openDb();
 const eventBus = createEventBus({ persist: (event) => insertEvent(db, event) });
@@ -31,19 +29,11 @@ const collector = runCollector(db, eventBus, [
   { provider: fomcCalendarProvider, client: null, intervalMs: 24 * 60 * 60 * 1000 }, // dado estático, checar 1x/dia basta
 ]);
 
-function writeHeartbeat() {
-  fs.mkdirSync(path.dirname(HEALTH_FILE), { recursive: true });
-  fs.writeFileSync(
-    HEALTH_FILE,
-    JSON.stringify({ lastHeartbeatAt: new Date().toISOString(), metrics: collector.getMetrics() }, null, 2)
-  );
-}
-
-setTimeout(writeHeartbeat, 5000);
-setInterval(writeHeartbeat, HEARTBEAT_INTERVAL_MS);
+const heartbeat = startHeartbeat(HEALTH_FILE, () => ({ metrics: collector.getMetrics() }));
 
 process.on("SIGINT", () => {
   console.log("📡 Knowledge Collector encerrado (SIGINT).");
+  heartbeat.stop();
   collector.stop();
   process.exit(0);
 });

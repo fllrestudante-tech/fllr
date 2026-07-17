@@ -21,6 +21,7 @@ const CHILDREN = [
   { name: "fear_greed_collector", script: path.join(__dirname, "fearGreedCollector.js") },
   { name: "btc_dominance_collector", script: path.join(__dirname, "btcDominanceCollector.js") },
   { name: "knowledge_collector", script: path.join(__dirname, "knowledgeCollector.js") },
+  { name: "metrics_sampler", script: path.join(__dirname, "metricsSampler.js") },
 ];
 
 function ensureDirs() {

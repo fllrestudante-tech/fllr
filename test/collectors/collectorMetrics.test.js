@@ -55,3 +55,51 @@ test("getMetrics retorna cópia -- mutar o resultado não afeta o estado interno
   snapshot.candles.totalRuns = 999;
   assert.equal(m.getMetrics().candles.totalRuns, 1);
 });
+
+test("janela deslizante: antes de windowMs passar, lastWindow continua null e a janela aberta acumula", () => {
+  let t = 0;
+  const m = createCollectorMetrics({ now: () => t, windowMs: 1000 });
+  m.recordSuccess("candles", { inserted: true });
+  t += 500;
+  m.recordSuccess("candles", { inserted: false });
+  const metrics = m.getMetrics();
+  assert.equal(metrics.candles.lastWindow, null);
+  assert.equal(metrics.candles.windowRuns, 2);
+  assert.equal(metrics.candles.windowInserted, 1);
+});
+
+test("janela deslizante: fecha sozinha na próxima chamada depois de windowMs, reseta a janela aberta", () => {
+  let t = 0;
+  const m = createCollectorMetrics({ now: () => t, windowMs: 1000 });
+  m.recordSuccess("candles", { inserted: true });
+  m.recordFailure("candles", new Error("x"));
+  t = 1500; // passou da janela de 1000ms
+  m.recordSuccess("candles", { inserted: true }); // essa chamada fecha a janela anterior antes de contar
+
+  const metrics = m.getMetrics();
+  assert.equal(metrics.candles.lastWindow.runs, 2);
+  assert.equal(metrics.candles.lastWindow.inserted, 1);
+  assert.equal(metrics.candles.lastWindow.errors, 1);
+  assert.equal(metrics.candles.lastWindow.durationMs, 1500);
+  // janela nova já reflete só a chamada que disparou o fechamento
+  assert.equal(metrics.candles.windowRuns, 1);
+  assert.equal(metrics.candles.windowInserted, 1);
+  assert.equal(metrics.candles.windowErrors, 0);
+});
+
+test("janela deslizante: domínios diferentes têm janelas independentes", () => {
+  let t = 0;
+  const m = createCollectorMetrics({ now: () => t, windowMs: 1000 });
+  m.recordSuccess("candles", { inserted: true });
+  t = 2000;
+  m.recordSuccess("funding", { inserted: true }); // dispara ensure() de funding com windowStartedAt=2000, não deveria fechar sozinho
+  assert.equal(m.getMetrics().funding.lastWindow, null);
+});
+
+test("clock injetado (now) default é Date.now -- comportamento em produção não muda", () => {
+  const m = createCollectorMetrics();
+  const before = Date.now();
+  m.recordSuccess("candles", { inserted: true });
+  const lastRunAt = new Date(m.getMetrics().candles.lastRunAt).getTime();
+  assert.ok(lastRunAt >= before);
+});

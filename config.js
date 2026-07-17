@@ -41,6 +41,28 @@ const config = {
     fredApiKey: process.env.FRED_API_KEY || "",
   },
 
+  // SLA Registry (Runtime Metrics Engine, Fase B) -- expectedIntervalMs é de
+  // quanto em quanto tempo esse domínio deveria produzir dado novo; provider
+  // agrupa domínios da mesma fonte externa pro API Health. Domínio não
+  // listado aqui cai em defaultExpectedIntervalMs automaticamente (cobre
+  // providers novos do Knowledge Collector sem precisar editar isto).
+  sla: {
+    defaultExpectedIntervalMs: 60 * 60 * 1000,
+    toleranceMultiplier: 2,
+    domains: {
+      candles: { expectedIntervalMs: 60 * 1000, provider: "bybit" },
+      funding: { expectedIntervalMs: 5 * 60 * 1000, provider: "bybit" },
+      open_interest: { expectedIntervalMs: 5 * 60 * 1000, provider: "bybit" },
+      ticker: { expectedIntervalMs: 60 * 1000, provider: "bybit" },
+      long_short_ratio: { expectedIntervalMs: 5 * 60 * 1000, provider: "bybit" },
+      fear_greed: { expectedIntervalMs: 24 * 60 * 60 * 1000, provider: "fear_greed" },
+      btc_dominance: { expectedIntervalMs: 60 * 60 * 1000, provider: "coingecko" },
+      coinmarketcal: { expectedIntervalMs: 60 * 60 * 1000, provider: "coinmarketcal" },
+      fred: { expectedIntervalMs: 24 * 60 * 60 * 1000, provider: "fred" },
+      fomc_calendar: { expectedIntervalMs: 24 * 60 * 60 * 1000, provider: "fomc_calendar" },
+    },
+  },
+
   // Limites dentro dos quais o auto-tuning (lib/backtest.js) pode variar parâmetros.
   // Isso impede que o ajuste automático "invente" uma estratégia totalmente diferente.
   tuningBounds: {

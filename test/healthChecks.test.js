@@ -12,6 +12,7 @@ const {
   checkFearGreed,
   checkBtcDominance,
   checkKnowledgeCollector,
+  checkMetricsSampler,
   checkSupervisor,
 } = require("../lib/healthChecks");
 const { openDb } = require("../lib/infra/db");
@@ -77,9 +78,9 @@ test("checkBacktest: arquivo corrompido reporta down", () => {
   assert.equal(result.status, "down");
 });
 
-test("checkTelegramRadar: arquivo de heartbeat inexistente reporta disabled (coletor manual, não supervisionado)", () => {
+test("checkTelegramRadar: arquivo de heartbeat inexistente reporta MANUAL (coletor manual, não supervisionado)", () => {
   const result = checkTelegramRadar(tmpFile("nao-existe.json"));
-  assert.equal(result.status, "disabled");
+  assert.equal(result.status, "MANUAL");
 });
 
 test("checkTelegramRadar: heartbeat recente reporta ok", () => {
@@ -91,13 +92,13 @@ test("checkTelegramRadar: heartbeat recente reporta ok", () => {
   assert.equal(result.status, "ok");
 });
 
-test("checkTelegramRadar: heartbeat velho (mais de 5min) reporta stopped, não down (coletor manual, staleness não é alarme)", () => {
+test("checkTelegramRadar: heartbeat velho (mais de 5min) reporta MANUAL, não down (coletor manual, staleness não é alarme)", () => {
   const file = tmpFile("health-velho.json");
   const now = Date.now();
   fs.writeFileSync(file, JSON.stringify({ lastHeartbeatAt: new Date(now - 10 * 60 * 1000).toISOString() }));
   const result = checkTelegramRadar(file, now);
   fs.unlinkSync(file);
-  assert.equal(result.status, "stopped");
+  assert.equal(result.status, "MANUAL");
 });
 
 test("checkTelegramRadar: arquivo corrompido reporta down (isso sim é anômalo, mesmo sendo manual)", () => {
@@ -228,6 +229,23 @@ test("checkKnowledgeCollector: heartbeat recente sem falhas reporta ok", () => {
     })
   );
   const result = checkKnowledgeCollector(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "ok");
+});
+
+test("checkMetricsSampler: arquivo inexistente reporta not_implemented", () => {
+  const result = checkMetricsSampler(tmpFile("metrics-sampler-nao-existe.json"));
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkMetricsSampler: heartbeat recente sem falhas reporta ok", () => {
+  const file = tmpFile("metrics-sampler-ok.json");
+  const now = Date.now();
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ lastHeartbeatAt: new Date(now - 1000).toISOString(), metrics: { collectors_sample: { consecutiveFailures: 0 } } })
+  );
+  const result = checkMetricsSampler(file, now);
   fs.unlinkSync(file);
   assert.equal(result.status, "ok");
 });
