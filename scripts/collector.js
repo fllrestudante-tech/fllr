@@ -8,6 +8,7 @@ const bybitClient = require("../lib/bybit");
 const { runCollector } = require("../lib/collectors/bybitCollector");
 const { DEFAULT_COLLECTOR_HEALTH_FILE } = require("../lib/healthChecks");
 const { startHeartbeat } = require("../lib/heartbeatWriter");
+const connectivityStatus = require("../lib/connectivityStatus");
 
 const HEALTH_FILE = DEFAULT_COLLECTOR_HEALTH_FILE;
 
@@ -21,7 +22,8 @@ eventBus.on("ticker.updated", () => {}); // alta frequência, sem log pra não p
 eventBus.on("long_short_ratio.updated", (e) => console.log(`⚖️  long/short atualizado: ${e.payload.symbol}`));
 
 console.log(`📡 Bybit Collector iniciando — símbolo ${config.symbol}, gravando em ${DEFAULT_DB_PATH}`);
-const collector = runCollector(db, eventBus, bybitClient, config);
+const shouldPause = () => !connectivityStatus.isOnline() || !connectivityStatus.isProviderHealthy("bybit");
+const collector = runCollector(db, eventBus, bybitClient, config, {}, shouldPause);
 
 // lib/healthChecks.js (checkCollector) lê esse arquivo -- o collector roda
 // como processo separado do loop principal e do npm run health, então essa

@@ -9,10 +9,12 @@ const backoff = require("./lib/backoff");
 const { createHealthRegistry } = require("./lib/health");
 const healthChecks = require("./lib/healthChecks");
 const alerts = require("./lib/alerts");
+const connectivityStatus = require("./lib/connectivityStatus");
 
 let botState;
 let instrumentInfo;
 let consecutiveFailures = 0;
+let networkPauseLogged = false;
 
 const healthRegistry = createHealthRegistry();
 healthRegistry.registerCheck("bybit", healthChecks.checkBybit);
@@ -22,6 +24,7 @@ healthRegistry.registerCheck("btc_dominance_collector", healthChecks.checkBtcDom
 healthRegistry.registerCheck("knowledge_collector", healthChecks.checkKnowledgeCollector);
 healthRegistry.registerCheck("metrics_sampler", healthChecks.checkMetricsSampler);
 healthRegistry.registerCheck("supervisor", healthChecks.checkSupervisor);
+healthRegistry.registerCheck("connectivity", healthChecks.checkConnectivity);
 healthRegistry.registerCheck("backtest", healthChecks.checkBacktest);
 healthRegistry.registerCheck("telegram_radar", healthChecks.checkTelegramRadar);
 healthRegistry.registerCheck("scanner", healthChecks.notImplemented);
@@ -177,6 +180,23 @@ async function closePosition(reasonSide, equity) {
 
 async function cycle() {
   try {
+    // Pausa controlada em vez de descobrir a queda via exceção a cada ciclo:
+    // sem isso, cada tick de 10s martelaria withRetry (até 4 tentativas,
+    // ~30s) contra uma Bybit já sabidamente fora do ar. Não é falha do
+    // ciclo -- devolve true pra não acionar o backoff de erro nem imprimir
+    // "ciclo falhou" por algo que é intencional.
+    if (!connectivityStatus.isOnline() || !connectivityStatus.isProviderHealthy("bybit")) {
+      if (!networkPauseLogged) {
+        console.log("⏸️  Rede/Bybit offline — pausando operação até a conexão voltar (sem novas compras/vendas).");
+        networkPauseLogged = true;
+      }
+      return true;
+    }
+    if (networkPauseLogged) {
+      console.log("▶️  Conectividade restabelecida — retomando operação.");
+      networkPauseLogged = false;
+    }
+
     botState = state.resetDailyLossIfNewDay(botState);
 
     const { state: reconciled, closedExternally } = await state.reconcile(botState);

@@ -14,6 +14,7 @@ const {
   checkKnowledgeCollector,
   checkMetricsSampler,
   checkSupervisor,
+  checkConnectivity,
 } = require("../lib/healthChecks");
 const { openDb } = require("../lib/infra/db");
 
@@ -287,4 +288,26 @@ test("checkSupervisor: state.json sem _meta.lastTickAt reporta degraded", () => 
   const result = checkSupervisor(file);
   fs.unlinkSync(file);
   assert.equal(result.status, "degraded");
+});
+
+test("checkConnectivity: sem snapshot ainda reporta not_implemented (não down)", () => {
+  const result = checkConnectivity(tmpFile("connectivity-nao-existe.json"));
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkConnectivity: online:true reporta ok", () => {
+  const file = tmpFile("connectivity-ok.json");
+  fs.writeFileSync(file, JSON.stringify({ online: true, providers: { bybit: true, coingecko: true, telegram: true, database: true } }));
+  const result = checkConnectivity(file);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "ok");
+});
+
+test("checkConnectivity: online:false reporta down com o motivo nos detalhes", () => {
+  const file = tmpFile("connectivity-down.json");
+  fs.writeFileSync(file, JSON.stringify({ online: false, reason: "bybit_down", since: 123, providers: { bybit: false } }));
+  const result = checkConnectivity(file);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "down");
+  assert.equal(result.details.reason, "bybit_down");
 });

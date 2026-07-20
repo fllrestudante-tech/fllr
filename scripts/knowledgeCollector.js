@@ -13,6 +13,7 @@ const fredProvider = require("../lib/collectors/knowledge/providers/fredProvider
 const fomcCalendarProvider = require("../lib/collectors/knowledge/providers/fomcCalendarProvider");
 const { DEFAULT_KNOWLEDGE_HEALTH_FILE } = require("../lib/healthChecks");
 const { startHeartbeat } = require("../lib/heartbeatWriter");
+const connectivityStatus = require("../lib/connectivityStatus");
 
 const HEALTH_FILE = DEFAULT_KNOWLEDGE_HEALTH_FILE;
 
@@ -23,11 +24,20 @@ eventBus.on("market_event.created", (e) => console.log(`🗓️  novo evento [${
 eventBus.on("market_event.updated", (e) => console.log(`🔄 evento atualizado [${e.payload.provider}/${e.payload.category}]`));
 
 console.log(`📡 Knowledge Collector (eventos) iniciando — gravando em ${DEFAULT_DB_PATH}`);
-const collector = runCollector(db, eventBus, [
-  { provider: coinMarketCalProvider, client: coinMarketCalClient },
-  { provider: fredProvider, client: fredClient },
-  { provider: fomcCalendarProvider, client: null, intervalMs: 24 * 60 * 60 * 1000 }, // dado estático, checar 1x/dia basta
-]);
+// CoinMarketCal/FRED/FOMC não têm sonda dedicada (fora do escopo desta fase)
+// -- pausa pelo sinal genérico de internet.
+const shouldPause = () => !connectivityStatus.isOnline();
+const collector = runCollector(
+  db,
+  eventBus,
+  [
+    { provider: coinMarketCalProvider, client: coinMarketCalClient },
+    { provider: fredProvider, client: fredClient },
+    { provider: fomcCalendarProvider, client: null, intervalMs: 24 * 60 * 60 * 1000 }, // dado estático, checar 1x/dia basta
+  ],
+  {},
+  shouldPause
+);
 
 const heartbeat = startHeartbeat(HEALTH_FILE, () => ({ metrics: collector.getMetrics() }));
 

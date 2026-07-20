@@ -6,6 +6,7 @@ const fearGreedClient = require("../lib/fearGreed");
 const { runCollector } = require("../lib/collectors/fearGreedCollector");
 const { DEFAULT_FEAR_GREED_HEALTH_FILE } = require("../lib/healthChecks");
 const { startHeartbeat } = require("../lib/heartbeatWriter");
+const connectivityStatus = require("../lib/connectivityStatus");
 
 const HEALTH_FILE = DEFAULT_FEAR_GREED_HEALTH_FILE;
 
@@ -15,7 +16,10 @@ const eventBus = createEventBus({ persist: (event) => insertEvent(db, event) });
 eventBus.on("fear_greed.updated", (e) => console.log(`😱 Fear & Greed atualizado: ${e.payload.value}`));
 
 console.log(`📡 Fear & Greed Collector iniciando — gravando em ${DEFAULT_DB_PATH}`);
-const collector = runCollector(db, eventBus, fearGreedClient);
+// Sem sonda dedicada pra alternative.me (fora do escopo desta fase) -- pausa
+// pelo sinal genérico de internet, que é o que já se sabe detectar aqui.
+const shouldPause = () => !connectivityStatus.isOnline();
+const collector = runCollector(db, eventBus, fearGreedClient, {}, shouldPause);
 
 // fonte única, resposta rápida -- 3s é suficiente (Bybit usa 5s por ter 5 domínios em paralelo)
 const heartbeat = startHeartbeat(HEALTH_FILE, () => ({ metrics: collector.getMetrics() }), { initialDelayMs: 3000 });

@@ -39,6 +39,17 @@ test("recordSuccess após recordFailure zera consecutiveFailures", () => {
   assert.equal(m.getMetrics().ticker.consecutiveFailures, 0);
 });
 
+test("recordPaused: incrementa totalPaused, não conta como erro nem afeta consecutiveFailures", () => {
+  const m = createCollectorMetrics();
+  m.recordFailure("candles", new Error("boom"));
+  m.recordPaused("candles");
+  m.recordPaused("candles");
+  const metrics = m.getMetrics();
+  assert.equal(metrics.candles.totalPaused, 2);
+  assert.equal(metrics.candles.totalErrors, 1);
+  assert.equal(metrics.candles.consecutiveFailures, 1, "recordPaused não deve zerar nem incrementar consecutiveFailures");
+});
+
 test("domínios diferentes não se misturam", () => {
   const m = createCollectorMetrics();
   m.recordSuccess("candles", { inserted: true });

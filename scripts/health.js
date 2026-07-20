@@ -46,6 +46,7 @@ async function main() {
   registry.registerCheck("knowledge_collector", checks.checkKnowledgeCollector);
   registry.registerCheck("metrics_sampler", checks.checkMetricsSampler);
   registry.registerCheck("supervisor", checks.checkSupervisor);
+  registry.registerCheck("connectivity", checks.checkConnectivity);
   registry.registerCheck("backtest", checks.checkBacktest);
   registry.registerCheck("telegram_radar", checks.checkTelegramRadar);
   registry.registerCheck("scanner", checks.notImplemented);
