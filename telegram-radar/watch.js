@@ -14,6 +14,8 @@ const { createEventBus } = require("../lib/infra/eventBus");
 const { getRecentHashes, insertMention } = require("../lib/collectors/telegramStore");
 const { hashText, isDuplicate } = require("./lib/dedupe");
 const { classify } = require("./lib/classify");
+const { createAlertManager } = require("../lib/alertManager");
+const { logAlert } = require("../lib/logger");
 
 const apiId = Number(process.env.TELEGRAM_API_ID);
 const apiHash = process.env.TELEGRAM_API_HASH;
@@ -56,10 +58,84 @@ function extractSignals(text) {
   return { tickers, keywords };
 }
 
+// Processa 1 mensagem recebida -- isolado num try/catch pra que uma falha
+// (ex: banco travado) não derrube o processo inteiro (client.addEventHandler
+// roda callbacks async fora de qualquer try do chamador; uma rejeição não
+// tratada mataria o radar, que não é supervisionado). Erro vira log
+// estruturado (lib/logger.js::logAlert) + alerta ERROR via
+// lib/alertManager.js (mesmo caminho já confirmado funcionando pro Telegram),
+// mas a mensagem seguinte continua sendo processada normalmente. Extraído
+// como função própria (recebe dependências por parâmetro) pra ser testável
+// sem precisar de uma conexão real com o Telegram.
+async function handleIncomingMessage({ db, eventBus, alertManager, targets, targetIds }, message) {
+  const chatId = message.chatId?.toString();
+  if (!chatId || !targetIds.has(chatId)) return { handled: false };
+
+  const chat = targets.find((t) => t.id.toString() === chatId);
+  const channel = chat?.title || chatId;
+  // message.date é o timestamp real de quando a mensagem foi publicada no
+  // Telegram (segundos epoch) -- usar isso em vez de Date.now() (hora de
+  // recebimento) evita distorcer análise temporal caso o gramJS reentregue
+  // backlog após uma reconexão (recebimento tardio ≠ momento da publicação).
+  const messageTimeMs = message.date ? message.date * 1000 : Date.now();
+  const text = message.message || "";
+  const { tickers, keywords } = extractSignals(text);
+  if (tickers.length === 0 && keywords.length === 0) return { handled: false };
+
+  try {
+    const recentHashes = getRecentHashes(db, DEDUPE_WINDOW_MS, messageTimeMs);
+    if (isDuplicate(text, recentHashes, DEDUPE_WINDOW_MS, messageTimeMs)) {
+      console.log(`⏭️  [${channel}] mensagem duplicada (repost dentro de ${DEDUPE_WINDOW_MS / 60000}min), ignorada.`);
+      return { handled: false, duplicate: true };
+    }
+
+    const { sentiment, confidence, matchedKeywords } = classify(text);
+    const hash = hashText(text);
+    const truncatedText = text.slice(0, 500);
+    const tickerList = tickers.length > 0 ? tickers : [null];
+
+    for (const ticker of tickerList) {
+      insertMention(db, {
+        timeMs: messageTimeMs,
+        channel,
+        ticker,
+        text: truncatedText,
+        hash,
+        sentiment,
+        confidence,
+        keywords: matchedKeywords.length ? matchedKeywords : keywords,
+      });
+    }
+
+    eventBus.emit("telegram.message.received", { channel, tickers, sentiment, confidence });
+    console.log(`📥 [${channel}] tickers=${tickers.join(",")} sentiment=${sentiment}(${confidence.toFixed(2)}) keywords=${keywords.join(",")}`);
+    return { handled: true };
+  } catch (err) {
+    const context = {
+      event: "radar_insert_error",
+      channel,
+      messageId: message.id ?? null,
+      ticker: tickers[0] ?? null,
+      timestampMs: messageTimeMs,
+      error: err.message,
+      stack: err.stack,
+    };
+    logAlert(context);
+    console.error(`❌ [${channel}] erro ao processar mensagem (isolado -- radar continua vivo): ${err.message}`);
+    if (alertManager) {
+      await alertManager
+        .fire("telegram_radar_insert_error", "ERROR", `telegram-radar: falha ao processar mensagem de [${channel}] -- ${err.message}`)
+        .catch((alertErr) => console.error("❌ Falha ao enviar alerta de erro do radar:", alertErr.message));
+    }
+    return { handled: false, error: err.message };
+  }
+}
+
 async function main() {
   ensureDataDir();
   const db = openDb(); // market.db único (lib/infra/db.js) -- não abre mais um banco isolado do radar
   const eventBus = createEventBus({ persist: (event) => insertEvent(db, event) });
+  const alertManager = createAlertManager({ db });
   const client = new TelegramClient(new StringSession(sessionString), apiId, apiHash, { connectionRetries: 5 });
   await client.connect();
   console.log("✅ Conectado ao Telegram.");
@@ -94,49 +170,23 @@ async function main() {
   console.log(`📡 Escutando (${targets.length}/${targetChannelNames.length} pedidos): ${targets.map((t) => t.title).join(", ")}`);
   const targetIds = new Set(targets.map((t) => t.id.toString()));
 
-  client.addEventHandler(async (event) => {
-    const message = event.message;
-    const chatId = message.chatId?.toString();
-    if (!chatId || !targetIds.has(chatId)) return;
-
-    const text = message.message || "";
-    const { tickers, keywords } = extractSignals(text);
-    if (tickers.length === 0 && keywords.length === 0) return;
-
-    const chat = targets.find((t) => t.id.toString() === chatId);
-    const channel = chat?.title || chatId;
-    const now = Date.now();
-
-    const recentHashes = getRecentHashes(db, DEDUPE_WINDOW_MS, now);
-    if (isDuplicate(text, recentHashes, DEDUPE_WINDOW_MS, now)) {
-      console.log(`⏭️  [${channel}] mensagem duplicada (repost dentro de ${DEDUPE_WINDOW_MS / 60000}min), ignorada.`);
-      return;
-    }
-
-    const { sentiment, confidence, matchedKeywords } = classify(text);
-    const hash = hashText(text);
-    const truncatedText = text.slice(0, 500);
-    const tickerList = tickers.length > 0 ? tickers : [null];
-
-    for (const ticker of tickerList) {
-      insertMention(db, {
-        timeMs: now,
-        channel,
-        ticker,
-        text: truncatedText,
-        hash,
-        sentiment,
-        confidence,
-        keywords: matchedKeywords.length ? matchedKeywords : keywords,
-      });
-    }
-
-    eventBus.emit("telegram.message.received", { channel, tickers, sentiment, confidence });
-    console.log(`📥 [${channel}] tickers=${tickers.join(",")} sentiment=${sentiment}(${confidence.toFixed(2)}) keywords=${keywords.join(",")}`);
+  client.addEventHandler((event) => {
+    // handleIncomingMessage nunca rejeita (ver comentário na definição) --
+    // o .catch aqui é só uma rede de segurança extra caso algo escape disso.
+    handleIncomingMessage({ db, eventBus, alertManager, targets, targetIds }, event.message).catch((err) => {
+      console.error("❌ Erro inesperado não capturado no handler do radar:", err.message);
+    });
   }, new NewMessage({}));
 }
 
-main().catch((err) => {
-  console.error("❌ Erro no radar de Telegram:", err.message);
-  process.exit(1);
-});
+// Só roda main() quando o arquivo é executado diretamente (npm run
+// telegram:watch) -- permite requerer extractSignals/handleIncomingMessage
+// em testes sem conectar no Telegram de verdade.
+if (require.main === module) {
+  main().catch((err) => {
+    console.error("❌ Erro no radar de Telegram:", err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { extractSignals, handleIncomingMessage };
