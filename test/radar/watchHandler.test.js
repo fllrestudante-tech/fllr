@@ -4,7 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { openDb } = require("../../lib/infra/db");
-const { handleIncomingMessage } = require("../../telegram-radar/watch");
+const { shouldSkipMessage, extractLinks, detectMediaType, handleIncomingMessage } = require("../../telegram-radar/watch");
 
 function tmpDbPath() {
   return path.join(os.tmpdir(), `bot-cripto10-radar-handler-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
@@ -16,9 +16,131 @@ function makeTargets() {
   return { targets, targetIds };
 }
 
-function makeMessage({ id, text, dateSec, chatId = "111" }) {
-  return { id, message: text, date: dateSec, chatId: { toString: () => chatId } };
+function makeMessage({ id, text = null, dateSec, chatId = "111", action = null, media = null, sticker = null, gif = null, senderId = null, replyToMsgId = undefined }) {
+  return {
+    id,
+    message: text,
+    date: dateSec,
+    chatId: { toString: () => chatId },
+    action,
+    media,
+    sticker,
+    gif,
+    senderId,
+    replyToMsgId,
+  };
 }
+
+test("shouldSkipMessage: descarta mensagem de serviço (action presente)", () => {
+  assert.equal(shouldSkipMessage({ action: { className: "MessageActionChatJoinedByLink" } }), true);
+});
+
+test("shouldSkipMessage: descarta mensagem totalmente vazia (sem texto e sem mídia)", () => {
+  assert.equal(shouldSkipMessage({ message: "", media: null }), true);
+});
+
+test("shouldSkipMessage: descarta sticker sem legenda, mas mantém sticker com legenda", () => {
+  assert.equal(shouldSkipMessage({ message: "", media: {}, sticker: {} }), true);
+  assert.equal(shouldSkipMessage({ message: "olha esse gráfico", media: {}, sticker: {} }), false);
+});
+
+test("shouldSkipMessage: descarta GIF sem legenda", () => {
+  assert.equal(shouldSkipMessage({ message: "", media: {}, gif: {} }), true);
+});
+
+test("shouldSkipMessage: mantém foto sem legenda (não está na lista de exclusão explícita)", () => {
+  assert.equal(shouldSkipMessage({ message: "", media: {}, photo: {} }), false);
+});
+
+test("shouldSkipMessage: mantém mensagem de texto normal", () => {
+  assert.equal(shouldSkipMessage({ message: "UNIUSDT rompendo resistência", media: null }), false);
+});
+
+test("extractLinks: extrai URLs únicas do texto", () => {
+  const links = extractLinks("olha esse video https://youtu.be/abc e de novo https://youtu.be/abc, outro https://x.com/y");
+  assert.deepEqual(links, ["https://youtu.be/abc", "https://x.com/y"]);
+});
+
+test("extractLinks: texto sem link retorna array vazio", () => {
+  assert.deepEqual(extractLinks("BTC rompendo agora"), []);
+});
+
+test("detectMediaType: identifica sticker/gif/photo/document/nenhum", () => {
+  assert.equal(detectMediaType({ sticker: {}, media: {} }), "sticker");
+  assert.equal(detectMediaType({ gif: {}, media: {} }), "gif");
+  assert.equal(detectMediaType({ photo: {}, media: {} }), "photo");
+  assert.equal(detectMediaType({ document: {}, media: {} }), "document");
+  assert.equal(detectMediaType({ media: null }), null);
+});
+
+test("handleIncomingMessage: captura mensagem de texto puro (sem ticker/keyword) -- coletor não classifica mais na entrada", async () => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const { targets, targetIds } = makeTargets();
+  const eventBus = { emit: () => {} };
+
+  const result = await handleIncomingMessage(
+    { db, eventBus, alertManager: null, targets, targetIds },
+    makeMessage({ id: 1, text: "Bom dia pessoal, cenário de hoje é de cautela", dateSec: Math.floor(Date.now() / 1000) })
+  );
+
+  const row = db.prepare("SELECT * FROM telegram_messages").get();
+  db.close();
+  fs.unlinkSync(dbPath);
+
+  assert.equal(result.handled, true);
+  assert.equal(row.text, "Bom dia pessoal, cenário de hoje é de cautela");
+  assert.equal(row.ticker, null);
+  assert.equal(row.sentiment, "unclassified");
+  assert.equal(row.confidence, 0);
+});
+
+test("handleIncomingMessage: grava message_id, author, reply_to e links quando presentes", async () => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const { targets, targetIds } = makeTargets();
+  const eventBus = { emit: () => {} };
+
+  await handleIncomingMessage(
+    { db, eventBus, alertManager: null, targets, targetIds },
+    makeMessage({
+      id: 42,
+      text: "confira essa análise https://youtu.be/xyz",
+      dateSec: Math.floor(Date.now() / 1000),
+      senderId: { toString: () => "999" },
+      replyToMsgId: 41,
+    })
+  );
+
+  const row = db.prepare("SELECT * FROM telegram_messages").get();
+  db.close();
+  fs.unlinkSync(dbPath);
+
+  assert.equal(row.message_id, 42);
+  assert.equal(row.reply_to_message_id, 41);
+  assert.equal(row.author, "999");
+  assert.deepEqual(JSON.parse(row.links), ["https://youtu.be/xyz"]);
+});
+
+test("handleIncomingMessage: mensagem de serviço/sticker sem legenda é ignorada sem tocar o banco", async () => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const { targets, targetIds } = makeTargets();
+  const eventBus = { emit: () => {} };
+
+  const result = await handleIncomingMessage(
+    { db, eventBus, alertManager: null, targets, targetIds },
+    makeMessage({ id: 1, text: "", dateSec: Math.floor(Date.now() / 1000), media: {}, sticker: {} })
+  );
+
+  const rows = db.prepare("SELECT * FROM telegram_messages").all();
+  db.close();
+  fs.unlinkSync(dbPath);
+
+  assert.equal(result.handled, false);
+  assert.equal(result.skipped, true);
+  assert.equal(rows.length, 0);
+});
 
 test("handleIncomingMessage: grava usando message.date (timestamp real), não a hora de recebimento", async () => {
   const dbPath = tmpDbPath();
@@ -29,7 +151,7 @@ test("handleIncomingMessage: grava usando message.date (timestamp real), não a 
 
   const result = await handleIncomingMessage(
     { db, eventBus, alertManager: null, targets, targetIds },
-    makeMessage({ id: 1, text: "SOL breakout confirmado", dateSec: pastDateSec })
+    makeMessage({ id: 1, text: "SOL rompendo agora", dateSec: pastDateSec })
   );
 
   const row = db.prepare("SELECT * FROM telegram_messages").get();
@@ -38,7 +160,7 @@ test("handleIncomingMessage: grava usando message.date (timestamp real), não a 
 
   assert.equal(result.handled, true);
   assert.equal(row.time_ms, pastDateSec * 1000);
-  assert.notEqual(row.time_ms, Date.now()); // não usou a hora de recebimento
+  assert.notEqual(row.time_ms, Date.now());
 });
 
 test("handleIncomingMessage: dedupe entre mensagens com o mesmo texto normalizado dentro da janela", async () => {
@@ -145,23 +267,4 @@ test("handleIncomingMessage: falha ao enviar o alerta (ex: Telegram fora do ar) 
 
   assert.equal(result.handled, false);
   assert.ok(result.error);
-});
-
-test("handleIncomingMessage: mensagem sem ticker nem keyword é ignorada (handled=false) sem tocar o banco", async () => {
-  const dbPath = tmpDbPath();
-  const db = openDb(dbPath);
-  const { targets, targetIds } = makeTargets();
-  const eventBus = { emit: () => {} };
-
-  const result = await handleIncomingMessage(
-    { db, eventBus, alertManager: null, targets, targetIds },
-    makeMessage({ id: 1, text: "bom dia pessoal", dateSec: Math.floor(Date.now() / 1000) })
-  );
-
-  const rows = db.prepare("SELECT * FROM telegram_messages").all();
-  db.close();
-  fs.unlinkSync(dbPath);
-
-  assert.equal(result.handled, false);
-  assert.equal(rows.length, 0);
 });

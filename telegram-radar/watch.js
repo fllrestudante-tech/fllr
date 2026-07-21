@@ -1,8 +1,12 @@
-// Escuta canais do Telegram (contas que você já segue) e extrai menções de
-// tickers/palavras-chave pra uma base local (SQLite) — 100% determinístico,
-// sem chamada a nenhuma IA/LLM: só regex, dedup, classificação por
-// palavra-chave e score por frequência. Rodar depois de gerar a sessão com
-// login.js.
+// Escuta canais do Telegram (contas que você já segue) e captura
+// praticamente toda mensagem útil pra base local (SQLite) -- o Telegram
+// Collector é um COLETOR, não um classificador: grava texto/mídia/replies
+// bruto e deixa a decisão de relevância (é call? é ticker? é ruído?) pra uma
+// etapa futura separada de classificação (Narrative Engine/Signal
+// Extractor) que lê o texto depois. Só descarta o que é claramente
+// irrelevante na origem (serviço do Telegram, sticker/GIF sem legenda,
+// mensagem vazia) -- ver shouldSkipMessage(). Rodar depois de gerar a sessão
+// com login.js.
 require("dotenv").config({ path: __dirname + "/../.env" });
 const fs = require("fs");
 const path = require("path");
@@ -13,7 +17,6 @@ const { openDb, insertEvent } = require("../lib/infra/db");
 const { createEventBus } = require("../lib/infra/eventBus");
 const { getRecentHashes, insertMention } = require("../lib/collectors/telegramStore");
 const { hashText, isDuplicate } = require("./lib/dedupe");
-const { classify } = require("./lib/classify");
 const { createAlertManager } = require("../lib/alertManager");
 const { logAlert } = require("../lib/logger");
 
@@ -29,6 +32,7 @@ const DATA_DIR = path.join(__dirname, "data");
 const HEALTH_FILE = path.join(DATA_DIR, "health.json");
 const HEARTBEAT_INTERVAL_MS = 60000;
 const DEDUPE_WINDOW_MS = 10 * 60 * 1000; // mesmo "call" repostado em canais diferentes dentro de 10min conta uma vez só
+const URL_REGEX = /https?:\/\/\S+/g;
 
 // lib/healthChecks.js (checkTelegramRadar) lê esse arquivo pra saber se o
 // radar está vivo — watch.js roda como processo separado do loop principal,
@@ -46,16 +50,41 @@ function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Cashtags/hashtags tipo $BTC, #SOL, $1000PEPE — e algumas palavras-chave de calls.
-const TICKER_REGEX = /[$#]([A-Z][A-Z0-9]{1,9})\b/g;
-const KEYWORDS = ["breakout", "listing", "airdrop", "buy zone", "pump", "moon", "gem", "presale"];
+// Filtro mínimo na origem -- só descarta o que não carrega conteúdo nenhum
+// pra capturar: mensagens de serviço (entrou/saiu, mudou foto/título, pin --
+// identificadas por message.action), mensagem totalmente vazia (sem texto e
+// sem mídia), e sticker/GIF isolado sem legenda. Reações não passam por
+// aqui -- chegam via um tipo de update diferente (UpdateMessageReactions),
+// não via NewMessage, então já ficam fora naturalmente. Tudo o mais
+// (inclusive mídia com legenda, ou mídia sem legenda que não seja
+// sticker/gif, ex: um print de gráfico) é capturado.
+function shouldSkipMessage(message) {
+  if (message.action) return true;
+  const hasText = Boolean(message.message && message.message.trim().length > 0);
+  const hasMedia = Boolean(message.media);
+  if (!hasText && !hasMedia) return true;
+  if (!hasText && (message.sticker || message.gif)) return true;
+  return false;
+}
 
-function extractSignals(text) {
-  if (!text) return { tickers: [], keywords: [] };
-  const tickers = [...new Set([...text.matchAll(TICKER_REGEX)].map((m) => m[1]))];
-  const lower = text.toLowerCase();
-  const keywords = KEYWORDS.filter((k) => lower.includes(k));
-  return { tickers, keywords };
+function extractLinks(text) {
+  if (!text) return [];
+  const matches = text.match(URL_REGEX) || [];
+  // \S+ pega pontuação de frase colada no fim da URL (ex: "...abc," ou
+  // "...abc)."); remove esses caracteres do final antes de deduplicar.
+  const cleaned = matches.map((url) => url.replace(/[.,!?;:'")\]]+$/, ""));
+  return [...new Set(cleaned)];
+}
+
+function detectMediaType(message) {
+  if (message.sticker) return "sticker";
+  if (message.gif) return "gif";
+  if (message.videoNote) return "video_note";
+  if (message.video) return "video";
+  if (message.photo) return "photo";
+  if (message.document) return "document";
+  if (message.contact) return "contact";
+  return message.media ? "other" : null;
 }
 
 // Processa 1 mensagem recebida -- isolado num try/catch pra que uma falha
@@ -70,6 +99,7 @@ function extractSignals(text) {
 async function handleIncomingMessage({ db, eventBus, alertManager, targets, targetIds, logAlert: logAlertFn = logAlert }, message) {
   const chatId = message.chatId?.toString();
   if (!chatId || !targetIds.has(chatId)) return { handled: false };
+  if (shouldSkipMessage(message)) return { handled: false, skipped: true };
 
   const chat = targets.find((t) => t.id.toString() === chatId);
   const channel = chat?.title || chatId;
@@ -79,8 +109,6 @@ async function handleIncomingMessage({ db, eventBus, alertManager, targets, targ
   // backlog após uma reconexão (recebimento tardio ≠ momento da publicação).
   const messageTimeMs = message.date ? message.date * 1000 : Date.now();
   const text = message.message || "";
-  const { tickers, keywords } = extractSignals(text);
-  if (tickers.length === 0 && keywords.length === 0) return { handled: false };
 
   try {
     const recentHashes = getRecentHashes(db, DEDUPE_WINDOW_MS, messageTimeMs);
@@ -89,33 +117,34 @@ async function handleIncomingMessage({ db, eventBus, alertManager, targets, targ
       return { handled: false, duplicate: true };
     }
 
-    const { sentiment, confidence, matchedKeywords } = classify(text);
     const hash = hashText(text);
-    const truncatedText = text.slice(0, 500);
-    const tickerList = tickers.length > 0 ? tickers : [null];
+    const links = extractLinks(text);
+    const mediaType = detectMediaType(message);
+    const author = message.senderId ? message.senderId.toString() : null;
+    const replyToMessageId = message.replyToMsgId ?? null;
 
-    for (const ticker of tickerList) {
-      insertMention(db, {
-        timeMs: messageTimeMs,
-        channel,
-        ticker,
-        text: truncatedText,
-        hash,
-        sentiment,
-        confidence,
-        keywords: matchedKeywords.length ? matchedKeywords : keywords,
-      });
-    }
+    insertMention(db, {
+      timeMs: messageTimeMs,
+      channel,
+      messageId: message.id ?? null,
+      replyToMessageId,
+      author,
+      text,
+      hash,
+      mediaType,
+      links,
+      // ticker/sentiment/confidence/keywords ficam nos defaults
+      // ("não classificado ainda") -- ver lib/collectors/telegramStore.js.
+    });
 
-    eventBus.emit("telegram.message.received", { channel, tickers, sentiment, confidence });
-    console.log(`📥 [${channel}] tickers=${tickers.join(",")} sentiment=${sentiment}(${confidence.toFixed(2)}) keywords=${keywords.join(",")}`);
+    eventBus.emit("telegram.message.received", { channel, mediaType, hasLinks: links.length > 0 });
+    console.log(`📥 [${channel}] msg#${message.id ?? "?"} media=${mediaType ?? "-"} len=${text.length}${links.length ? ` links=${links.length}` : ""}`);
     return { handled: true };
   } catch (err) {
     const context = {
       event: "radar_insert_error",
       channel,
       messageId: message.id ?? null,
-      ticker: tickers[0] ?? null,
       timestampMs: messageTimeMs,
       error: err.message,
       stack: err.stack,
@@ -180,8 +209,8 @@ async function main() {
 }
 
 // Só roda main() quando o arquivo é executado diretamente (npm run
-// telegram:watch) -- permite requerer extractSignals/handleIncomingMessage
-// em testes sem conectar no Telegram de verdade.
+// telegram:watch) -- permite requerer handleIncomingMessage em testes sem
+// conectar no Telegram de verdade.
 if (require.main === module) {
   main().catch((err) => {
     console.error("❌ Erro no radar de Telegram:", err.message);
@@ -189,4 +218,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { extractSignals, handleIncomingMessage };
+module.exports = { shouldSkipMessage, extractLinks, detectMediaType, handleIncomingMessage };

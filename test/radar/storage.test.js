@@ -95,3 +95,34 @@ test("getRecentHashes: só retorna hashes dentro da janela pedida", () => {
   assert.equal(recent.length, 1);
   assert.equal(recent[0].hash, hashText("recente"));
 });
+
+test("insertMention: captura bruta -- ticker/sentiment/confidence/keywords usam defaults 'não classificado' quando omitidos", () => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+
+  insertMention(db, {
+    timeMs: Date.now(),
+    channel: "Canal Teste",
+    text: "Bom dia pessoal",
+    hash: hashText("Bom dia pessoal"),
+    messageId: 123,
+    replyToMessageId: 122,
+    author: "555",
+    mediaType: "photo",
+    links: ["https://exemplo.com/x"],
+  });
+
+  const row = db.prepare("SELECT * FROM telegram_messages").get();
+  db.close();
+  fs.unlinkSync(dbPath);
+
+  assert.equal(row.ticker, null);
+  assert.equal(row.sentiment, "unclassified");
+  assert.equal(row.confidence, 0);
+  assert.deepEqual(JSON.parse(row.keywords), []);
+  assert.equal(row.message_id, 123);
+  assert.equal(row.reply_to_message_id, 122);
+  assert.equal(row.author, "555");
+  assert.equal(row.media_type, "photo");
+  assert.deepEqual(JSON.parse(row.links), ["https://exemplo.com/x"]);
+});

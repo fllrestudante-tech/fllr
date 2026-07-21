@@ -14,7 +14,9 @@ const db = openDb();
 const rows = db.prepare("SELECT ticker, time_ms as time, channel FROM telegram_messages WHERE ticker IS NOT NULL").all();
 
 if (rows.length === 0) {
-  console.log("Nenhuma menção com ticker coletada ainda.");
+  console.log(
+    "Nenhuma menção com ticker classificada ainda -- watch.js agora só captura texto bruto; a extração de ticker vira responsabilidade de um classificador futuro (Narrative Engine/Signal Extractor)."
+  );
   process.exit(0);
 }
 
