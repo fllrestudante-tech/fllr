@@ -1,6 +1,9 @@
-// Consulta o SQLite (telegram-radar/data/radar.db) e ranqueia tickers por
-// score de frequência com decaimento — substitui reprocessar o mentions.jsonl
-// inteiro a cada chamada. Rodar sob demanda (node telegram-radar/summarize.js).
+// Consulta o SQLite e ranqueia tickers por score de frequência com
+// decaimento. Lê de telegram_signals (join com telegram_messages_raw pro
+// canal/timestamp) -- essa tabela só existe vazia até um classificador
+// futuro (Narrative Engine/Signal Extractor) processar telegram_messages_raw
+// e gravar linhas nela (migração 0009). Rodar sob demanda
+// (node telegram-radar/summarize.js).
 const fs = require("fs");
 const { openDb, DEFAULT_DB_PATH } = require("../lib/infra/db");
 const { scoreByTicker } = require("./lib/score");
@@ -11,11 +14,18 @@ if (!fs.existsSync(DEFAULT_DB_PATH)) {
 }
 
 const db = openDb();
-const rows = db.prepare("SELECT ticker, time_ms as time, channel FROM telegram_messages WHERE ticker IS NOT NULL").all();
+const rows = db
+  .prepare(
+    `SELECT s.ticker as ticker, r.time_ms as time, r.channel as channel
+     FROM telegram_signals s
+     JOIN telegram_messages_raw r ON r.id = s.raw_message_id
+     WHERE s.ticker IS NOT NULL`
+  )
+  .all();
 
 if (rows.length === 0) {
   console.log(
-    "Nenhuma menção com ticker classificada ainda -- watch.js agora só captura texto bruto; a extração de ticker vira responsabilidade de um classificador futuro (Narrative Engine/Signal Extractor)."
+    "Nenhum ticker classificado ainda -- watch.js só captura texto bruto (telegram_messages_raw); a extração de ticker é responsabilidade de um classificador futuro (Narrative Engine/Signal Extractor) que ainda não existe."
   );
   process.exit(0);
 }

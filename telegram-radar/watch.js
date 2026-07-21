@@ -1,12 +1,15 @@
 // Escuta canais do Telegram (contas que você já segue) e captura
-// praticamente toda mensagem útil pra base local (SQLite) -- o Telegram
-// Collector é um COLETOR, não um classificador: grava texto/mídia/replies
-// bruto e deixa a decisão de relevância (é call? é ticker? é ruído?) pra uma
-// etapa futura separada de classificação (Narrative Engine/Signal
-// Extractor) que lê o texto depois. Só descarta o que é claramente
-// irrelevante na origem (serviço do Telegram, sticker/GIF sem legenda,
-// mensagem vazia) -- ver shouldSkipMessage(). Rodar depois de gerar a sessão
-// com login.js.
+// praticamente toda mensagem útil pra base local (SQLite, tabela
+// telegram_messages_raw) -- o Telegram Collector é um COLETOR, não um
+// classificador: grava texto/mídia/replies bruto e nunca toma decisão
+// irreversível na ingestão. A decisão de relevância (é call? é ticker? é
+// ruído?) vira responsabilidade de uma camada separada (telegram_signals,
+// migração 0009), escrita depois por um classificador futuro (Narrative
+// Engine/Signal Extractor) que lê o histórico bruto completo -- permitindo
+// reprocessar do zero sempre que o algoritmo evoluir, sem perder nem
+// recapturar nada. Só descarta o que é claramente irrelevante na origem
+// (serviço do Telegram, sticker/GIF sem legenda, mensagem vazia) -- ver
+// shouldSkipMessage(). Rodar depois de gerar a sessão com login.js.
 require("dotenv").config({ path: __dirname + "/../.env" });
 const fs = require("fs");
 const path = require("path");
@@ -15,7 +18,7 @@ const { StringSession } = require("telegram/sessions");
 const { NewMessage } = require("telegram/events");
 const { openDb, insertEvent } = require("../lib/infra/db");
 const { createEventBus } = require("../lib/infra/eventBus");
-const { getRecentHashes, insertMention } = require("../lib/collectors/telegramStore");
+const { getRecentHashes, insertRawMessage } = require("../lib/collectors/telegramStore");
 const { hashText, isDuplicate } = require("./lib/dedupe");
 const { createAlertManager } = require("../lib/alertManager");
 const { logAlert } = require("../lib/logger");
@@ -123,7 +126,7 @@ async function handleIncomingMessage({ db, eventBus, alertManager, targets, targ
     const author = message.senderId ? message.senderId.toString() : null;
     const replyToMessageId = message.replyToMsgId ?? null;
 
-    insertMention(db, {
+    insertRawMessage(db, {
       timeMs: messageTimeMs,
       channel,
       messageId: message.id ?? null,
@@ -133,8 +136,6 @@ async function handleIncomingMessage({ db, eventBus, alertManager, targets, targ
       hash,
       mediaType,
       links,
-      // ticker/sentiment/confidence/keywords ficam nos defaults
-      // ("não classificado ainda") -- ver lib/collectors/telegramStore.js.
     });
 
     eventBus.emit("telegram.message.received", { channel, mediaType, hasLinks: links.length > 0 });

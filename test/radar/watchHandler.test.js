@@ -73,7 +73,7 @@ test("detectMediaType: identifica sticker/gif/photo/document/nenhum", () => {
   assert.equal(detectMediaType({ media: null }), null);
 });
 
-test("handleIncomingMessage: captura mensagem de texto puro (sem ticker/keyword) -- coletor não classifica mais na entrada", async () => {
+test("handleIncomingMessage: captura mensagem de texto puro sem exigir ticker/keyword -- coletor não classifica na entrada", async () => {
   const dbPath = tmpDbPath();
   const db = openDb(dbPath);
   const { targets, targetIds } = makeTargets();
@@ -84,15 +84,16 @@ test("handleIncomingMessage: captura mensagem de texto puro (sem ticker/keyword)
     makeMessage({ id: 1, text: "Bom dia pessoal, cenário de hoje é de cautela", dateSec: Math.floor(Date.now() / 1000) })
   );
 
-  const row = db.prepare("SELECT * FROM telegram_messages").get();
+  const row = db.prepare("SELECT * FROM telegram_messages_raw").get();
   db.close();
   fs.unlinkSync(dbPath);
 
   assert.equal(result.handled, true);
   assert.equal(row.text, "Bom dia pessoal, cenário de hoje é de cautela");
-  assert.equal(row.ticker, null);
-  assert.equal(row.sentiment, "unclassified");
-  assert.equal(row.confidence, 0);
+  // telegram_messages_raw não tem coluna de classificação -- isso vive em
+  // telegram_signals, escrita depois por um classificador futuro.
+  assert.equal("ticker" in row, false);
+  assert.equal("sentiment" in row, false);
 });
 
 test("handleIncomingMessage: grava message_id, author, reply_to e links quando presentes", async () => {
@@ -112,7 +113,7 @@ test("handleIncomingMessage: grava message_id, author, reply_to e links quando p
     })
   );
 
-  const row = db.prepare("SELECT * FROM telegram_messages").get();
+  const row = db.prepare("SELECT * FROM telegram_messages_raw").get();
   db.close();
   fs.unlinkSync(dbPath);
 
@@ -133,7 +134,7 @@ test("handleIncomingMessage: mensagem de serviço/sticker sem legenda é ignorad
     makeMessage({ id: 1, text: "", dateSec: Math.floor(Date.now() / 1000), media: {}, sticker: {} })
   );
 
-  const rows = db.prepare("SELECT * FROM telegram_messages").all();
+  const rows = db.prepare("SELECT * FROM telegram_messages_raw").all();
   db.close();
   fs.unlinkSync(dbPath);
 
@@ -154,7 +155,7 @@ test("handleIncomingMessage: grava usando message.date (timestamp real), não a 
     makeMessage({ id: 1, text: "SOL rompendo agora", dateSec: pastDateSec })
   );
 
-  const row = db.prepare("SELECT * FROM telegram_messages").get();
+  const row = db.prepare("SELECT * FROM telegram_messages_raw").get();
   db.close();
   fs.unlinkSync(dbPath);
 
@@ -179,7 +180,7 @@ test("handleIncomingMessage: dedupe entre mensagens com o mesmo texto normalizad
     makeMessage({ id: 2, text: "$BTC vai romper agora", dateSec: nowSec + 5 })
   );
 
-  const rows = db.prepare("SELECT * FROM telegram_messages").all();
+  const rows = db.prepare("SELECT * FROM telegram_messages_raw").all();
   db.close();
   fs.unlinkSync(dbPath);
 
@@ -224,7 +225,7 @@ test("handleIncomingMessage: erro isolado -- falha na mensagem 1 dispara alerta 
     makeMessage({ id: 2, text: "ETH pump forte", dateSec: nowSec + 1 })
   );
 
-  const rows = realDb.prepare("SELECT * FROM telegram_messages").all();
+  const rows = realDb.prepare("SELECT * FROM telegram_messages_raw").all();
   realDb.close();
   fs.unlinkSync(dbPath);
 
