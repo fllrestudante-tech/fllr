@@ -52,6 +52,27 @@ test("formatProcessesTable: uma linha por processo, mostra estado degraded quand
   assert.ok(result.some((l) => l.includes("RUNNING (degraded)")));
 });
 
+test("formatProcessesTable: snapshot fresco (sampledAt recente) não mostra aviso de desatualização", () => {
+  const now = new Date("2026-07-16T12:00:00.000Z").getTime();
+  const snapshot = {
+    sampledAt: new Date(now - 30000).toISOString(), // 30s atrás, dentro do limite
+    processes: { bot: { operationalState: "RUNNING", startedAt: new Date(now - 60000).toISOString() } },
+  };
+  const result = formatProcessesTable(snapshot, now);
+  assert.ok(!result.some((l) => l.includes("DESATUALIZADA")));
+});
+
+test("formatProcessesTable: snapshot congelado (ex: metrics_sampler morreu junto com o resto) avisa que a tabela pode estar errada", () => {
+  const now = new Date("2026-07-16T12:00:00.000Z").getTime();
+  const snapshot = {
+    sampledAt: new Date(now - 8 * 60 * 60 * 1000).toISOString(), // 8h atrás -- mesmo achado real desta sessão
+    processes: { bot: { operationalState: "RUNNING", startedAt: new Date(now - 9 * 60 * 60 * 1000).toISOString() } },
+  };
+  const result = formatProcessesTable(snapshot, now);
+  assert.ok(result[0].includes("DESATUALIZADA"));
+  assert.ok(result.some((l) => l.includes("bot"))); // tabela continua presente, só com o aviso antes
+});
+
 test("formatDatabaseSection: sem snapshot, mensagem honesta", () => {
   assert.ok(formatDatabaseSection(null)[0].includes("sampler ainda não rodou"));
 });
