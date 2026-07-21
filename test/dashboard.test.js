@@ -83,3 +83,22 @@ test("formatTradingSection: com trades, mostra as métricas principais", () => {
   const lines = formatTradingSection(snapshot);
   assert.ok(lines[0].includes("Trades: 4"));
 });
+
+test("formatTradingSection: com sampleConfidence, mostra o aviso ANTES das métricas", () => {
+  const snapshot = {
+    totalTrades: 11,
+    winRate: 0.4545,
+    profitFactor: 0.97,
+    expectancy: -0.00005,
+    maxDrawdown: 0.0155,
+    sharpe: -0.01,
+    averageHoldMs: null,
+    tradesWithHoldData: 0,
+    sampleConfidence: { totalTrades: 11, target: 100, pct: 11, status: "LOW_CONFIDENCE" },
+    portfolioAnalytics: {},
+  };
+  const lines = formatTradingSection(snapshot);
+  assert.ok(lines[0].includes("Sample Confidence: 11/100 (11%)"));
+  assert.ok(lines[0].includes("LOW_CONFIDENCE"));
+  assert.ok(lines[1].includes("Trades: 11"));
+});
