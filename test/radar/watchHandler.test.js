@@ -89,13 +89,16 @@ test("handleIncomingMessage: erro isolado -- falha na mensagem 1 dispara alerta 
     },
   };
 
+  const loggedContexts = [];
+  const logAlertFake = (context) => loggedContexts.push(context);
+
   const nowSec = Math.floor(Date.now() / 1000);
   const result1 = await handleIncomingMessage(
-    { db: poisonedDb, eventBus, alertManager, targets, targetIds },
+    { db: poisonedDb, eventBus, alertManager, targets, targetIds, logAlert: logAlertFake },
     makeMessage({ id: 1, text: "BTC breakout iminente", dateSec: nowSec })
   );
   const result2 = await handleIncomingMessage(
-    { db: poisonedDb, eventBus, alertManager, targets, targetIds },
+    { db: poisonedDb, eventBus, alertManager, targets, targetIds, logAlert: logAlertFake },
     makeMessage({ id: 2, text: "ETH pump forte", dateSec: nowSec + 1 })
   );
 
@@ -111,6 +114,9 @@ test("handleIncomingMessage: erro isolado -- falha na mensagem 1 dispara alerta 
   assert.equal(alerts.length, 1);
   assert.equal(alerts[0].severity, "ERROR");
   assert.equal(alerts[0].key, "telegram_radar_insert_error");
+  assert.equal(loggedContexts.length, 1); // log estruturado usado (não o real, injetado por teste)
+  assert.equal(loggedContexts[0].event, "radar_insert_error");
+  assert.equal(loggedContexts[0].channel, "Canal Teste");
 });
 
 test("handleIncomingMessage: falha ao enviar o alerta (ex: Telegram fora do ar) não derruba o handler", async () => {
@@ -130,7 +136,7 @@ test("handleIncomingMessage: falha ao enviar o alerta (ex: Telegram fora do ar) 
   };
 
   const result = await handleIncomingMessage(
-    { db: poisonedDb, eventBus, alertManager, targets, targetIds },
+    { db: poisonedDb, eventBus, alertManager, targets, targetIds, logAlert: () => {} },
     makeMessage({ id: 1, text: "BTC breakout", dateSec: Math.floor(Date.now() / 1000) })
   );
 

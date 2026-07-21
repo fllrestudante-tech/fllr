@@ -67,7 +67,7 @@ function extractSignals(text) {
 // mas a mensagem seguinte continua sendo processada normalmente. Extraído
 // como função própria (recebe dependências por parâmetro) pra ser testável
 // sem precisar de uma conexão real com o Telegram.
-async function handleIncomingMessage({ db, eventBus, alertManager, targets, targetIds }, message) {
+async function handleIncomingMessage({ db, eventBus, alertManager, targets, targetIds, logAlert: logAlertFn = logAlert }, message) {
   const chatId = message.chatId?.toString();
   if (!chatId || !targetIds.has(chatId)) return { handled: false };
 
@@ -120,7 +120,7 @@ async function handleIncomingMessage({ db, eventBus, alertManager, targets, targ
       error: err.message,
       stack: err.stack,
     };
-    logAlert(context);
+    logAlertFn(context);
     console.error(`❌ [${channel}] erro ao processar mensagem (isolado -- radar continua vivo): ${err.message}`);
     if (alertManager) {
       await alertManager
