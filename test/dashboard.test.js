@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { formatDomainsTable, formatProcessesTable, formatDatabaseSection, formatTradingSection, fmtUptime, fmtMb, fmtRatePerHour } = require("../lib/dashboard");
+const { formatDomainsTable, formatProcessesTable, formatDatabaseSection, formatTradingSection, formatBackupSection, fmtUptime, fmtMb, fmtRatePerHour } = require("../lib/dashboard");
 
 test("fmtUptime: formata horas+minutos ou só minutos", () => {
   const now = new Date("2026-07-16T12:00:00.000Z").getTime();
@@ -71,6 +71,35 @@ test("formatProcessesTable: snapshot congelado (ex: metrics_sampler morreu junto
   const result = formatProcessesTable(snapshot, now);
   assert.ok(result[0].includes("DESATUALIZADA"));
   assert.ok(result.some((l) => l.includes("bot"))); // tabela continua presente, só com o aviso antes
+});
+
+test("formatBackupSection: sem dado nenhum, mensagem honesta", () => {
+  assert.ok(formatBackupSection(null)[0].includes("backup daemon ainda não rodou"));
+});
+
+test("formatBackupSection: never_ran mostra como rodar manualmente", () => {
+  const result = formatBackupSection({ status: "never_ran" });
+  assert.ok(result[0].includes("npm run backup"));
+});
+
+test("formatBackupSection: backup ok mostra data/integridade/retenção/espaço", () => {
+  const result = formatBackupSection({
+    status: "ok",
+    lastBackupAt: "2026-07-21T03:00:00.000Z",
+    ageMs: 3600000,
+    integrityOk: true,
+    retentionDays: 14,
+    diskUsageBytes: 432000000,
+  });
+  assert.ok(result[0].includes("2026-07-21"));
+  assert.ok(result[1].includes("ok"));
+  assert.ok(result[1].includes("14 dias"));
+});
+
+test("formatBackupSection: backup inválido (integrity_check falhou) sinaliza claramente", () => {
+  const result = formatBackupSection({ status: "invalid", lastBackupAt: "2026-07-21T03:00:00.000Z", ageMs: 1000, integrityOk: false, retentionDays: 14, diskUsageBytes: 100 });
+  assert.ok(result.some((l) => l.includes("INVÁLIDO")));
+  assert.ok(result.some((l) => l.includes("FALHOU")));
 });
 
 test("formatDatabaseSection: sem snapshot, mensagem honesta", () => {

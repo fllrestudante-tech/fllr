@@ -18,7 +18,8 @@
     "telegram:login3": "node telegram-radar/login-step3.js",
     "telegram:watch": "node telegram-radar/watch.js",
     "telegram:summary": "node telegram-radar/summarize.js",
-    "classify:telegram": "node scripts/narrativeEngine.js"
+    "classify:telegram": "node scripts/narrativeEngine.js",
+    "backup": "node scripts/runBackupOnce.js"
   },
   "keywords": [],
   "author": "",

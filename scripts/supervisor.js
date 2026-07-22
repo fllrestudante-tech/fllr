@@ -39,6 +39,7 @@ const CHILDREN = [
   { name: "btc_dominance_collector", script: path.join(__dirname, "btcDominanceCollector.js") },
   { name: "knowledge_collector", script: path.join(__dirname, "knowledgeCollector.js") },
   { name: "metrics_sampler", script: path.join(__dirname, "metricsSampler.js") },
+  { name: "backup_daemon", script: path.join(__dirname, "backupDaemon.js") },
 ];
 
 function ensureDirs() {

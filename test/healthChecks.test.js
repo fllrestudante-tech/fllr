@@ -13,6 +13,8 @@ const {
   checkBtcDominance,
   checkKnowledgeCollector,
   checkMetricsSampler,
+  checkBackupDaemon,
+  checkBackup,
   checkSupervisor,
   checkConnectivity,
 } = require("../lib/healthChecks");
@@ -249,6 +251,50 @@ test("checkMetricsSampler: heartbeat recente sem falhas reporta ok", () => {
   const result = checkMetricsSampler(file, now);
   fs.unlinkSync(file);
   assert.equal(result.status, "ok");
+});
+
+test("checkBackupDaemon: arquivo inexistente reporta not_implemented", () => {
+  const result = checkBackupDaemon(tmpFile("backup-daemon-nao-existe.json"));
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkBackupDaemon: heartbeat recente reporta ok", () => {
+  const file = tmpFile("backup-daemon-ok.json");
+  const now = Date.now();
+  fs.writeFileSync(file, JSON.stringify({ lastHeartbeatAt: new Date(now - 1000).toISOString(), metrics: {} }));
+  const result = checkBackupDaemon(file, now);
+  fs.unlinkSync(file);
+  assert.equal(result.status, "ok");
+});
+
+test("checkBackup: nenhum backup ainda reporta not_implemented (never_ran)", () => {
+  const backupsDir = path.join(os.tmpdir(), `bot-cripto10-checkbackup-${Date.now()}`);
+  const result = checkBackup({ backupsDir });
+  assert.equal(result.status, "not_implemented");
+});
+
+test("checkBackup: backup fresco e válido reporta ok", () => {
+  const backupsDir = path.join(os.tmpdir(), `bot-cripto10-checkbackup-ok-${Date.now()}`);
+  const dateDir = path.join(backupsDir, "daily", "2026-07-21");
+  fs.mkdirSync(dateDir, { recursive: true });
+  fs.writeFileSync(path.join(dateDir, "backup.json"), JSON.stringify({ level: "daily", createdAt: new Date().toISOString(), valid: true }));
+
+  const result = checkBackup({ backupsDir });
+  fs.rmSync(backupsDir, { recursive: true, force: true });
+
+  assert.equal(result.status, "ok");
+});
+
+test("checkBackup: último backup com integrity_check falhou reporta down", () => {
+  const backupsDir = path.join(os.tmpdir(), `bot-cripto10-checkbackup-invalido-${Date.now()}`);
+  const dateDir = path.join(backupsDir, "daily", "2026-07-21");
+  fs.mkdirSync(dateDir, { recursive: true });
+  fs.writeFileSync(path.join(dateDir, "backup.json"), JSON.stringify({ level: "daily", createdAt: new Date().toISOString(), valid: false }));
+
+  const result = checkBackup({ backupsDir });
+  fs.rmSync(backupsDir, { recursive: true, force: true });
+
+  assert.equal(result.status, "down");
 });
 
 test("checkSupervisor: arquivo inexistente reporta not_implemented", () => {

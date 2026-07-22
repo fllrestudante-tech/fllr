@@ -45,6 +45,8 @@ async function main() {
   registry.registerCheck("btc_dominance_collector", checks.checkBtcDominance);
   registry.registerCheck("knowledge_collector", checks.checkKnowledgeCollector);
   registry.registerCheck("metrics_sampler", checks.checkMetricsSampler);
+  registry.registerCheck("backup_daemon", checks.checkBackupDaemon);
+  registry.registerCheck("backup", checks.checkBackup);
   registry.registerCheck("supervisor", checks.checkSupervisor);
   registry.registerCheck("connectivity", checks.checkConnectivity);
   registry.registerCheck("backtest", checks.checkBacktest);
@@ -81,6 +83,9 @@ async function main() {
 
   console.log("\nDatabase Health:\n");
   dashboard.formatDatabaseSection(databaseSnapshot).forEach((l) => console.log(l));
+
+  console.log("\nBackup Health:\n");
+  dashboard.formatBackupSection(results.backup?.details).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
