@@ -115,6 +115,8 @@ async function openPosition(side, analysis, equity) {
   botState.openedAt = Date.now(); // hold time (Trading Health) e time stop (lib/tradeLifecycle.js)
   botState.stopLossPrice = plan.stopLossPrice; // referência de R pro break even (Fase D3)
   botState.breakEvenApplied = false;
+  botState.trailingActivated = false;
+  botState.trailingDistance = null;
   state.save(botState);
 
   logger.log({
@@ -146,6 +148,27 @@ async function applyBreakEven(analysis) {
   }
 }
 
+// Fase D4 (Trailing ATR adaptativo): só chamado depois que o break even já
+// foi aplicado (pré-requisito, ver lib/tradeLifecycle.js::isTrailingActivationDue).
+// distance/regime já vêm calculados do ciclo -- computados uma única vez na
+// ativação, não recalculados depois (a Bybit ratcheia o resto sozinha no
+// servidor). Falha não derruba o ciclo, mesmo padrão de tolerância do break even.
+async function applyTrailingStop(distance, regime) {
+  try {
+    const activePrice = tradeLifecycle.computeTrailingActivePrice(botState, distance);
+    const roundedDistance = instrumentInfo ? risk.roundToTick(distance, instrumentInfo.tickSize) : distance;
+    const roundedActivePrice = instrumentInfo ? risk.roundToTick(activePrice, instrumentInfo.tickSize) : activePrice;
+    await bybit.setTradingStop({ trailingStop: roundedDistance, activePrice: roundedActivePrice });
+    botState.trailingActivated = true;
+    botState.trailingDistance = roundedDistance;
+    state.save(botState);
+    logger.log({ event: "trailing_stop_activated", distance: roundedDistance, activePrice: roundedActivePrice, regime });
+    console.log(`📈 Trailing stop ativado (regime ${regime}) -- distância ${roundedDistance}, activePrice ${roundedActivePrice}.`);
+  } catch (err) {
+    console.error("⚠️  Falha ao ativar trailing stop:", err.message);
+  }
+}
+
 // reason: lib/tradeLifecycle.js::REASONS ("signal_reversal" | "time_stop", e
 // futuros incrementos da Fase D) -- só diferencia o evento logado (exitReason
 // pro futuro Exit Analytics/Validation Engine), a mecânica de fechamento é a
@@ -171,6 +194,8 @@ async function closePosition(reason, equity) {
   botState.openedAt = null;
   botState.stopLossPrice = null;
   botState.breakEvenApplied = false;
+  botState.trailingActivated = false;
+  botState.trailingDistance = null;
   state.save(botState);
 
   // Fechamento por reversão de sinal também precisa alimentar o circuit breaker
@@ -268,6 +293,12 @@ async function cycle() {
       await closePosition(lifecycle.reason, totalEquity);
     } else if (tradeLifecycle.isBreakEvenDue(botState, analysis)) {
       await applyBreakEven(analysis);
+    } else {
+      const multiplier = config.trailingStopAtrMultiplier[regime.toLowerCase()] ?? config.trailingStopAtrMultiplier.normal;
+      const trailingDistance = analysis.atr * multiplier;
+      if (tradeLifecycle.isTrailingActivationDue(botState, analysis, trailingDistance)) {
+        await applyTrailingStop(trailingDistance, regime);
+      }
     }
 
     const risk_ = risk.canExecute(analysis.signal, botState);

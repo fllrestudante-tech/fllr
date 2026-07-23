@@ -48,6 +48,17 @@ const config = {
   circuitBreakerDailyDrawdownPct: num(process.env.CIRCUIT_BREAKER_DAILY_DRAWDOWN_PCT, 0.03),
   circuitBreakerOnHighVolatility: bool(process.env.CIRCUIT_BREAKER_ON_HIGH_VOLATILITY, true),
 
+  // Fase D4 (Trailing ATR adaptativo) -- distância do trailing = ATR(14) na
+  // ativação × multiplicador, variando pelo mesmo regime de volatilidade do
+  // circuit breaker (lib/volatilityRegime.js). Só ativa depois do break even
+  // (D3), com activePrice calculado pra nunca deixar o piso do trailing pior
+  // que a entrada -- ver index.js::applyTrailingStop.
+  trailingStopAtrMultiplier: {
+    low: num(process.env.TRAILING_ATR_MULTIPLIER_LOW, 1.5),
+    normal: num(process.env.TRAILING_ATR_MULTIPLIER_NORMAL, 2),
+    high: num(process.env.TRAILING_ATR_MULTIPLIER_HIGH, 3),
+  },
+
   alerts: {
     telegramBotToken: process.env.TELEGRAM_ALERT_BOT_TOKEN || "",
     telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",

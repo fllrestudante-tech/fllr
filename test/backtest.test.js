@@ -146,9 +146,14 @@ test("simulate: trade que anda +1R e reverte sai no zero a zero (breakeven), nã
 
   const originalTarget = config.targetReturnPerTradePct;
   const originalLeverage = config.leverageMax;
+  const originalMultiplier = config.trailingStopAtrMultiplier;
   try {
     config.targetReturnPerTradePct = 0.3;
     config.leverageMax = 1; // rewardRiskRatio = 0.3/params.stopLossPct > 1 -- alvo fica mais longe que +1R
+    // Neutraliza o trailing (Fase D4) pra isolar o comportamento do break
+    // even puro -- sem isso, um trade que ativa break even pode continuar e
+    // ativar o trailing também, deixando de ser um zero-a-zero exato.
+    config.trailingStopAtrMultiplier = { low: 1e9, normal: 1e9, high: 1e9 };
 
     const result = simulate(candles, params);
     assert.ok(result.breakevens > 0, "cenário deveria produzir ao menos 1 saída em breakeven");
@@ -158,6 +163,37 @@ test("simulate: trade que anda +1R e reverte sai no zero a zero (breakeven), nã
   } finally {
     config.targetReturnPerTradePct = originalTarget;
     config.leverageMax = originalLeverage;
+    config.trailingStopAtrMultiplier = originalMultiplier;
+  }
+});
+
+// --- Fase D4 (Trailing ATR adaptativo) -- mesma ressalva do teste de D3
+// acima sobre craftar sinais exatos; verifica a propriedade central: com uma
+// distância de trailing pequena o bastante pra ativar fácil, alguns trades
+// saem com retorno positivo mas MENOR que o alvo cheio -- prova de que o
+// trailing está travando lucro parcial de verdade (nem 0 do breakeven puro,
+// nem o retorno fixo do alvo).
+test("simulate: trailing ativo produz saídas com lucro parcial, distinto do alvo cheio e do breakeven", () => {
+  const candles = syntheticCandles(1500, 1);
+  const params = signal.DEFAULT_PARAMS;
+
+  const originalTarget = config.targetReturnPerTradePct;
+  const originalLeverage = config.leverageMax;
+  const originalMultiplier = config.trailingStopAtrMultiplier;
+  try {
+    config.targetReturnPerTradePct = 0.3;
+    config.leverageMax = 1;
+    config.trailingStopAtrMultiplier = { low: 0.3, normal: 0.5, high: 0.8 }; // distância pequena -- ativa fácil após o break even
+
+    const fullTargetReturn = config.riskPerTradePct * (0.3 / 1 / params.stopLossPct);
+    const result = simulate(candles, params);
+
+    const partialProfits = result.tradeReturns.filter((r) => r > 0 && r < fullTargetReturn - 1e-9);
+    assert.ok(partialProfits.length > 0, "deveria haver ao menos 1 saída de lucro parcial via trailing");
+  } finally {
+    config.targetReturnPerTradePct = originalTarget;
+    config.leverageMax = originalLeverage;
+    config.trailingStopAtrMultiplier = originalMultiplier;
   }
 });
 

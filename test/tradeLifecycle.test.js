@@ -1,6 +1,14 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { evaluate, isTimeStop, isSignalReversal, isBreakEvenDue, REASONS } = require("../lib/tradeLifecycle");
+const {
+  evaluate,
+  isTimeStop,
+  isSignalReversal,
+  isBreakEvenDue,
+  isTrailingActivationDue,
+  computeTrailingActivePrice,
+  REASONS,
+} = require("../lib/tradeLifecycle");
 
 const config = { maxHoldMinutes: 120 };
 
@@ -112,4 +120,43 @@ test("isBreakEvenDue: venda -- true exatamente em +1R", () => {
 test("isBreakEvenDue: venda -- false antes de +1R", () => {
   const state = { isOpened: true, side: "Sell", entryPrice: 100, stopLossPrice: 103, breakEvenApplied: false };
   assert.equal(isBreakEvenDue(state, { price: 99 }), false);
+});
+
+// --- isTrailingActivationDue / computeTrailingActivePrice (Fase D4) ---
+
+function trailingReadyState(overrides = {}) {
+  return { isOpened: true, side: "Buy", entryPrice: 100, breakEvenApplied: true, trailingActivated: false, ...overrides };
+}
+
+test("computeTrailingActivePrice: compra soma a distância, venda subtrai", () => {
+  assert.equal(computeTrailingActivePrice({ side: "Buy", entryPrice: 100 }, 5), 105);
+  assert.equal(computeTrailingActivePrice({ side: "Sell", entryPrice: 100 }, 5), 95);
+});
+
+test("isTrailingActivationDue: false se break even ainda não foi aplicado (pré-requisito)", () => {
+  assert.equal(isTrailingActivationDue(trailingReadyState({ breakEvenApplied: false }), { price: 200 }, 5), false);
+});
+
+test("isTrailingActivationDue: false se já ativado", () => {
+  assert.equal(isTrailingActivationDue(trailingReadyState({ trailingActivated: true }), { price: 200 }, 5), false);
+});
+
+test("isTrailingActivationDue: false sem distância válida", () => {
+  assert.equal(isTrailingActivationDue(trailingReadyState(), { price: 200 }, 0), false);
+  assert.equal(isTrailingActivationDue(trailingReadyState(), { price: 200 }, null), false);
+});
+
+test("isTrailingActivationDue: compra -- false antes do activePrice", () => {
+  assert.equal(isTrailingActivationDue(trailingReadyState(), { price: 104 }, 5), false);
+});
+
+test("isTrailingActivationDue: compra -- true no activePrice ou além", () => {
+  assert.equal(isTrailingActivationDue(trailingReadyState(), { price: 105 }, 5), true);
+  assert.equal(isTrailingActivationDue(trailingReadyState(), { price: 110 }, 5), true);
+});
+
+test("isTrailingActivationDue: venda -- true no activePrice ou além", () => {
+  const state = trailingReadyState({ side: "Sell" });
+  assert.equal(isTrailingActivationDue(state, { price: 96 }, 5), false);
+  assert.equal(isTrailingActivationDue(state, { price: 95 }, 5), true);
 });
