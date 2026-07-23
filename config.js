@@ -38,6 +38,16 @@ const config = {
   // um número novo, é fechar uma divergência de fidelidade backtest↔produção.
   maxHoldMinutes: num(process.env.MAX_HOLD_MINUTES, 120),
 
+  // Fase D2 (Circuit Breaker) -- pausa novas entradas quando qualquer um dos
+  // 3 gatilhos disparar: sequência de perdas, drawdown diário elevado (menor
+  // que o dailyLossLimitPct "duro" abaixo, serve de aviso antes dele) ou
+  // volatilidade extrema (lib/volatilityRegime.js). Não fecha posição já
+  // aberta, só bloqueia lib/risk.js::canExecute.
+  circuitBreakerLossStreak: num(process.env.CIRCUIT_BREAKER_LOSS_STREAK, 3),
+  circuitBreakerPauseMs: num(process.env.CIRCUIT_BREAKER_PAUSE_MS, 6 * 60 * 60 * 1000),
+  circuitBreakerDailyDrawdownPct: num(process.env.CIRCUIT_BREAKER_DAILY_DRAWDOWN_PCT, 0.03),
+  circuitBreakerOnHighVolatility: bool(process.env.CIRCUIT_BREAKER_ON_HIGH_VOLATILITY, true),
+
   alerts: {
     telegramBotToken: process.env.TELEGRAM_ALERT_BOT_TOKEN || "",
     telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",

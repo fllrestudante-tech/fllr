@@ -1,7 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const config = require("../config");
-const { computeMetrics, isCandidateBetter, MAX_HOLD_CANDLES } = require("../lib/backtest");
+const signal = require("../lib/signal");
+const { computeMetrics, isCandidateBetter, MAX_HOLD_CANDLES, simulate } = require("../lib/backtest");
 
 // Fase D1: MAX_HOLD_CANDLES precisa vir de config.maxHoldMinutes (single
 // source of truth com o time stop ao vivo, lib/tradeLifecycle.js), não mais
@@ -71,6 +72,66 @@ test("isCandidateBetter: rejeita quando drawdown piora além da tolerância de 1
   const decision = isCandidateBetter(baseline, candidate);
   assert.equal(decision.promote, false);
   assert.match(decision.reason, /drawdown piorou/);
+});
+
+// --- Fase D2 (Circuit Breaker) -- teste de propriedade, não de contagem
+// exata de trades: hand-craft de candles que disparem os 4 indicadores
+// simultaneamente (EMA/RSI/StochRSI/OBV) de forma determinística é frágil
+// demais pra valer a pena. Em vez disso, geramos uma série sintética longa
+// o bastante pra produzir *algum* sinal com os parâmetros default, e
+// comparamos duas rodadas idênticas variando só a duração da pausa -- uma
+// pausa maior nunca pode gerar MAIS trades que uma pausa menor, propriedade
+// que vale independente de onde exatamente os sinais caem.
+function mulberry32(seed) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function syntheticCandles(n, seed = 42) {
+  const rand = mulberry32(seed);
+  const out = [];
+  let price = 100;
+  for (let i = 0; i < n; i++) {
+    // passeio aleatório com viés alternado (favorece cruzamentos de EMA e
+    // reversões de RSI/StochRSI ao longo da série, em vez de tendência única)
+    const bias = Math.sin(i / 40) * 0.3;
+    price += (rand() - 0.5) * 2 + bias;
+    price = Math.max(price, 1);
+    const high = price + rand() * 0.8;
+    const low = price - rand() * 0.8;
+    const close = low + rand() * (high - low);
+    const volume = 100 + rand() * 50;
+    out.push([i * 60000, String(price), String(high), String(low), String(close), String(volume)]);
+    price = close;
+  }
+  return out;
+}
+
+test("simulate: pausa de circuit breaker maior nunca produz mais trades que uma pausa menor (mesma série/parâmetros)", () => {
+  const candles = syntheticCandles(1500);
+  const params = signal.DEFAULT_PARAMS;
+
+  const originalPause = config.circuitBreakerPauseMs;
+  const originalStreak = config.circuitBreakerLossStreak;
+  try {
+    config.circuitBreakerLossStreak = 1; // dispara na primeira perda -- maximiza a chance do gatilho ser exercitado no teste
+
+    config.circuitBreakerPauseMs = 60 * 1000; // 1 candle de pausa
+    const shortPause = simulate(candles, params);
+
+    config.circuitBreakerPauseMs = 6 * 60 * 60 * 1000; // 6h de pausa (default de produção)
+    const longPause = simulate(candles, params);
+
+    assert.ok(longPause.totalTrades <= shortPause.totalTrades);
+  } finally {
+    config.circuitBreakerPauseMs = originalPause;
+    config.circuitBreakerLossStreak = originalStreak;
+  }
 });
 
 test("isCandidateBetter: promove quando expectância melhora e drawdown está dentro da tolerância", () => {

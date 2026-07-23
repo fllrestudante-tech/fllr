@@ -4,6 +4,7 @@ const state = require("./lib/state");
 const signal = require("./lib/signal");
 const risk = require("./lib/risk");
 const tradeLifecycle = require("./lib/tradeLifecycle");
+const volatilityRegime = require("./lib/volatilityRegime");
 const logger = require("./lib/logger");
 const backtest = require("./lib/backtest");
 const backoff = require("./lib/backoff");
@@ -220,6 +221,12 @@ async function cycle() {
       return;
     }
 
+    // Terceiro gatilho do circuit breaker (Fase D2) -- observado por ciclo,
+    // não por trade fechado (diferente de loss streak/drawdown diário).
+    const regime = volatilityRegime.classifyVolatility(candles);
+    risk.registerVolatilityCheck(botState, regime);
+    state.save(botState);
+
     const analysis = signal.analyze(candles);
     const time = new Date().toLocaleTimeString();
 
@@ -228,6 +235,7 @@ async function cycle() {
     console.log(`💰 Price: ${analysis.price}`);
     console.log(`📊 EMA${analysis.params.emaShort}: ${analysis.ema8.toFixed(4)} | EMA${analysis.params.emaLong}: ${analysis.ema56.toFixed(4)}`);
     console.log(`📈 RSI: ${analysis.rsi.toFixed(2)} | StochRSI: ${analysis.stoch.toFixed(2)}`);
+    console.log(`🌪️ Regime de volatilidade: ${regime}`);
     console.log(`📦 Posição aberta? ${botState.isOpened} (${botState.side || "-"})`);
     console.log(`🧠 Sinal: ${analysis.signal} (${analysis.reasons.join(",")})`);
 
