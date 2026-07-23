@@ -113,6 +113,8 @@ async function openPosition(side, analysis, equity) {
   botState.lastSignal = side;
   botState.lastTradeTime = Date.now();
   botState.openedAt = Date.now(); // hold time (Trading Health) e time stop (lib/tradeLifecycle.js)
+  botState.stopLossPrice = plan.stopLossPrice; // referência de R pro break even (Fase D3)
+  botState.breakEvenApplied = false;
   state.save(botState);
 
   logger.log({
@@ -125,6 +127,23 @@ async function openPosition(side, analysis, equity) {
     reasons: analysis.reasons,
     orderResult: res,
   });
+}
+
+// Fase D3 (Break Even): move o stop-loss pra entrada (risco zero) sem fechar
+// a posição. Falha não derruba o ciclo -- o stop original enviado no
+// placeOrder continua valendo como rede de segurança (mesmo padrão de
+// tolerância já usado em setLeverage no boot).
+async function applyBreakEven(analysis) {
+  try {
+    const stopLoss = instrumentInfo ? risk.roundToTick(botState.entryPrice, instrumentInfo.tickSize) : botState.entryPrice;
+    await bybit.setTradingStop({ stopLoss });
+    botState.breakEvenApplied = true;
+    state.save(botState);
+    logger.log({ event: "break_even_applied", entryPrice: botState.entryPrice, price: analysis.price });
+    console.log(`🟰 Break even aplicado -- stop movido para a entrada ($${botState.entryPrice}).`);
+  } catch (err) {
+    console.error("⚠️  Falha ao aplicar break even:", err.message);
+  }
 }
 
 // reason: lib/tradeLifecycle.js::REASONS ("signal_reversal" | "time_stop", e
@@ -150,6 +169,8 @@ async function closePosition(reason, equity) {
   botState.entryPrice = null;
   botState.lastTradeTime = Date.now();
   botState.openedAt = null;
+  botState.stopLossPrice = null;
+  botState.breakEvenApplied = false;
   state.save(botState);
 
   // Fechamento por reversão de sinal também precisa alimentar o circuit breaker
@@ -245,6 +266,8 @@ async function cycle() {
     const lifecycle = tradeLifecycle.evaluate({ botState, analysis, now: Date.now(), config });
     if (lifecycle.reason) {
       await closePosition(lifecycle.reason, totalEquity);
+    } else if (tradeLifecycle.isBreakEvenDue(botState, analysis)) {
+      await applyBreakEven(analysis);
     }
 
     const risk_ = risk.canExecute(analysis.signal, botState);

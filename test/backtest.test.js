@@ -134,6 +134,33 @@ test("simulate: pausa de circuit breaker maior nunca produz mais trades que uma 
   }
 });
 
+// --- Fase D3 (Break Even) -- com o R:R padrão de produção (alvo mais perto
+// que o stop, rewardRiskRatio 0.4), o alvo quase sempre fecha o trade antes
+// de alcançar +1R, então o break even fica estruturalmente adormecido (nem
+// bug nem feature quebrada -- reflexo da config de risco atual, documentado
+// aqui pra não parecer teste "furado"). Pra exercitar o caminho de verdade,
+// o teste força temporariamente um R:R > 1.
+test("simulate: trade que anda +1R e reverte sai no zero a zero (breakeven), não como perda cheia", () => {
+  const candles = syntheticCandles(1500, 2); // seed com breakevens conhecidos (ver exploração manual)
+  const params = signal.DEFAULT_PARAMS;
+
+  const originalTarget = config.targetReturnPerTradePct;
+  const originalLeverage = config.leverageMax;
+  try {
+    config.targetReturnPerTradePct = 0.3;
+    config.leverageMax = 1; // rewardRiskRatio = 0.3/params.stopLossPct > 1 -- alvo fica mais longe que +1R
+
+    const result = simulate(candles, params);
+    assert.ok(result.breakevens > 0, "cenário deveria produzir ao menos 1 saída em breakeven");
+    assert.equal(result.totalTrades, result.wins + result.losses + result.timeouts + result.breakevens);
+    const zeroReturns = result.tradeReturns.filter((r) => r === 0);
+    assert.equal(zeroReturns.length, result.breakevens);
+  } finally {
+    config.targetReturnPerTradePct = originalTarget;
+    config.leverageMax = originalLeverage;
+  }
+});
+
 test("isCandidateBetter: promove quando expectância melhora e drawdown está dentro da tolerância", () => {
   const baseline = { totalTrades: 30, expectancy: 0.005, maxDrawdown: 0.05 };
   const candidate = { totalTrades: 30, expectancy: 0.01, maxDrawdown: 0.054 }; // dentro de 0.055

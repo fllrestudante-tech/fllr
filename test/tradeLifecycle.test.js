@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { evaluate, isTimeStop, isSignalReversal, REASONS } = require("../lib/tradeLifecycle");
+const { evaluate, isTimeStop, isSignalReversal, isBreakEvenDue, REASONS } = require("../lib/tradeLifecycle");
 
 const config = { maxHoldMinutes: 120 };
 
@@ -71,4 +71,45 @@ test("evaluate: reason null quando dentro do prazo e sinal não reverteu", () =>
   const botState = { isOpened: true, side: "Buy", openedAt: now - 5 * 60 * 1000 };
   const result = evaluate({ botState, analysis: { signal: "wait" }, now, config });
   assert.equal(result.reason, null);
+});
+
+// --- isBreakEvenDue (Fase D3) ---
+
+function openBuyState(overrides = {}) {
+  return { isOpened: true, side: "Buy", entryPrice: 100, stopLossPrice: 97, breakEvenApplied: false, ...overrides };
+}
+
+test("isBreakEvenDue: false sem posição aberta", () => {
+  assert.equal(isBreakEvenDue({ isOpened: false }, { price: 200 }), false);
+});
+
+test("isBreakEvenDue: false se já foi aplicado", () => {
+  assert.equal(isBreakEvenDue(openBuyState({ breakEvenApplied: true }), { price: 200 }), false);
+});
+
+test("isBreakEvenDue: false sem stopLossPrice/entryPrice (estado antigo/corrompido)", () => {
+  assert.equal(isBreakEvenDue({ isOpened: true, side: "Buy", stopLossPrice: null, entryPrice: null }, { price: 200 }), false);
+});
+
+test("isBreakEvenDue: compra -- false antes de +1R", () => {
+  // R = 100-97 = 3, preço só andou 2 a favor
+  assert.equal(isBreakEvenDue(openBuyState(), { price: 102 }), false);
+});
+
+test("isBreakEvenDue: compra -- true exatamente em +1R", () => {
+  assert.equal(isBreakEvenDue(openBuyState(), { price: 103 }), true);
+});
+
+test("isBreakEvenDue: compra -- true além de +1R", () => {
+  assert.equal(isBreakEvenDue(openBuyState(), { price: 110 }), true);
+});
+
+test("isBreakEvenDue: venda -- true exatamente em +1R", () => {
+  const state = { isOpened: true, side: "Sell", entryPrice: 100, stopLossPrice: 103, breakEvenApplied: false };
+  assert.equal(isBreakEvenDue(state, { price: 97 }), true);
+});
+
+test("isBreakEvenDue: venda -- false antes de +1R", () => {
+  const state = { isOpened: true, side: "Sell", entryPrice: 100, stopLossPrice: 103, breakEvenApplied: false };
+  assert.equal(isBreakEvenDue(state, { price: 99 }), false);
 });
