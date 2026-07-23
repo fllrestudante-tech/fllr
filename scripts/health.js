@@ -7,6 +7,9 @@ const { createHealthRegistry } = require("../lib/health");
 const checks = require("../lib/healthChecks");
 const dashboard = require("../lib/dashboard");
 const { computeAvailability } = require("../lib/platformAvailability");
+const marketBrainData = require("../lib/brains/marketBrainData");
+const marketBrain = require("../lib/brains/marketBrain");
+const config = require("../config");
 const { DEFAULT_MARKET_DB_PATH } = checks;
 
 const METRICS_DIR = path.join(__dirname, "..", "runtime", "metrics");
@@ -49,6 +52,23 @@ function readAvailability() {
   try {
     db = new Database(DEFAULT_MARKET_DB_PATH, { readonly: true, fileMustExist: true });
     return computeAvailability(db);
+  } catch {
+    return null;
+  } finally {
+    if (db) db.close();
+  }
+}
+
+// Mesmo padrão on-demand de readAvailability() -- não precisa de sampler
+// contínuo pra v1, é uma leitura barata (últimas linhas de 5 tabelas +
+// getBacktestCandles já cacheável pelo próprio SO entre chamadas).
+function readMarketBrainSnapshot() {
+  if (!fs.existsSync(DEFAULT_MARKET_DB_PATH)) return null;
+  let db;
+  try {
+    db = new Database(DEFAULT_MARKET_DB_PATH, { readonly: true, fileMustExist: true });
+    const inputs = marketBrainData.gatherMarketBrainInputs(db, { symbol: config.symbol, interval: config.interval });
+    return marketBrain.analyzeMarket(inputs);
   } catch {
     return null;
   } finally {
@@ -108,6 +128,9 @@ async function main() {
 
   console.log("\nPlatform Availability:\n");
   dashboard.formatPlatformAvailabilitySection(readAvailability()).forEach((l) => console.log(l));
+
+  console.log("\nMarket Brain:\n");
+  dashboard.formatMarketBrainSection(readMarketBrainSnapshot()).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
