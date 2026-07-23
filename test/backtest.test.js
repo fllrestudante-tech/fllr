@@ -1,8 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const config = require("../config");
 const signal = require("../lib/signal");
-const { computeMetrics, isCandidateBetter, MAX_HOLD_CANDLES, simulate } = require("../lib/backtest");
+const { openDb } = require("../lib/infra/db");
+const { computeMetrics, isCandidateBetter, MAX_HOLD_CANDLES, simulate, run } = require("../lib/backtest");
 
 // Fase D1: MAX_HOLD_CANDLES precisa vir de config.maxHoldMinutes (single
 // source of truth com o time stop ao vivo, lib/tradeLifecycle.js), não mais
@@ -253,4 +257,70 @@ test("isCandidateBetter: promove quando expectância melhora e drawdown está de
   const candidate = { totalTrades: 30, expectancy: 0.01, maxDrawdown: 0.054 }; // dentro de 0.055
   const decision = isCandidateBetter(baseline, candidate);
   assert.equal(decision.promote, true);
+});
+
+// run() (item 1 do sequenciamento de Brains -- prefere market.db, cai pro
+// fallback ao vivo). Nunca deixa run() escrever no data/tuning.json real do
+// projeto -- redireciona config.paths.tuningFile pra um arquivo temporário
+// durante o teste, restaurado em finally (mesmo padrão já usado acima pra
+// config.tpLevels/trailingStopAtrMultiplier).
+function tmpDbPath() {
+  return path.join(os.tmpdir(), `bot-cripto10-backtest-run-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+}
+function cleanupDb(dbPath) {
+  fs.rmSync(dbPath, { force: true });
+  fs.rmSync(dbPath + "-wal", { force: true });
+  fs.rmSync(dbPath + "-shm", { force: true });
+}
+function withTempTuningFile(fn) {
+  const originalTuningFile = config.paths.tuningFile;
+  const tmpTuningFile = path.join(os.tmpdir(), `bot-cripto10-tuning-test-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
+  config.paths.tuningFile = tmpTuningFile;
+  return Promise.resolve()
+    .then(fn)
+    .finally(() => {
+      config.paths.tuningFile = originalTuningFile;
+      fs.rmSync(tmpTuningFile, { force: true });
+    });
+}
+
+test("run(): usa market_db quando há trecho contíguo suficiente no banco", async () => {
+  await withTempTuningFile(async () => {
+    const dbPath = tmpDbPath();
+    const db = openDb(dbPath);
+    const insert = db.prepare(
+      "INSERT INTO candles (uuid, exchange, symbol, interval, open_time, open, high, low, close, volume, recorded_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+    );
+    const candles = syntheticCandles(300, 7);
+    const baseTime = Date.now() - candles.length * 60000;
+    for (const [i, c] of candles.entries()) {
+      const openTime = baseTime + i * 60000;
+      insert.run(`uuid-${openTime}`, "bybit", config.symbol, config.interval, openTime, parseFloat(c[1]), parseFloat(c[2]), parseFloat(c[3]), parseFloat(c[4]), parseFloat(c[5]), new Date(openTime).toISOString());
+    }
+
+    const result = await run({ db });
+
+    assert.equal(result.lastRun.candleSource, "market_db");
+    assert.equal(result.lastRun.candleCount, 300);
+    assert.ok(result.lastRun.windowStart < result.lastRun.windowEnd);
+
+    db.close();
+    cleanupDb(dbPath);
+  });
+});
+
+test("run(): cai pro live_fallback quando o banco não tem trecho contíguo suficiente", async () => {
+  await withTempTuningFile(async () => {
+    const dbPath = tmpDbPath();
+    const db = openDb(dbPath); // tabela candles existe mas vazia -- insuficiente
+    const fakeBybitClient = { getKlines: async () => syntheticCandles(1000, 9) };
+
+    const result = await run({ db, bybitClient: fakeBybitClient });
+
+    assert.equal(result.lastRun.candleSource, "live_fallback");
+    assert.equal(result.lastRun.candleCount, 1000);
+
+    db.close();
+    cleanupDb(dbPath);
+  });
 });

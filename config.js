@@ -72,6 +72,13 @@ const config = {
     { r: 2, qtyPct: 0.3 },
   ],
 
+  // Item 1 do sequenciamento de Brains: lib/backtest.js passa a preferir
+  // candles já persistidos em data/market.db em vez de só buscar 1000 ao
+  // vivo da Bybit a cada rodada. lookbackDays limita o tamanho da consulta
+  // conforme o banco cresce ao longo de meses (sem isso, a query SELECT
+  // fica maior a cada dia que o coletor roda).
+  backtestDbLookbackDays: num(process.env.BACKTEST_DB_LOOKBACK_DAYS, 30),
+
   alerts: {
     telegramBotToken: process.env.TELEGRAM_ALERT_BOT_TOKEN || "",
     telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",
