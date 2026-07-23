@@ -31,6 +31,13 @@ const config = {
   backtestIntervalHours: num(process.env.BACKTEST_INTERVAL_HOURS, 6),
   healthCheckIntervalMs: num(process.env.HEALTH_CHECK_INTERVAL_MS, 60000),
 
+  // Fase D1 (Exit Engine) -- tempo máximo que uma posição pode ficar aberta
+  // antes do bot fechar a mercado, independente de sinal/SL/TP. Default =
+  // 120 candles de 1min (120min), mesmo valor que lib/backtest.js::simulate()
+  // já assumia como MAX_HOLD_CANDLES desde sempre -- portar pro live não é
+  // um número novo, é fechar uma divergência de fidelidade backtest↔produção.
+  maxHoldMinutes: num(process.env.MAX_HOLD_MINUTES, 120),
+
   alerts: {
     telegramBotToken: process.env.TELEGRAM_ALERT_BOT_TOKEN || "",
     telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",

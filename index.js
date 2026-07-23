@@ -3,6 +3,7 @@ const bybit = require("./lib/bybit");
 const state = require("./lib/state");
 const signal = require("./lib/signal");
 const risk = require("./lib/risk");
+const tradeLifecycle = require("./lib/tradeLifecycle");
 const logger = require("./lib/logger");
 const backtest = require("./lib/backtest");
 const backoff = require("./lib/backoff");
@@ -110,7 +111,7 @@ async function openPosition(side, analysis, equity) {
   botState.qty = plan.qty;
   botState.lastSignal = side;
   botState.lastTradeTime = Date.now();
-  botState.openedAt = Date.now(); // só pra computar hold time no fechamento (Trading Health) -- não influencia nenhuma decisão
+  botState.openedAt = Date.now(); // hold time (Trading Health) e time stop (lib/tradeLifecycle.js)
   state.save(botState);
 
   logger.log({
@@ -125,9 +126,13 @@ async function openPosition(side, analysis, equity) {
   });
 }
 
-async function closePosition(reasonSide, equity) {
-  const bybitSide = reasonSide === "buy" ? "Sell" : "Buy"; // ordem oposta à posição atual, reduceOnly
-  console.log(`🔁 Sinal reverteu — fechando posição ${botState.side} manualmente.`);
+// reason: lib/tradeLifecycle.js::REASONS ("signal_reversal" | "time_stop", e
+// futuros incrementos da Fase D) -- só diferencia o evento logado (exitReason
+// pro futuro Exit Analytics/Validation Engine), a mecânica de fechamento é a
+// mesma pra qualquer motivo decidido pelo bot (reduceOnly na Bybit).
+async function closePosition(reason, equity) {
+  const bybitSide = botState.side === "Buy" ? "Sell" : "Buy"; // ordem oposta à posição atual, reduceOnly
+  console.log(`🔁 Fechando posição ${botState.side} (${reason}).`);
   const holdMs = botState.openedAt ? Date.now() - botState.openedAt : null; // capturado antes do reset abaixo limpar openedAt
 
   const res = await bybit.placeOrder({
@@ -136,7 +141,7 @@ async function closePosition(reasonSide, equity) {
     reduceOnly: true,
   });
 
-  logger.log({ event: "order_closed_manually", side: bybitSide, qty: botState.qty, orderResult: res });
+  logger.log({ event: "order_closed_manually", reason, side: bybitSide, qty: botState.qty, orderResult: res });
 
   botState.isOpened = false;
   botState.side = null;
@@ -164,6 +169,7 @@ async function closePosition(reasonSide, equity) {
       // o que dispara o fechamento nem o tamanho da posição.
       logger.log({
         event: "order_closed_manually_pnl",
+        reason,
         pnlUsd,
         pnlPct,
         avgEntryPrice: last.avgEntryPrice,
@@ -171,7 +177,7 @@ async function closePosition(reasonSide, equity) {
         side: last.side,
         holdMs,
       });
-      console.log(`ℹ️  PnL da posição fechada: $${pnlUsd.toFixed(2)} (${(pnlPct * 100).toFixed(2)}%)`);
+      console.log(`ℹ️  PnL da posição fechada (${reason}): $${pnlUsd.toFixed(2)} (${(pnlPct * 100).toFixed(2)}%)`);
     }
   } catch (err) {
     console.error("⚠️  Não foi possível buscar closed-pnl após fechamento manual:", err.message);
@@ -225,14 +231,12 @@ async function cycle() {
     console.log(`📦 Posição aberta? ${botState.isOpened} (${botState.side || "-"})`);
     console.log(`🧠 Sinal: ${analysis.signal} (${analysis.reasons.join(",")})`);
 
-    // Reversão de sinal com posição aberta: fecha a posição atual antes de tudo
-    if (botState.isOpened) {
-      const opposingSignal =
-        (botState.side === "Buy" && analysis.signal === "sell") ||
-        (botState.side === "Sell" && analysis.signal === "buy");
-      if (opposingSignal) {
-        await closePosition(analysis.signal === "sell" ? "buy" : "sell", totalEquity);
-      }
+    // Trade Lifecycle Engine: única pergunta sobre saídas que o bot decide e
+    // executa ativamente (time stop, reversão de sinal, e futuros incrementos
+    // da Fase D) -- evita espalhar mais um `if` aqui a cada saída nova.
+    const lifecycle = tradeLifecycle.evaluate({ botState, analysis, now: Date.now(), config });
+    if (lifecycle.reason) {
+      await closePosition(lifecycle.reason, totalEquity);
     }
 
     const risk_ = risk.canExecute(analysis.signal, botState);

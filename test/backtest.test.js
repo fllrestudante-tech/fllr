@@ -1,6 +1,16 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { computeMetrics, isCandidateBetter } = require("../lib/backtest");
+const config = require("../config");
+const { computeMetrics, isCandidateBetter, MAX_HOLD_CANDLES } = require("../lib/backtest");
+
+// Fase D1: MAX_HOLD_CANDLES precisa vir de config.maxHoldMinutes (single
+// source of truth com o time stop ao vivo, lib/tradeLifecycle.js), não mais
+// uma constante local desacoplada do que a produção realmente faz.
+test("MAX_HOLD_CANDLES é derivado de config.maxHoldMinutes / intervalMinutes", () => {
+  const intervalMinutes = Number(config.interval) || 1;
+  const expected = Math.max(1, Math.round(config.maxHoldMinutes / intervalMinutes));
+  assert.equal(MAX_HOLD_CANDLES, expected);
+});
 
 test("computeMetrics: array vazio retorna tudo zerado", () => {
   const m = computeMetrics([]);
