@@ -6,6 +6,7 @@
 // testável); este arquivo só faz a ligação com child_process/fs de verdade.
 const { spawn } = require("child_process");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { createSupervisorState, recordSpawn, recordExit, markStopped, touchTick } = require("../lib/supervisor");
 const { createRotatingWriter } = require("../lib/logRotation");
@@ -17,6 +18,7 @@ const connectivityManager = require("../lib/connectivityManager");
 const connectivityStatus = require("../lib/connectivityStatus");
 const systemIncidents = require("../lib/systemIncidents");
 const backfill = require("../lib/backfill");
+const lifecycle = require("../lib/lifecycle");
 const { sendTelegramAlert } = require("../lib/alerts");
 const { insertAlertHistory } = require("../lib/alertsHistory");
 const { getSla } = require("../lib/slaRegistry");
@@ -28,9 +30,16 @@ const RUNTIME_DIR = path.join(__dirname, "..", "runtime");
 const LOCK_FILE = path.join(RUNTIME_DIR, "locks", "supervisor.lock");
 const PIDS_DIR = path.join(RUNTIME_DIR, "pids");
 const STATE_FILE = path.join(RUNTIME_DIR, "processes", "state.json");
+const LIFECYCLE_FILE = lifecycle.defaultLifecyclePath(RUNTIME_DIR);
 const CONNECTIVITY_STATUS_FILE = connectivityStatus.DEFAULT_STATUS_FILE;
 const TICK_INTERVAL_MS = 30000;
 const INCIDENT_TYPE = "NETWORK";
+const BOOT_INCIDENT_TYPE = "SYSTEM";
+
+// mkdir aqui (não só dentro de ensureDirs(), chamada bem mais abaixo) porque
+// a checagem de boot incident já precisa ler/escrever runtime/lifecycle.json
+// antes de qualquer outra coisa.
+fs.mkdirSync(RUNTIME_DIR, { recursive: true });
 
 const CHILDREN = [
   { name: "bot", script: path.join(__dirname, "..", "index.js") },
@@ -112,6 +121,78 @@ if (resumedIncident) {
   openIncidentUuid = resumedIncident.uuid;
   console.warn(`🔌 Incidente de rede já aberto retomado (causa=${resumedIncident.root_cause}, desde ${resumedIncident.started_at}).`);
 }
+
+const BOOT_ROOT_CAUSE_LABEL = { os_reboot: "reboot inesperado do sistema", process_crash: "processo derrubado sem encerramento limpo" };
+
+function formatBootIncidentMessage(incident, { resyncSummary = null } = {}) {
+  const startedLabel = new Date(incident.startedAt).toISOString().slice(11, 16);
+  const endedLabel = new Date(incident.endedAt).toISOString().slice(11, 16);
+  const minutes = Math.round((incident.endedAt - incident.startedAt) / 60000);
+  const causeLabel = BOOT_ROOT_CAUSE_LABEL[incident.rootCause] || incident.rootCause;
+  const suffix = resyncSummary ? `Coleta retomada automaticamente (${resyncSummary}).` : "Coleta retomada automaticamente.";
+  return (
+    `🐕 Plataforma reiniciada sozinha após ${causeLabel}. ` +
+    `Última atividade conhecida: ${startedLabel}. Voltou às ${endedLabel}. Tempo offline: ${minutes}min. ${suffix}`
+  );
+}
+
+// Mesmo padrão de resyncAfterIncident (linhas abaixo) -- reaproveita
+// lib/backfill.js pra preencher candles/funding/open_interest do intervalo
+// em que a plataforma inteira ficou fora do ar. Roda fire-and-forget (não
+// bloqueia o boot dos filhos, que já é lento o bastante); é seguro rodar em
+// paralelo com o polling ao vivo dos coletores (mesmo INSERT OR IGNORE
+// idempotente usado em todo lugar).
+async function recoverFromBootIncident(uuid, incident) {
+  const opts = { exchange: "bybit", symbol: config.symbol, interval: config.interval, sinceMs: incident.startedAt, untilMs: incident.endedAt };
+  const results = {};
+  try {
+    const [candles, funding, openInterest] = await Promise.all([
+      backfill.backfillCandles(db, eventBus, bybitClient, opts),
+      backfill.backfillFunding(db, eventBus, bybitClient, opts),
+      backfill.backfillOpenInterest(db, eventBus, bybitClient, opts),
+    ]);
+    const durationMs = incident.endedAt - incident.startedAt;
+    for (const [domain, result] of [["candles", candles], ["funding", funding], ["openInterest", openInterest]]) {
+      const expected = Math.max(0, Math.round(durationMs / getSla(domain === "openInterest" ? "open_interest" : domain).expectedIntervalMs));
+      results[domain] = { expectedMissing: expected, recovered: result.inserted };
+    }
+    systemIncidents.updateResyncStatus(db, uuid, { resyncStatus: "done", resyncDetails: results });
+  } catch (err) {
+    console.error("🐕 Falha ao recuperar dados perdidos após queda de sistema:", err.message);
+    systemIncidents.updateResyncStatus(db, uuid, { resyncStatus: "failed", resyncDetails: { error: err.message } });
+  }
+
+  const resyncSummary = Object.entries(results)
+    .map(([domain, r]) => `${domain}: ${r.recovered}/${r.expectedMissing}`)
+    .join(", ");
+  const message = formatBootIncidentMessage(incident, { resyncSummary: resyncSummary || null });
+  console.log(`🐕 ${message}`);
+  await sendTelegramAlert(message).catch((err) => console.error("🐕 Falha ao enviar alerta de boot incident:", err.message));
+  insertAlertHistory(db, { severity: "HIGH", source: "system_boot", message, occurredAt: new Date().toISOString() });
+}
+
+// Detecta se o boot anterior terminou de propósito (clean_shutdown) ou não
+// (crash/reboot) -- ver lib/lifecycle.js. Roda antes do loop de spawn dos
+// filhos pra já ter o incidente registrado e o backfill disparado o quanto
+// antes; não bloqueia o boot (recoverFromBootIncident é fire-and-forget).
+const previousLifecycle = lifecycle.readLifecycle(LIFECYCLE_FILE);
+const bootCheck = lifecycle.detectBootIncident({ previous: previousLifecycle, osUptimeSec: os.uptime(), now: Date.now() });
+if (bootCheck.isIncident) {
+  const uuid = systemIncidents.insertOpenIncident(db, {
+    type: BOOT_INCIDENT_TYPE,
+    severity: "HIGH",
+    rootCause: bootCheck.rootCause,
+    startedAt: bootCheck.startedAt,
+  });
+  systemIncidents.closeIncident(db, uuid, {
+    endedAt: bootCheck.endedAt,
+    durationMs: bootCheck.endedAt - bootCheck.startedAt,
+    automaticRecovery: true,
+  });
+  console.warn(`🐕 Boot incident detectado (causa=${bootCheck.rootCause}, desde ${new Date(bootCheck.startedAt).toISOString()}).`);
+  recoverFromBootIncident(uuid, bootCheck).catch((err) => console.error("🐕 Falha no fluxo de recuperação de boot incident:", err.message));
+}
+let currentLifecycle = lifecycle.writeRunning(LIFECYCLE_FILE, { pid: process.pid, startedAt: new Date().toISOString() });
 
 function persistState() {
   atomicWriteJsonSync(STATE_FILE, state);
@@ -262,6 +343,7 @@ function shutdown(signal) {
     }
   }
 
+  lifecycle.writeCleanShutdown(LIFECYCLE_FILE, currentLifecycle, Date.now());
   releaseLock();
   setTimeout(() => {
     for (const writer of Object.values(logWriters)) writer.close();
@@ -277,6 +359,7 @@ for (const spec of CHILDREN) startChild(spec);
 tickTimer = setInterval(() => {
   touchTick(state, Date.now());
   persistState();
+  currentLifecycle = lifecycle.writeHeartbeat(LIFECYCLE_FILE, currentLifecycle, Date.now());
   alertManager.flush().catch((err) => console.error("🐕 Falha ao consolidar alertas:", err.message));
   runConnectivityCheck().catch((err) => console.error("🔌 Falha na checagem de conectividade:", err.message));
 }, TICK_INTERVAL_MS);

@@ -2,9 +2,12 @@
 // externo pago. Uso: npm run health (ou npm run health -- --watch[=Nseg])
 const fs = require("fs");
 const path = require("path");
+const Database = require("better-sqlite3");
 const { createHealthRegistry } = require("../lib/health");
 const checks = require("../lib/healthChecks");
 const dashboard = require("../lib/dashboard");
+const { computeAvailability } = require("../lib/platformAvailability");
+const { DEFAULT_MARKET_DB_PATH } = checks;
 
 const METRICS_DIR = path.join(__dirname, "..", "runtime", "metrics");
 
@@ -36,6 +39,22 @@ const STATUS_ICON = {
   STARTING: "🟡",
   UNKNOWN: "❔",
 };
+
+// Query barata sobre system_incidents (não precisa de sampler contínuo,
+// diferente das métricas de throughput -- mesmo raciocínio já aplicado ao
+// Backup Health, que também é calculado sob demanda em vez de amostrado).
+function readAvailability() {
+  if (!fs.existsSync(DEFAULT_MARKET_DB_PATH)) return null;
+  let db;
+  try {
+    db = new Database(DEFAULT_MARKET_DB_PATH, { readonly: true, fileMustExist: true });
+    return computeAvailability(db);
+  } catch {
+    return null;
+  } finally {
+    if (db) db.close();
+  }
+}
 
 async function main() {
   const registry = createHealthRegistry();
@@ -86,6 +105,9 @@ async function main() {
 
   console.log("\nBackup Health:\n");
   dashboard.formatBackupSection(results.backup?.details).forEach((l) => console.log(l));
+
+  console.log("\nPlatform Availability:\n");
+  dashboard.formatPlatformAvailabilitySection(readAvailability()).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
