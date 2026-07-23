@@ -90,6 +90,9 @@ async function main() {
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
 
+  console.log("\nExit Analytics (de onde vem o lucro, por motivo de saída):\n");
+  dashboard.formatExitAnalyticsTable(tradingSnapshot).forEach((l) => console.log(l));
+
   console.log("\nMarket Quality (Coverage / Gaps / Sanity / Data Confidence Score):\n");
   dashboard.formatQualityTable(qualitySnapshot).forEach((l) => console.log(l));
 

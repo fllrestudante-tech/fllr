@@ -83,6 +83,62 @@ test("registerVolatilityCheck: não dispara pausa em regime NORMAL/LOW", () => {
   assert.equal(state.circuitBreakerUntil, null);
 });
 
+// --- planOrder: tpLevels (Fase D5) ---
+
+test("planOrder: calcula tpLevels a partir de config.tpLevels, preço absoluto por R e qty por qtyPct (compra)", () => {
+  const originalLevels = config.tpLevels;
+  try {
+    config.tpLevels = [
+      { r: 1, qtyPct: 0.3 },
+      { r: 2, qtyPct: 0.3 },
+    ];
+    const plan = risk.planOrder({
+      side: "buy",
+      price: 100,
+      atr: 0, // força uso do stopLossPct puro, sem interferência do ATR
+      equity: 10000,
+      params: { stopLossPct: 0.03 },
+      instrumentInfo: null,
+    });
+    // R = 100 * 0.03 = 3
+    assert.equal(plan.tpLevels.length, 2);
+    assert.ok(Math.abs(plan.tpLevels[0].price - 103) < 1e-6); // 100 + 1*3
+    assert.ok(Math.abs(plan.tpLevels[1].price - 106) < 1e-6); // 100 + 2*3
+    assert.ok(Math.abs(plan.tpLevels[0].qty - plan.qty * 0.3) < 1e-6);
+  } finally {
+    config.tpLevels = originalLevels;
+  }
+});
+
+test("planOrder: tpLevels na venda sobem preço pro lado oposto (R subtrai)", () => {
+  const originalLevels = config.tpLevels;
+  try {
+    config.tpLevels = [{ r: 1, qtyPct: 0.3 }];
+    const plan = risk.planOrder({
+      side: "sell",
+      price: 100,
+      atr: 0,
+      equity: 10000,
+      params: { stopLossPct: 0.03 },
+      instrumentInfo: null,
+    });
+    assert.ok(Math.abs(plan.tpLevels[0].price - 97) < 1e-6); // 100 - 1*3
+  } finally {
+    config.tpLevels = originalLevels;
+  }
+});
+
+test("planOrder: array vazio em config.tpLevels retorna tpLevels vazio, sem quebrar", () => {
+  const originalLevels = config.tpLevels;
+  try {
+    config.tpLevels = [];
+    const plan = risk.planOrder({ side: "buy", price: 100, atr: 0, equity: 10000, params: { stopLossPct: 0.03 }, instrumentInfo: null });
+    assert.deepEqual(plan.tpLevels, []);
+  } finally {
+    config.tpLevels = originalLevels;
+  }
+});
+
 test("registerVolatilityCheck: HIGH persistente reestende a pausa (rolling)", () => {
   const state = freshState();
   const t1 = Date.now();

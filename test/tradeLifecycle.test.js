@@ -7,7 +7,10 @@ const {
   isBreakEvenDue,
   isTrailingActivationDue,
   computeTrailingActivePrice,
+  classifyExternalClose,
+  classifyPartialClose,
   REASONS,
+  EXTERNAL_CLOSE_REASONS,
 } = require("../lib/tradeLifecycle");
 
 const config = { maxHoldMinutes: 120 };
@@ -159,4 +162,48 @@ test("isTrailingActivationDue: venda -- true no activePrice ou além", () => {
   const state = trailingReadyState({ side: "Sell" });
   assert.equal(isTrailingActivationDue(state, { price: 96 }, 5), false);
   assert.equal(isTrailingActivationDue(state, { price: 95 }, 5), true);
+});
+
+// --- classifyExternalClose (Exit Analytics) ---
+
+test("classifyExternalClose: trailing_stop tem prioridade quando já estava ativo", () => {
+  const state = { trailingActivated: true, breakEvenApplied: true, stopLossPrice: 97, takeProfitPrice: 106 };
+  assert.equal(classifyExternalClose(state, 108), EXTERNAL_CLOSE_REASONS.TRAILING_STOP);
+});
+
+test("classifyExternalClose: break_even quando aplicado mas trailing ainda não ativou", () => {
+  const state = { trailingActivated: false, breakEvenApplied: true, stopLossPrice: 97, takeProfitPrice: 106 };
+  assert.equal(classifyExternalClose(state, 100), EXTERNAL_CLOSE_REASONS.BREAK_EVEN);
+});
+
+test("classifyExternalClose: stop_loss quando o preço de saída está mais perto do stop original", () => {
+  const state = { trailingActivated: false, breakEvenApplied: false, stopLossPrice: 97, takeProfitPrice: 106 };
+  assert.equal(classifyExternalClose(state, 97.1), EXTERNAL_CLOSE_REASONS.STOP_LOSS);
+});
+
+test("classifyExternalClose: take_profit quando o preço de saída está mais perto do alvo", () => {
+  const state = { trailingActivated: false, breakEvenApplied: false, stopLossPrice: 97, takeProfitPrice: 106 };
+  assert.equal(classifyExternalClose(state, 105.9), EXTERNAL_CLOSE_REASONS.TAKE_PROFIT);
+});
+
+test("classifyExternalClose: unknown quando faltam os níveis de referência (estado antigo/corrompido)", () => {
+  const state = { trailingActivated: false, breakEvenApplied: false, stopLossPrice: null, takeProfitPrice: null };
+  assert.equal(classifyExternalClose(state, 100), EXTERNAL_CLOSE_REASONS.UNKNOWN);
+});
+
+// --- classifyPartialClose (Fase D5) ---
+
+test("classifyPartialClose: tp1 quando nenhum nível disparou ainda", () => {
+  const state = { tpLevels: [{ r: 1 }, { r: 2 }], tpLevelsFilled: 0 };
+  assert.equal(classifyPartialClose(state), "tp1");
+});
+
+test("classifyPartialClose: tp2 depois que tp1 já disparou", () => {
+  const state = { tpLevels: [{ r: 1 }, { r: 2 }], tpLevelsFilled: 1 };
+  assert.equal(classifyPartialClose(state), "tp2");
+});
+
+test("classifyPartialClose: null quando todos os níveis conhecidos já foram consumidos", () => {
+  const state = { tpLevels: [{ r: 1 }, { r: 2 }], tpLevelsFilled: 2 };
+  assert.equal(classifyPartialClose(state), null);
 });

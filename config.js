@@ -59,6 +59,19 @@ const config = {
     high: num(process.env.TRAILING_ATR_MULTIPLIER_HIGH, 3),
   },
 
+  // Fase D5 (TP Escalonado) -- níveis em array, não hardcoded, pra testar
+  // splits diferentes (20/30/50, 40/30/30...) só mudando config, sem
+  // recompilar nada. `r` é múltiplo de R (distância do stop original,
+  // mesma unidade do break even/trailing); `qtyPct` é a fração da posição
+  // fechada nesse nível. O que sobrar (1 - soma dos qtyPct) corre no
+  // break even/trailing já construídos (D3/D4). Confirmado contra a API
+  // real da Bybit (Demo): TP1+TP2 parciais (tpslMode="Partial") coexistem
+  // sem conflito com o trailingStop na mesma posição.
+  tpLevels: [
+    { r: 1, qtyPct: 0.3 },
+    { r: 2, qtyPct: 0.3 },
+  ],
+
   alerts: {
     telegramBotToken: process.env.TELEGRAM_ALERT_BOT_TOKEN || "",
     telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",

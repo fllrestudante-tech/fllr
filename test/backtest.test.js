@@ -144,55 +144,106 @@ test("simulate: trade que anda +1R e reverte sai no zero a zero (breakeven), nã
   const candles = syntheticCandles(1500, 2); // seed com breakevens conhecidos (ver exploração manual)
   const params = signal.DEFAULT_PARAMS;
 
-  const originalTarget = config.targetReturnPerTradePct;
-  const originalLeverage = config.leverageMax;
   const originalMultiplier = config.trailingStopAtrMultiplier;
+  const originalTpLevels = config.tpLevels;
   try {
-    config.targetReturnPerTradePct = 0.3;
-    config.leverageMax = 1; // rewardRiskRatio = 0.3/params.stopLossPct > 1 -- alvo fica mais longe que +1R
-    // Neutraliza o trailing (Fase D4) pra isolar o comportamento do break
-    // even puro -- sem isso, um trade que ativa break even pode continuar e
-    // ativar o trailing também, deixando de ser um zero-a-zero exato.
+    // Neutraliza trailing (D4) e TP escalonado (D5) pra isolar o
+    // comportamento do break even puro -- sem isso, o TP1 padrão também
+    // dispara em +1R (mesmo gatilho) e trava lucro real numa fração da
+    // posição, deixando de ser um zero-a-zero exato no trade como um todo.
     config.trailingStopAtrMultiplier = { low: 1e9, normal: 1e9, high: 1e9 };
+    config.tpLevels = [];
 
     const result = simulate(candles, params);
     assert.ok(result.breakevens > 0, "cenário deveria produzir ao menos 1 saída em breakeven");
-    assert.equal(result.totalTrades, result.wins + result.losses + result.timeouts + result.breakevens);
+    assert.equal(result.totalTrades, result.wins + result.losses + result.breakevens);
     const zeroReturns = result.tradeReturns.filter((r) => r === 0);
     assert.equal(zeroReturns.length, result.breakevens);
   } finally {
-    config.targetReturnPerTradePct = originalTarget;
-    config.leverageMax = originalLeverage;
     config.trailingStopAtrMultiplier = originalMultiplier;
+    config.tpLevels = originalTpLevels;
   }
 });
 
 // --- Fase D4 (Trailing ATR adaptativo) -- mesma ressalva do teste de D3
 // acima sobre craftar sinais exatos; verifica a propriedade central: com uma
-// distância de trailing pequena o bastante pra ativar fácil, alguns trades
-// saem com retorno positivo mas MENOR que o alvo cheio -- prova de que o
-// trailing está travando lucro parcial de verdade (nem 0 do breakeven puro,
-// nem o retorno fixo do alvo).
-test("simulate: trailing ativo produz saídas com lucro parcial, distinto do alvo cheio e do breakeven", () => {
+// distância de trailing pequena o bastante pra ativar fácil, trades saem
+// com retornos positivos VARIÁVEIS (dependentes do caminho de preço real),
+// não um valor fixo único -- prova de que o trailing está ratcheando de
+// verdade, não só aplicando uma regra categórica.
+test("simulate: trailing ativo produz saídas com lucro variável e positivo, dependente do caminho de preço", () => {
   const candles = syntheticCandles(1500, 1);
   const params = signal.DEFAULT_PARAMS;
 
-  const originalTarget = config.targetReturnPerTradePct;
-  const originalLeverage = config.leverageMax;
   const originalMultiplier = config.trailingStopAtrMultiplier;
+  const originalTpLevels = config.tpLevels;
   try {
-    config.targetReturnPerTradePct = 0.3;
-    config.leverageMax = 1;
     config.trailingStopAtrMultiplier = { low: 0.3, normal: 0.5, high: 0.8 }; // distância pequena -- ativa fácil após o break even
+    config.tpLevels = []; // neutraliza TP escalonado (D5) pra isolar a contribuição do trailing
 
-    const fullTargetReturn = config.riskPerTradePct * (0.3 / 1 / params.stopLossPct);
     const result = simulate(candles, params);
 
-    const partialProfits = result.tradeReturns.filter((r) => r > 0 && r < fullTargetReturn - 1e-9);
-    assert.ok(partialProfits.length > 0, "deveria haver ao menos 1 saída de lucro parcial via trailing");
+    const profits = result.tradeReturns.filter((r) => r > 0);
+    const distinctValues = new Set(profits.map((r) => r.toFixed(10)));
+    assert.ok(profits.length > 0, "deveria haver ao menos 1 saída lucrativa");
+    assert.ok(distinctValues.size > 1, "retornos deveriam variar entre trades (dependentes do caminho de preço), não um valor fixo único");
   } finally {
-    config.targetReturnPerTradePct = originalTarget;
-    config.leverageMax = originalLeverage;
+    config.trailingStopAtrMultiplier = originalMultiplier;
+    config.tpLevels = originalTpLevels;
+  }
+});
+
+// --- Fase D5 (TP Escalonado) -- com um único nível cobrindo 100% da posição
+// em R=1, o comportamento deveria ser idêntico a um "win binário" clássico
+// (riskFraction * r * qtyPct = riskFraction), permitindo checagem exata do
+// valor, ao contrário dos cenários de trailing/breakeven parcial acima
+// (que dependem de caminho de preço e não têm um valor único esperado).
+test("simulate: nível de TP único cobrindo 100% da posição produz retorno exato riskFraction × r", () => {
+  const candles = syntheticCandles(1500, 2);
+  const params = signal.DEFAULT_PARAMS;
+
+  const originalTpLevels = config.tpLevels;
+  try {
+    config.tpLevels = [{ r: 1, qtyPct: 1.0 }];
+    const result = simulate(candles, params);
+
+    const expectedWin = config.riskPerTradePct * 1 * 1.0;
+    const wins = result.tradeReturns.filter((r) => r > 0);
+    assert.ok(wins.length > 0, "cenário deveria produzir ao menos 1 win via TP");
+    for (const w of wins) {
+      assert.ok(Math.abs(w - expectedWin) < 1e-9, `retorno de win deveria ser exatamente ${expectedWin}, veio ${w}`);
+    }
+    // Perdas continuam perda cheia -- TP em 100% não deixa "resto" pra
+    // break even/trailing amortecerem o stop.
+    const losses = result.tradeReturns.filter((r) => r < 0);
+    for (const l of losses) {
+      assert.ok(Math.abs(l - -config.riskPerTradePct) < 1e-9);
+    }
+  } finally {
+    config.tpLevels = originalTpLevels;
+  }
+});
+
+// --- Fase D5 -- dois níveis parciais (30%+30%) deixando 40% pro break even:
+// um trade que bate TP1 mas depois reverte e o resto sai em breakeven
+// (não em stop cheio) deve ter retorno = só a contribuição do TP1, nem
+// zero puro nem perda.
+test("simulate: TP1 parcial seguido de breakeven no resto produz retorno = só a fatia do TP1", () => {
+  const candles = syntheticCandles(1500, 2);
+  const params = signal.DEFAULT_PARAMS;
+
+  const originalTpLevels = config.tpLevels;
+  const originalMultiplier = config.trailingStopAtrMultiplier;
+  try {
+    config.tpLevels = [{ r: 1, qtyPct: 0.3 }]; // só TP1, resto (70%) roda no break even (sem TP2 pra simplificar)
+    config.trailingStopAtrMultiplier = { low: 1e9, normal: 1e9, high: 1e9 }; // neutraliza trailing (D4)
+
+    const result = simulate(candles, params);
+    const expectedTp1Only = config.riskPerTradePct * 1 * 0.3; // contribuição do TP1, resto saiu em 0 (breakeven)
+    const matches = result.tradeReturns.filter((r) => Math.abs(r - expectedTp1Only) < 1e-9);
+    assert.ok(matches.length > 0, "deveria haver ao menos 1 trade onde só o TP1 contribuiu e o resto saiu em breakeven puro");
+  } finally {
+    config.tpLevels = originalTpLevels;
     config.trailingStopAtrMultiplier = originalMultiplier;
   }
 });

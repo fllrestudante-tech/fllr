@@ -6,6 +6,7 @@ data/tuning.json
 data/market.db
 data/market.db-wal
 data/market.db-shm
+data/*.tmp
 runtime/
 logs/
 backups/

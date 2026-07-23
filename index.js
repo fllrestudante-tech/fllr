@@ -56,11 +56,23 @@ async function handleExternalClose(equity) {
     const pnlUsd = parseFloat(last.closedPnl);
     const pnlPct = equity > 0 ? pnlUsd / equity : 0;
     const holdMs = botState.openedAt ? Date.now() - botState.openedAt : null; // openedAt some se o bot reiniciou entre a abertura e o fechamento -- honesto reportar null, não fabricar
+    // Classificado ANTES de limpar o estado -- lib/tradeLifecycle.js::classifyExternalClose
+    // precisa de stopLossPrice/takeProfitPrice/breakEvenApplied/trailingActivated
+    // como estavam no momento do fechamento, não depois de zerados.
+    const exitReason = tradeLifecycle.classifyExternalClose(botState, parseFloat(last.avgExitPrice));
     risk.registerTradeResult(botState, pnlPct);
     botState.openedAt = null;
+    botState.stopLossPrice = null;
+    botState.takeProfitPrice = null;
+    botState.breakEvenApplied = false;
+    botState.trailingActivated = false;
+    botState.trailingDistance = null;
+    botState.tpLevels = [];
+    botState.tpLevelsFilled = 0;
     state.save(botState);
     logger.log({
       event: "position_closed_externally",
+      reason: exitReason,
       pnlUsd,
       pnlPct,
       avgEntryPrice: last.avgEntryPrice,
@@ -68,9 +80,49 @@ async function handleExternalClose(equity) {
       side: last.side,
       holdMs,
     });
-    console.log(`ℹ️  Posição fechada por SL/TP. PnL: $${pnlUsd.toFixed(2)} (${(pnlPct * 100).toFixed(2)}%)`);
+    console.log(`ℹ️  Posição fechada (${exitReason}). PnL: $${pnlUsd.toFixed(2)} (${(pnlPct * 100).toFixed(2)}%)`);
   } catch (err) {
     console.error("⚠️  Não foi possível buscar closed-pnl:", err.message);
+  }
+}
+
+// Fase D5 (TP Escalonado) -- posição segue aberta, mas encolheu porque um
+// nível parcial (TP1/TP2) disparou no servidor. Diferente de
+// handleExternalClose: não zera isOpened/side/entryPrice (a posição
+// continua), só registra o resultado da fatia fechada e avança
+// tpLevelsFilled. reducedQty vem de lib/state.js::reconcile.
+async function handlePartialClose(reducedQty, equity) {
+  try {
+    const closedList = await bybit.getClosedPnl(config.symbol, 3);
+    // A fatia parcial mais recente é a que tem closedSize mais próxima do
+    // qty reduzido -- getClosedPnl vem mais recente primeiro, mas não custa
+    // confirmar em vez de assumir que é sempre o índice 0.
+    const match = closedList.find((c) => Math.abs(parseFloat(c.closedSize) - reducedQty) < 1e-6) || closedList[0];
+    if (!match) {
+      console.warn("⚠️  TP parcial detectado mas nenhum closed-pnl correspondente encontrado.");
+      return;
+    }
+
+    const exitReason = tradeLifecycle.classifyPartialClose(botState);
+    const pnlUsd = parseFloat(match.closedPnl);
+    const pnlPct = equity > 0 ? pnlUsd / equity : 0;
+    risk.registerTradeResult(botState, pnlPct);
+    botState.tpLevelsFilled = (botState.tpLevelsFilled || 0) + 1;
+    state.save(botState);
+
+    logger.log({
+      event: "partial_close",
+      reason: exitReason,
+      qty: reducedQty,
+      pnlUsd,
+      pnlPct,
+      avgEntryPrice: match.avgEntryPrice,
+      avgExitPrice: match.avgExitPrice,
+      side: match.side,
+    });
+    console.log(`🎯 TP parcial (${exitReason}) -- qty ${reducedQty}, PnL: $${pnlUsd.toFixed(2)} (${(pnlPct * 100).toFixed(2)}%)`);
+  } catch (err) {
+    console.error("⚠️  Não foi possível processar TP parcial:", err.message);
   }
 }
 
@@ -83,17 +135,21 @@ async function openPosition(side, analysis, equity) {
   }
 
   const bybitSide = side === "buy" ? "Buy" : "Sell";
+  const tpLevelsDesc = plan.tpLevels.map((l) => `${(l.qtyPct * 100).toFixed(0)}%@${l.r}R`).join(" + ") || "nenhum";
   console.log(
-    `${side === "buy" ? "🟢" : "🔴"} Sinal de ${side.toUpperCase()}. qty=${plan.qty} stop=${plan.stopLossPrice} alvo=${plan.takeProfitPrice}`
+    `${side === "buy" ? "🟢" : "🔴"} Sinal de ${side.toUpperCase()}. qty=${plan.qty} stop=${plan.stopLossPrice} TP escalonado=${tpLevelsDesc}`
   );
 
+  // Fase D5 -- takeProfit fixo não é mais anexado à ordem de entrada: TP1/TP2
+  // (registrados abaixo como pernas Partial) assumem o papel de realização de
+  // lucro; o que sobrar corre no break even/trailing (D3/D4). stopLossPrice
+  // continua vindo junto da ordem (rede de segurança desde o primeiro tick).
   let res;
   try {
     res = await bybit.placeOrder({
       side: bybitSide,
       qty: plan.qty,
       stopLoss: plan.stopLossPrice,
-      takeProfit: plan.takeProfitPrice,
     });
   } catch (err) {
     // Envio da ordem falhou (ex: erro regulatório, saldo insuficiente) — registra
@@ -114,10 +170,26 @@ async function openPosition(side, analysis, equity) {
   botState.lastTradeTime = Date.now();
   botState.openedAt = Date.now(); // hold time (Trading Health) e time stop (lib/tradeLifecycle.js)
   botState.stopLossPrice = plan.stopLossPrice; // referência de R pro break even (Fase D3)
+  botState.takeProfitPrice = plan.takeProfitPrice; // referência pro Exit Analytics classificar o fechamento
   botState.breakEvenApplied = false;
   botState.trailingActivated = false;
   botState.trailingDistance = null;
+  botState.tpLevels = plan.tpLevels || [];
+  botState.tpLevelsFilled = 0;
   state.save(botState);
+
+  // Fase D5 (TP Escalonado) -- registra cada nível como uma ordem Partial
+  // separada, uma vez, na abertura (confirmado contra a API real: TP1+TP2
+  // coexistem com stopLoss/trailing na mesma posição sem conflito). Não
+  // precisa de checagem por ciclo -- a Bybit executa no servidor.
+  for (const level of botState.tpLevels) {
+    if (level.qty <= 0) continue;
+    try {
+      await bybit.setTradingStop({ tpslMode: "Partial", takeProfit: level.price, tpSize: level.qty });
+    } catch (err) {
+      console.error(`⚠️  Falha ao registrar TP parcial (R=${level.r}):`, err.message);
+    }
+  }
 
   logger.log({
     event: "order_opened",
@@ -126,6 +198,7 @@ async function openPosition(side, analysis, equity) {
     price: analysis.price,
     stopLossPrice: plan.stopLossPrice,
     takeProfitPrice: plan.takeProfitPrice,
+    tpLevels: plan.tpLevels,
     reasons: analysis.reasons,
     orderResult: res,
   });
@@ -193,9 +266,12 @@ async function closePosition(reason, equity) {
   botState.lastTradeTime = Date.now();
   botState.openedAt = null;
   botState.stopLossPrice = null;
+  botState.takeProfitPrice = null;
   botState.breakEvenApplied = false;
   botState.trailingActivated = false;
   botState.trailingDistance = null;
+  botState.tpLevels = [];
+  botState.tpLevelsFilled = 0;
   state.save(botState);
 
   // Fechamento por reversão de sinal também precisa alimentar o circuit breaker
@@ -252,13 +328,15 @@ async function cycle() {
 
     botState = state.resetDailyLossIfNewDay(botState);
 
-    const { state: reconciled, closedExternally } = await state.reconcile(botState);
+    const { state: reconciled, closedExternally, partiallyClosedQty } = await state.reconcile(botState);
     botState = reconciled;
 
     const { totalEquity } = await bybit.getWalletBalance();
 
     if (closedExternally) {
       await handleExternalClose(totalEquity);
+    } else if (partiallyClosedQty > 0) {
+      await handlePartialClose(partiallyClosedQty, totalEquity);
     }
 
     const candles = await bybit.getKlines(config.symbol, config.interval, 500);
