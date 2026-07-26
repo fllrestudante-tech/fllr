@@ -237,8 +237,13 @@ async function main() {
       : null;
   dashboard.formatInstitutionalContextSection(institutionalContext).forEach((l) => console.log(l));
 
+  const replayStats = readJsonIfExists(path.join(REPLAY_DIR, "stats.json"));
+
   console.log("\nReplay Engine:\n");
-  dashboard.formatReplaySummarySection(readJsonIfExists(path.join(REPLAY_DIR, "stats.json"))).forEach((l) => console.log(l));
+  dashboard.formatReplaySummarySection(replayStats).forEach((l) => console.log(l));
+
+  console.log("\nResearch Dashboard:\n");
+  dashboard.formatResearchDashboardSection(replayStats, config.replay.minSnapshotsForDecisionBrain).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
