@@ -98,6 +98,24 @@ const config = {
     mitigationThreshold: num(process.env.STRUCTURE_MITIGATION_THRESHOLD, 0.5),
   },
 
+  // Replay Engine -- percorre o market.db candle a candle (em passos),
+  // roda todos os Brains, espera outcomeHorizonCandles pra medir o que o
+  // preço fez de verdade e julgar SUCCESS/FAIL contra a direção fundida
+  // do Context Fusion. stepCandles evita processar/duplicar leitura a
+  // cada 1min (janelas consecutivas se sobrepõem quase inteiras);
+  // windowCandles limita o custo de cada passo (Structure/Liquidity/FVG/
+  // Order Block não precisam do histórico inteiro pra decidir o que
+  // importa agora). outcomeThresholdPct é hipótese, não validada -- é
+  // exatamente o tipo de número que este motor existe pra calibrar no
+  // futuro, não pra assumir certo de saída.
+  replay: {
+    stepCandles: num(process.env.REPLAY_STEP_CANDLES, 15),
+    windowCandles: num(process.env.REPLAY_WINDOW_CANDLES, 1500),
+    outcomeHorizonCandles: num(process.env.REPLAY_OUTCOME_HORIZON_CANDLES, 30),
+    outcomeThresholdPct: num(process.env.REPLAY_OUTCOME_THRESHOLD_PCT, 0.3),
+    lookbackDays: num(process.env.REPLAY_LOOKBACK_DAYS, 365),
+  },
+
   alerts: {
     telegramBotToken: process.env.TELEGRAM_ALERT_BOT_TOKEN || "",
     telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",

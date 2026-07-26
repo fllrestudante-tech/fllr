@@ -23,6 +23,7 @@ const config = require("../config");
 const { DEFAULT_MARKET_DB_PATH } = checks;
 
 const METRICS_DIR = path.join(__dirname, "..", "runtime", "metrics");
+const REPLAY_DIR = path.join(__dirname, "..", "data", "replay");
 
 function readJsonIfExists(filePath) {
   if (!fs.existsSync(filePath)) return null;
@@ -235,6 +236,9 @@ async function main() {
       ? synthesizeInstitutionalContext({ liquidity: liquiditySnapshot, fvg: fvgSnapshot, orderBlock: orderBlockSnapshot })
       : null;
   dashboard.formatInstitutionalContextSection(institutionalContext).forEach((l) => console.log(l));
+
+  console.log("\nReplay Engine:\n");
+  dashboard.formatReplaySummarySection(readJsonIfExists(path.join(REPLAY_DIR, "stats.json"))).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
