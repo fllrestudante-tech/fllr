@@ -27,6 +27,13 @@ const { sampleSanityChecks } = require("../lib/sanityChecks");
 const { computeDataConfidenceScore } = require("../lib/dataConfidenceScore");
 const { compareProviders } = require("../lib/crossSourceValidation");
 const { buildSourceReliabilityRegistry } = require("../lib/sourceReliability");
+const marketBrainData = require("../lib/brains/marketBrainData");
+const marketBrain = require("../lib/brains/marketBrain");
+const structureBrainData = require("../lib/brains/structureBrainData");
+const structureBrain = require("../lib/brains/structureBrain");
+const liquidityBrainData = require("../lib/brains/liquidityBrainData");
+const liquidityBrain = require("../lib/brains/liquidityBrain");
+const { fuseContext } = require("../lib/brains/contextFusion");
 
 // Domínios de mercado que teriam um equivalente em outra exchange (Binance,
 // quando existir) -- só esses fazem sentido pra Cross-Source Validation.
@@ -355,6 +362,32 @@ function runTradingSample() {
   eventBus.emit("runtime_metrics.trading.updated", { sampledAt });
 }
 
+/**
+ * Context Fusion -- combina Market/Structure/Liquidity Brain (só leitura,
+ * ver lib/brains/contextFusion.js) e persiste o resultado no mesmo padrão
+ * de snapshot+histórico JSONL já usado pelos outros 4 domínios -- é
+ * literalmente o "guardar ao longo do tempo" que motivou entrar aqui em
+ * vez de criar tabela/migração nova. Cadência lenta (junto de
+ * database/trading/quality): computar os 3 Brains sobre ~2500+ candles
+ * não é leve o bastante pra rodar no ritmo rápido de 60s.
+ */
+function runContextSample() {
+  const market = marketBrain.analyzeMarket(marketBrainData.gatherMarketBrainInputs(db, { symbol: config.symbol, interval: config.interval }));
+  const structure = structureBrain.analyzeStructure(structureBrainData.gatherStructureBrainInputs(db, { symbol: config.symbol, interval: config.interval }));
+  const liquidity = liquidityBrain.analyzeLiquidity(liquidityBrainData.gatherLiquidityBrainInputs(db, { symbol: config.symbol, interval: config.interval }));
+  const context = fuseContext({ market, structure, liquidity });
+
+  const sampledAt = new Date().toISOString();
+  writeJsonSnapshot(path.join(METRICS_DIR, "context.json"), { ...context, sampledAt });
+  appendHistory("context", {
+    state: context.state,
+    confidence: context.confidence,
+    score: context.score,
+    conflicts: context.conflicts,
+  });
+  eventBus.emit("runtime_metrics.context.updated", { sampledAt });
+}
+
 function run() {
   const startedAt = Date.now();
   try {
@@ -403,6 +436,15 @@ function runSlow() {
   } catch (err) {
     samplerMetrics.recordFailure("quality_sample", err, { latencyMs: Date.now() - qualityStartedAt });
     console.error("⚠️  metricsSampler: falha ao amostrar quality:", err.message);
+  }
+
+  const contextStartedAt = Date.now();
+  try {
+    runContextSample();
+    samplerMetrics.recordSuccess("context_sample", { inserted: true, latencyMs: Date.now() - contextStartedAt });
+  } catch (err) {
+    samplerMetrics.recordFailure("context_sample", err, { latencyMs: Date.now() - contextStartedAt });
+    console.error("⚠️  metricsSampler: falha ao amostrar context (Context Fusion):", err.message);
   }
 }
 

@@ -13,6 +13,7 @@ const structureBrainData = require("../lib/brains/structureBrainData");
 const structureBrain = require("../lib/brains/structureBrain");
 const liquidityBrainData = require("../lib/brains/liquidityBrainData");
 const liquidityBrain = require("../lib/brains/liquidityBrain");
+const { fuseContext } = require("../lib/brains/contextFusion");
 const config = require("../config");
 const { DEFAULT_MARKET_DB_PATH } = checks;
 
@@ -161,14 +162,22 @@ async function main() {
   console.log("\nPlatform Availability:\n");
   dashboard.formatPlatformAvailabilitySection(readAvailability()).forEach((l) => console.log(l));
 
+  const marketSnapshot = readMarketBrainSnapshot();
+  const structureSnapshot = readStructureBrainSnapshot();
+  const liquiditySnapshot = readLiquidityBrainSnapshot();
+
   console.log("\nMarket Brain:\n");
-  dashboard.formatMarketBrainSection(readMarketBrainSnapshot()).forEach((l) => console.log(l));
+  dashboard.formatMarketBrainSection(marketSnapshot).forEach((l) => console.log(l));
 
   console.log("\nStructure Brain:\n");
-  dashboard.formatStructureBrainSection(readStructureBrainSnapshot()).forEach((l) => console.log(l));
+  dashboard.formatStructureBrainSection(structureSnapshot).forEach((l) => console.log(l));
 
   console.log("\nLiquidity Brain:\n");
-  dashboard.formatLiquidityBrainSection(readLiquidityBrainSnapshot()).forEach((l) => console.log(l));
+  dashboard.formatLiquidityBrainSection(liquiditySnapshot).forEach((l) => console.log(l));
+
+  console.log("\nContext Fusion:\n");
+  const context = marketSnapshot && structureSnapshot && liquiditySnapshot ? fuseContext({ market: marketSnapshot, structure: structureSnapshot, liquidity: liquiditySnapshot }) : null;
+  dashboard.formatContextFusionSection(context).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
