@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { runReplay, gradeOutcome, extractNewEvents, computeStats, computeTransitions } = require("../lib/replayEngine");
+const { runReplay, gradeOutcome, extractNewEvents, computeStats, computeTransitions, classifyDirectionalOutcome, directionForBrain } = require("../lib/replayEngine");
 
 function candle(t, open, high, low, close, volume) {
   return [t, open, high, low, close, volume];
@@ -16,7 +16,7 @@ function flatCandle(t, price) {
 
 test("gradeOutcome: sem candles futuros suficientes -- PENDING", () => {
   const candles = Array.from({ length: 50 }, (_, i) => flatCandle(i * 60000, 100 + i * 0.1));
-  assert.deepEqual(gradeOutcome(candles, 45, 30, 0.3, "FUSED_BULLISH"), { outcome: "PENDING", forwardReturnPct: null });
+  assert.deepEqual(gradeOutcome(candles, 45, 30, 0.3, "FUSED_BULLISH"), { outcome: "PENDING", forwardReturnPct: null, maxAdverseExcursionPct: null });
 });
 
 test("gradeOutcome: contexto bullish e preço sobe além do threshold -- SUCCESS", () => {
@@ -33,17 +33,42 @@ test("gradeOutcome: contexto bullish mas preço cai além do threshold -- FAIL",
   assert.ok(result.forwardReturnPct < -0.3);
 });
 
-test("gradeOutcome: contexto neutro -- NOT_GRADED mesmo com retorno calculável", () => {
+test("gradeOutcome: contexto neutro -- NOT_GRADED mesmo com retorno calculável, sem excursão adversa (nenhuma direção apostada)", () => {
   const candles = Array.from({ length: 50 }, (_, i) => flatCandle(i * 60000, 100 + i * 0.1));
   const result = gradeOutcome(candles, 10, 30, 0.3, "FUSED_NEUTRAL");
   assert.equal(result.outcome, "NOT_GRADED");
   assert.equal(typeof result.forwardReturnPct, "number");
+  assert.equal(result.maxAdverseExcursionPct, null);
 });
 
 test("gradeOutcome: retorno dentro do threshold -- INCONCLUSIVE", () => {
   const candles = Array.from({ length: 50 }, () => flatCandle(0, 100));
   const result = gradeOutcome(candles, 10, 30, 0.3, "FUSED_BULLISH");
-  assert.deepEqual(result, { outcome: "INCONCLUSIVE", forwardReturnPct: 0 });
+  assert.deepEqual(result, { outcome: "INCONCLUSIVE", forwardReturnPct: 0, maxAdverseExcursionPct: 0 });
+});
+
+test("gradeOutcome: maxAdverseExcursionPct mede o pior mergulho contra a direção, não só o retorno final", () => {
+  const candles = [candle(0, 100, 100, 100, 100, 1), candle(1, 100, 100, 95, 98, 1), candle(2, 98, 105, 97, 105, 1)];
+  const result = gradeOutcome(candles, 0, 2, 0.3, "FUSED_BULLISH");
+  assert.equal(result.outcome, "SUCCESS");
+  assert.equal(result.forwardReturnPct, 5);
+  assert.equal(result.maxAdverseExcursionPct, 5);
+});
+
+// --- classifyDirectionalOutcome / directionForBrain (puras) ---
+
+test("classifyDirectionalOutcome: sem direção -- NOT_GRADED", () => {
+  assert.equal(classifyDirectionalOutcome(null, 1.0, 0.3), "NOT_GRADED");
+});
+
+test("directionForBrain: extrai a direção certa de cada Brain (bull/bear/null), inclusive quando não há bloco/zona dominante", () => {
+  assert.equal(directionForBrain("market", { market: { trend: { state: "TRENDING_BULL" } } }), "bull");
+  assert.equal(directionForBrain("structure", { structure: { trend: { bias: "bearish" } } }), "bear");
+  assert.equal(directionForBrain("liquidity", { liquidity: { state: "LIQUIDITY_ABOVE" } }), "bull");
+  assert.equal(directionForBrain("context", { context: { state: "FUSED_NEUTRAL" } }), null);
+  assert.equal(directionForBrain("fvg", { fvg: { imbalanceDirection: "bullish" } }), "bull");
+  assert.equal(directionForBrain("orderBlock", { orderBlock: { dominantBlock: null } }), null);
+  assert.equal(directionForBrain("institutional", { institutional: { dominantZone: { direction: "bearish" } } }), "bear");
 });
 
 // --- extractNewEvents (pura) ---
@@ -64,21 +89,21 @@ test("extractNewEvents: só evidência mais nova que o último snapshot, ordenad
 
 // --- computeStats (pura) ---
 
-test("computeStats: agrupa por combinação real de states, exclui PENDING/NOT_GRADED, successRate/avgForwardReturnPct corretos", () => {
-  function snap(structureState, liquidityState, outcome, forwardReturnPct) {
-    return { brains: { structure: { state: structureState }, liquidity: { state: liquidityState } }, outcome, forwardReturnPct };
+test("computeStats: agrupa por combinação real de states, exclui PENDING/NOT_GRADED, successRate/avgForwardReturnPct/avgDrawdownPct/confidenceLabel corretos", () => {
+  function snap(structureState, liquidityState, outcome, forwardReturnPct, maxAdverseExcursionPct) {
+    return { brains: { structure: { state: structureState }, liquidity: { state: liquidityState } }, outcome, forwardReturnPct, maxAdverseExcursionPct };
   }
   const snapshots = [
-    snap("GOOD", "BALANCED", "SUCCESS", 1.0),
-    snap("GOOD", "BALANCED", "SUCCESS", 2.0),
-    snap("GOOD", "BALANCED", "FAIL", -1.0),
-    snap("WEAK", "BALANCED", "FAIL", -0.5),
-    snap("GOOD", "BALANCED", "PENDING", null),
-    snap("GOOD", "BALANCED", "NOT_GRADED", 0.1),
+    snap("GOOD", "BALANCED", "SUCCESS", 1.0, 0.2),
+    snap("GOOD", "BALANCED", "SUCCESS", 2.0, 0.5),
+    snap("GOOD", "BALANCED", "FAIL", -1.0, 1.5),
+    snap("WEAK", "BALANCED", "FAIL", -0.5, 0.8),
+    snap("GOOD", "BALANCED", "PENDING", null, null),
+    snap("GOOD", "BALANCED", "NOT_GRADED", 0.1, null),
   ];
   assert.deepEqual(computeStats(snapshots, ["structure", "liquidity"]), [
-    { comboKey: "structure:GOOD|liquidity:BALANCED", count: 3, successRate: 67, avgForwardReturnPct: 0.667 },
-    { comboKey: "structure:WEAK|liquidity:BALANCED", count: 1, successRate: 0, avgForwardReturnPct: -0.5 },
+    { comboKey: "structure:GOOD|liquidity:BALANCED", count: 3, successRate: 67, avgForwardReturnPct: 0.667, avgDrawdownPct: 0.733, confidenceLabel: "Baixa" },
+    { comboKey: "structure:WEAK|liquidity:BALANCED", count: 1, successRate: 0, avgForwardReturnPct: -0.5, avgDrawdownPct: 0.8, confidenceLabel: "Baixa" },
   ]);
 });
 
@@ -136,6 +161,14 @@ test("runReplay: Market Brain só usa o eixo tendência -- sentimento/risco marc
   const snapshots = runReplay(candles, REPLAY_OPTIONS);
   // confidence = média dos 3 eixos (trend com dado real=100, sentiment/risk=0 por dado indisponível) -- 33, não mais que isso
   assert.equal(snapshots[0].brains.market.confidence, 33);
+});
+
+test("runReplay: cada Brain no snapshot carrega sua própria direção (bull/bear/null), não só o state", () => {
+  const candles = buildFixture();
+  const snapshots = runReplay(candles, REPLAY_OPTIONS);
+  for (const key of Object.keys(snapshots[0].brains)) {
+    assert.ok("direction" in snapshots[0].brains[key], `${key} deveria expor direction`);
+  }
 });
 
 test("runReplay: últimos passos sem candles futuros suficientes -- PENDING", () => {

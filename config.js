@@ -114,6 +114,9 @@ const config = {
     outcomeHorizonCandles: num(process.env.REPLAY_OUTCOME_HORIZON_CANDLES, 30),
     outcomeThresholdPct: num(process.env.REPLAY_OUTCOME_THRESHOLD_PCT, 0.3),
     lookbackDays: num(process.env.REPLAY_LOOKBACK_DAYS, 365),
+    // Brain Analytics -- critério objetivo de amostra mínima antes do
+    // Decision Brain poder nascer (número dado pelo próprio usuário).
+    minSnapshotsForDecisionBrain: num(process.env.REPLAY_MIN_SNAPSHOTS_FOR_DECISION_BRAIN, 20000),
   },
 
   alerts: {

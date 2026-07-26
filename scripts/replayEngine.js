@@ -11,9 +11,11 @@ const Database = require("better-sqlite3");
 const config = require("../config");
 const candleHistory = require("../lib/candleHistory");
 const { runReplay, computeStats, computeTransitions } = require("../lib/replayEngine");
+const { computeBrainAccuracy, computeMarginalContribution, computeRedundancy, evaluateDecisionBrainReadiness } = require("../lib/brainAnalytics");
 const { DEFAULT_DB_PATH } = require("../lib/infra/db");
 
 const REPLAY_DIR = path.join(__dirname, "..", "data", "replay");
+const BRAIN_KEYS = ["market", "structure", "liquidity", "context", "fvg", "orderBlock", "institutional"];
 
 function main() {
   const db = new Database(DEFAULT_DB_PATH, { readonly: true, fileMustExist: true });
@@ -83,6 +85,15 @@ function main() {
       context: computeTransitions(snapshots, "context"),
       structure: computeTransitions(snapshots, "structure"),
     },
+    // Brain Analytics -- acurácia por Brain isolado, escada de
+    // contribuição marginal (a ordem importa, é a escada) e uma checagem
+    // de redundância ilustrativa (mesmo exemplo do usuário: Liquidity+
+    // Order Block explicam o FVG?). computeRedundancy é genérica --
+    // outras combinações ficam pra quem consultar snapshots.jsonl direto.
+    brainAccuracy: BRAIN_KEYS.map((key) => computeBrainAccuracy(snapshots, key, config.replay.outcomeThresholdPct)),
+    marginalContribution: computeMarginalContribution(snapshots, ["market", "structure", "liquidity", "fvg", "orderBlock"], config.replay.outcomeThresholdPct),
+    redundancy: [computeRedundancy(snapshots, "fvg", ["liquidity", "orderBlock"])],
+    decisionBrainReadiness: evaluateDecisionBrainReadiness(snapshots, { minSnapshots: config.replay.minSnapshotsForDecisionBrain }),
   };
   fs.writeFileSync(path.join(REPLAY_DIR, "stats.json"), JSON.stringify(stats, null, 2));
 
