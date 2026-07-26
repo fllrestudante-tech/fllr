@@ -18,6 +18,7 @@ const fvgBrainData = require("../lib/brains/fvgBrainData");
 const fvgBrain = require("../lib/brains/fvgBrain");
 const orderBlockBrainData = require("../lib/brains/orderBlockBrainData");
 const orderBlockBrain = require("../lib/brains/orderBlockBrain");
+const { synthesizeInstitutionalContext } = require("../lib/brains/institutionalContext");
 const config = require("../config");
 const { DEFAULT_MARKET_DB_PATH } = checks;
 
@@ -219,11 +220,21 @@ async function main() {
   const context = marketSnapshot && structureSnapshot && liquiditySnapshot ? fuseContext({ market: marketSnapshot, structure: structureSnapshot, liquidity: liquiditySnapshot }) : null;
   dashboard.formatContextFusionSection(context).forEach((l) => console.log(l));
 
+  const fvgSnapshot = readFVGBrainSnapshot();
+  const orderBlockSnapshot = readOrderBlockBrainSnapshot();
+
   console.log("\nFVG Brain:\n");
-  dashboard.formatFVGBrainSection(readFVGBrainSnapshot()).forEach((l) => console.log(l));
+  dashboard.formatFVGBrainSection(fvgSnapshot).forEach((l) => console.log(l));
 
   console.log("\nOrder Block Brain:\n");
-  dashboard.formatOrderBlockBrainSection(readOrderBlockBrainSnapshot()).forEach((l) => console.log(l));
+  dashboard.formatOrderBlockBrainSection(orderBlockSnapshot).forEach((l) => console.log(l));
+
+  console.log("\nInstitutional Context:\n");
+  const institutionalContext =
+    liquiditySnapshot && fvgSnapshot && orderBlockSnapshot
+      ? synthesizeInstitutionalContext({ liquidity: liquiditySnapshot, fvg: fvgSnapshot, orderBlock: orderBlockSnapshot })
+      : null;
+  dashboard.formatInstitutionalContextSection(institutionalContext).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
