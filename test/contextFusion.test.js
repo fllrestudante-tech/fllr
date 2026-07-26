@@ -5,8 +5,11 @@ const {
   directionFromMarket,
   directionFromStructure,
   directionFromLiquidity,
+  computeMajorityDirection,
   detectConflicts,
   confidencePenaltyFor,
+  computeDominantNarrative,
+  computeSecondaryNarrative,
 } = require("../lib/brains/contextFusion");
 
 function brainResult({ state, confidence, score = 50, reasons = ["r"], missingEvidence = [], extra = {} }) {
@@ -54,10 +57,49 @@ test("directionFromLiquidity: SWEPT_HIGH=bear, SWEPT_LOW=bull, LIQUIDITY_ABOVE=b
   assert.equal(directionFromLiquidity({ state: "BALANCED" }), null);
 });
 
-test("detectConflicts: só conta quando os dois lados têm direção não-nula e discordam", () => {
-  assert.deepEqual(detectConflicts({ A: "bull", B: "bull", C: "bear" }), ["A aponta alta, mas C aponta baixa", "B aponta alta, mas C aponta baixa"]);
-  assert.deepEqual(detectConflicts({ A: "bull", B: null, C: "bull" }), []); // B nulo nunca gera conflito
-  assert.deepEqual(detectConflicts({ A: "bull", B: "bull", C: "bull" }), []);
+test("computeMajorityDirection: 2-1 tem vencedor claro", () => {
+  assert.equal(computeMajorityDirection(["bull", "bull", "bear"]), "bull");
+  assert.equal(computeMajorityDirection(["bear", "bear", "bull"]), "bear");
+});
+
+test("computeMajorityDirection: empate (1-1) ou tudo null -- sem maioria", () => {
+  assert.equal(computeMajorityDirection(["bull", "bear", null]), null);
+  assert.equal(computeMajorityDirection([null, null, null]), null);
+});
+
+test("detectConflicts: com maioria clara, só o lado minoritário conflita", () => {
+  const brains = [
+    { shortName: "Market", brain: brainResult({ confidence: 80, reasons: ["m"] }), direction: "bull" },
+    { shortName: "Structure", brain: brainResult({ confidence: 80, reasons: ["s"] }), direction: "bull" },
+    { shortName: "Liquidity", brain: brainResult({ confidence: 80, reasons: ["l"] }), direction: "bear" },
+  ];
+  const conflicts = detectConflicts(brains, computeMajorityDirection(brains.map((b) => b.direction)));
+  assert.equal(conflicts.length, 1);
+  assert.equal(conflicts[0].brain, "Liquidity");
+});
+
+test("detectConflicts: empate 1-1 sem maioria -- os dois lados discordantes são marcados (simétrico)", () => {
+  const brains = [
+    { shortName: "Market", brain: brainResult({ confidence: 80, reasons: ["m"] }), direction: "bull" },
+    { shortName: "Structure", brain: brainResult({ confidence: 80, reasons: ["s"] }), direction: "bear" },
+    { shortName: "Liquidity", brain: brainResult({ confidence: 80, reasons: ["l"] }), direction: null },
+  ];
+  const conflicts = detectConflicts(brains, computeMajorityDirection(brains.map((b) => b.direction)));
+  assert.equal(conflicts.length, 2);
+  assert.deepEqual(
+    conflicts.map((c) => c.brain).sort(),
+    ["Market", "Structure"]
+  );
+});
+
+test("detectConflicts: todos concordando -- nenhum conflito", () => {
+  const brains = [
+    { shortName: "Market", brain: brainResult({ confidence: 80 }), direction: "bull" },
+    { shortName: "Structure", brain: brainResult({ confidence: 80 }), direction: "bull" },
+    { shortName: "Liquidity", brain: brainResult({ confidence: 80 }), direction: "bull" },
+  ];
+  const conflicts = detectConflicts(brains, computeMajorityDirection(brains.map((b) => b.direction)));
+  assert.deepEqual(conflicts, []);
 });
 
 test("confidencePenaltyFor: 0 conflitos=sem penalidade, 1=0.7x, 2+=0.4x", () => {
@@ -65,6 +107,29 @@ test("confidencePenaltyFor: 0 conflitos=sem penalidade, 1=0.7x, 2+=0.4x", () => 
   assert.equal(confidencePenaltyFor(1), 0.7);
   assert.equal(confidencePenaltyFor(2), 0.4);
   assert.equal(confidencePenaltyFor(3), 0.4);
+});
+
+test("computeDominantNarrative: bullish/bearish/neutral básicos", () => {
+  assert.equal(computeDominantNarrative("FUSED_BULLISH", { state: "GOOD" }), "Continuação de Alta");
+  assert.equal(computeDominantNarrative("FUSED_BEARISH", { state: "EXCELLENT" }), "Continuação de Baixa");
+  assert.equal(computeDominantNarrative("FUSED_NEUTRAL", { state: "NEUTRAL" }), "Indecisão");
+});
+
+test("computeDominantNarrative: sinaliza estrutura enfraquecendo (WEAK/BROKEN) mesmo com bias dominante", () => {
+  assert.equal(computeDominantNarrative("FUSED_BULLISH", { state: "WEAK" }), "Alta com Estrutura Enfraquecendo");
+  assert.equal(computeDominantNarrative("FUSED_BEARISH", { state: "BROKEN" }), "Baixa com Estrutura Enfraquecendo");
+});
+
+test("computeSecondaryNarrative: null sem conflito -- não fabrica narrativa à toa", () => {
+  assert.equal(computeSecondaryNarrative([]), null);
+});
+
+test("computeSecondaryNarrative: pega o conflito mais severo quando há mais de um", () => {
+  const conflicts = [
+    { brain: "Market", severity: "low", reason: "r1" },
+    { brain: "Liquidity", severity: "high", reason: "r2" },
+  ];
+  assert.equal(computeSecondaryNarrative(conflicts), "Possível divergência: Liquidity discorda (r2)");
 });
 
 // --- fuseContext (integração) ---
@@ -76,25 +141,29 @@ test("fuseContext: os 3 Brains concordando -- sem conflito, confidence não pena
   assert.deepEqual(context.conflicts, []);
   assert.equal(context.confidence, 80); // média dos 3 (todos 80), sem penalidade
   assert.ok(context.score > 0);
+  assert.equal(context.dominantNarrative, "Continuação de Alta");
+  assert.equal(context.secondaryNarrative, null);
 });
 
-test("fuseContext: 1 conflito -- penalidade 0.7x na confidence", () => {
+test("fuseContext: maioria 2-1 -- 1 conflito, penalidade 0.7x na confidence, narrativa secundária presente", () => {
   const context = fuseContext({
     market: marketResult({ trendState: "TRENDING_BULL" }),
-    structure: structureResult({ bias: "bearish" }), // discorda do market -- 1 conflito
-    liquidity: liquidityResult({ state: "BALANCED" }), // neutro -- não conflita com nenhum dos dois
+    structure: structureResult({ bias: "bullish" }), // concorda com market
+    liquidity: liquidityResult({ state: "SWEPT_HIGH" }), // bear -- discorda da maioria (bull)
   });
 
   assert.equal(context.conflicts.length, 1);
-  assert.ok(context.conflicts[0].includes("Market Brain"));
+  assert.equal(context.conflicts[0].brain, "Liquidity");
+  assert.ok(["low", "medium", "high"].includes(context.conflicts[0].severity));
   assert.equal(context.confidence, Math.round(80 * 0.7));
+  assert.ok(context.secondaryNarrative.includes("Liquidity"));
 });
 
-test("fuseContext: 2 conflitos -- penalidade 0.4x na confidence", () => {
+test("fuseContext: empate 1-1 sem terceiro desempatando -- 2 conflitos, penalidade 0.4x", () => {
   const context = fuseContext({
     market: marketResult({ trendState: "TRENDING_BULL" }),
     structure: structureResult({ bias: "bearish" }), // discorda do market
-    liquidity: liquidityResult({ state: "SWEPT_HIGH" }), // bear -- discorda do market também
+    liquidity: liquidityResult({ state: "BALANCED" }), // neutro
   });
 
   assert.equal(context.conflicts.length, 2);
@@ -106,7 +175,7 @@ test("fuseContext: reasons inclui o resumo de cada Brain + os conflitos", () => 
   assert.ok(context.reasons.some((r) => r.startsWith("Market Brain:")));
   assert.ok(context.reasons.some((r) => r.startsWith("Structure Brain:")));
   assert.ok(context.reasons.some((r) => r.startsWith("Liquidity Brain:")));
-  assert.ok(context.reasons.some((r) => r.includes("aponta")));
+  assert.ok(context.reasons.some((r) => r.includes("discorda do consenso")));
 });
 
 test("fuseContext: evidence tipado com 1 entrada por Brain", () => {
@@ -139,7 +208,7 @@ test("fuseContext: dependsOn aponta pra outros Brains, não domínios de dado cr
   assert.deepEqual(context.metadata.dependsOn, ["market_brain", "structure_brain", "liquidity_brain"]);
 });
 
-test("fuseContext: 3 Brains discordando (bull/bear/neutro) -- FUSED_NEUTRAL ou direção mais fraca, nunca quebra", () => {
+test("fuseContext: 3 Brains discordando (bull/bear/neutro) -- nunca quebra", () => {
   const context = fuseContext({
     market: marketResult({ trendState: "TRENDING_BULL" }),
     structure: structureResult({ bias: "bearish" }),
