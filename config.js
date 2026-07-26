@@ -82,8 +82,12 @@ const config = {
   // Structure Brain (swings/BOS/CHOCH) -- lookback configurável desde o
   // início porque o futuro Replay Engine vai querer comparar 3/5/7/9
   // candles de cada lado do fractal, não travado num valor só.
+  // equalTolerancePct/sweepReversalLookahead são do Liquidity Brain
+  // (mesmos swings, módulo de leitura diferente).
   structure: {
     lookback: num(process.env.STRUCTURE_LOOKBACK, 5),
+    equalTolerancePct: num(process.env.STRUCTURE_EQUAL_TOLERANCE_PCT, 0.1),
+    sweepReversalLookahead: num(process.env.STRUCTURE_SWEEP_LOOKAHEAD, 10),
   },
 
   alerts: {

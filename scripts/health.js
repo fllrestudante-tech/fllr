@@ -11,6 +11,8 @@ const marketBrainData = require("../lib/brains/marketBrainData");
 const marketBrain = require("../lib/brains/marketBrain");
 const structureBrainData = require("../lib/brains/structureBrainData");
 const structureBrain = require("../lib/brains/structureBrain");
+const liquidityBrainData = require("../lib/brains/liquidityBrainData");
+const liquidityBrain = require("../lib/brains/liquidityBrain");
 const config = require("../config");
 const { DEFAULT_MARKET_DB_PATH } = checks;
 
@@ -92,6 +94,20 @@ function readStructureBrainSnapshot() {
   }
 }
 
+function readLiquidityBrainSnapshot() {
+  if (!fs.existsSync(DEFAULT_MARKET_DB_PATH)) return null;
+  let db;
+  try {
+    db = new Database(DEFAULT_MARKET_DB_PATH, { readonly: true, fileMustExist: true });
+    const inputs = liquidityBrainData.gatherLiquidityBrainInputs(db, { symbol: config.symbol, interval: config.interval });
+    return liquidityBrain.analyzeLiquidity(inputs);
+  } catch {
+    return null;
+  } finally {
+    if (db) db.close();
+  }
+}
+
 async function main() {
   const registry = createHealthRegistry();
   registry.registerCheck("bybit", checks.checkBybit);
@@ -150,6 +166,9 @@ async function main() {
 
   console.log("\nStructure Brain:\n");
   dashboard.formatStructureBrainSection(readStructureBrainSnapshot()).forEach((l) => console.log(l));
+
+  console.log("\nLiquidity Brain:\n");
+  dashboard.formatLiquidityBrainSection(readLiquidityBrainSnapshot()).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
