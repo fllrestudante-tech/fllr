@@ -83,15 +83,19 @@ const config = {
   // início porque o futuro Replay Engine vai querer comparar 3/5/7/9
   // candles de cada lado do fractal, não travado num valor só.
   // equalTolerancePct/sweepReversalLookahead são do Liquidity Brain (mesmos
-  // swings, módulo de leitura diferente). exhaustionLookback é do FVG
-  // Brain -- candles sem atividade na zona depois de preenchido antes de
-  // considerar o gap "exaurido" (heurística de distância/tempo, não
-  // "tempo psicológico" inventado).
+  // swings, módulo de leitura diferente). exhaustionLookback é do FVG Brain
+  // (reaproveitado pelo Order Block Brain também -- mesmo conceito de
+  // "rompido há tempo demais sem atividade = já era"). confirmAge/
+  // mitigationThreshold são do Order Block Brain -- candles pra um bloco
+  // sobreviver antes de virar CONFIRMED, e % da zona "comida" antes de
+  // virar MITIGATED (hipóteses documentadas, não validadas por backtest).
   structure: {
     lookback: num(process.env.STRUCTURE_LOOKBACK, 5),
     equalTolerancePct: num(process.env.STRUCTURE_EQUAL_TOLERANCE_PCT, 0.1),
     sweepReversalLookahead: num(process.env.STRUCTURE_SWEEP_LOOKAHEAD, 10),
     exhaustionLookback: num(process.env.STRUCTURE_EXHAUSTION_LOOKBACK, 50),
+    confirmAge: num(process.env.STRUCTURE_CONFIRM_AGE, 3),
+    mitigationThreshold: num(process.env.STRUCTURE_MITIGATION_THRESHOLD, 0.5),
   },
 
   alerts: {

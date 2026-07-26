@@ -16,6 +16,8 @@ const liquidityBrain = require("../lib/brains/liquidityBrain");
 const { fuseContext } = require("../lib/brains/contextFusion");
 const fvgBrainData = require("../lib/brains/fvgBrainData");
 const fvgBrain = require("../lib/brains/fvgBrain");
+const orderBlockBrainData = require("../lib/brains/orderBlockBrainData");
+const orderBlockBrain = require("../lib/brains/orderBlockBrain");
 const config = require("../config");
 const { DEFAULT_MARKET_DB_PATH } = checks;
 
@@ -130,6 +132,23 @@ function readFVGBrainSnapshot() {
   }
 }
 
+// orderBlockBrainData orquestra Market/Structure/Liquidity/Context Fusion
+// do mesmo jeito que o fvgBrainData (Order Block Brain também precisa
+// deles como contexto) -- mesma redundância aceita acima.
+function readOrderBlockBrainSnapshot() {
+  if (!fs.existsSync(DEFAULT_MARKET_DB_PATH)) return null;
+  let db;
+  try {
+    db = new Database(DEFAULT_MARKET_DB_PATH, { readonly: true, fileMustExist: true });
+    const inputs = orderBlockBrainData.gatherOrderBlockBrainInputs(db, { symbol: config.symbol, interval: config.interval });
+    return orderBlockBrain.analyzeOrderBlocks(inputs);
+  } catch {
+    return null;
+  } finally {
+    if (db) db.close();
+  }
+}
+
 async function main() {
   const registry = createHealthRegistry();
   registry.registerCheck("bybit", checks.checkBybit);
@@ -202,6 +221,9 @@ async function main() {
 
   console.log("\nFVG Brain:\n");
   dashboard.formatFVGBrainSection(readFVGBrainSnapshot()).forEach((l) => console.log(l));
+
+  console.log("\nOrder Block Brain:\n");
+  dashboard.formatOrderBlockBrainSection(readOrderBlockBrainSnapshot()).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
