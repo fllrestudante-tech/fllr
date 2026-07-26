@@ -14,6 +14,8 @@ const structureBrain = require("../lib/brains/structureBrain");
 const liquidityBrainData = require("../lib/brains/liquidityBrainData");
 const liquidityBrain = require("../lib/brains/liquidityBrain");
 const { fuseContext } = require("../lib/brains/contextFusion");
+const fvgBrainData = require("../lib/brains/fvgBrainData");
+const fvgBrain = require("../lib/brains/fvgBrain");
 const config = require("../config");
 const { DEFAULT_MARKET_DB_PATH } = checks;
 
@@ -109,6 +111,25 @@ function readLiquidityBrainSnapshot() {
   }
 }
 
+// fvgBrainData já orquestra Market/Structure/Liquidity/Context Fusion
+// internamente (o FVG Brain precisa deles como contexto) -- recomputa os
+// outros 3 Brains de novo aqui em vez de reaproveitar os já calculados
+// acima; redundante, mas é uma ferramenta de CLI sob demanda (não um
+// hot path), simplicidade > microotimização.
+function readFVGBrainSnapshot() {
+  if (!fs.existsSync(DEFAULT_MARKET_DB_PATH)) return null;
+  let db;
+  try {
+    db = new Database(DEFAULT_MARKET_DB_PATH, { readonly: true, fileMustExist: true });
+    const inputs = fvgBrainData.gatherFVGBrainInputs(db, { symbol: config.symbol, interval: config.interval });
+    return fvgBrain.analyzeFVG(inputs);
+  } catch {
+    return null;
+  } finally {
+    if (db) db.close();
+  }
+}
+
 async function main() {
   const registry = createHealthRegistry();
   registry.registerCheck("bybit", checks.checkBybit);
@@ -178,6 +199,9 @@ async function main() {
   console.log("\nContext Fusion:\n");
   const context = marketSnapshot && structureSnapshot && liquiditySnapshot ? fuseContext({ market: marketSnapshot, structure: structureSnapshot, liquidity: liquiditySnapshot }) : null;
   dashboard.formatContextFusionSection(context).forEach((l) => console.log(l));
+
+  console.log("\nFVG Brain:\n");
+  dashboard.formatFVGBrainSection(readFVGBrainSnapshot()).forEach((l) => console.log(l));
 
   console.log("\nTrading Health (Demo):\n");
   dashboard.formatTradingSection(tradingSnapshot).forEach((l) => console.log(l));
