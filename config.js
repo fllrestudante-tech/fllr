@@ -79,6 +79,13 @@ const config = {
   // fica maior a cada dia que o coletor roda).
   backtestDbLookbackDays: num(process.env.BACKTEST_DB_LOOKBACK_DAYS, 30),
 
+  // Structure Brain (swings/BOS/CHOCH) -- lookback configurável desde o
+  // início porque o futuro Replay Engine vai querer comparar 3/5/7/9
+  // candles de cada lado do fractal, não travado num valor só.
+  structure: {
+    lookback: num(process.env.STRUCTURE_LOOKBACK, 5),
+  },
+
   alerts: {
     telegramBotToken: process.env.TELEGRAM_ALERT_BOT_TOKEN || "",
     telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",

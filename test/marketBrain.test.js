@@ -188,7 +188,32 @@ test("analyzeMarket: orquestra os 3 eixos + overall a partir dos inputs brutos",
   assert.equal(result.trend.state, "TRENDING_BULL");
   assert.equal(result.sentiment.state, "EUPHORIA");
   assert.equal(result.risk.state, "RISK_ON");
-  assert.ok(["MARKET_FAVORABLE", "MARKET_NEUTRAL"].includes(result.overall.state));
-  assert.ok(Array.isArray(result.overall.reasons));
-  assert.ok(Array.isArray(result.overall.missingEvidence));
+
+  // Forma comum (BrainResult) no topo -- ver lib/brains/brainResult.js.
+  assert.ok(["MARKET_FAVORABLE", "MARKET_NEUTRAL"].includes(result.state));
+  assert.ok(Array.isArray(result.reasons));
+  assert.ok(Array.isArray(result.missingEvidence));
+  assert.deepEqual(result.evidence, []);
+  assert.equal(typeof result.score, "number");
+  assert.equal(typeof result.confidence, "number");
+  assert.deepEqual(result.metadata.dependsOn, ["fear_greed", "btc_dominance", "funding", "open_interest", "long_short_ratio", "candles"]);
+  assert.ok(result.metadata.generatedAt);
+});
+
+test("analyzeMarket: confidence mede completude de dado, distinto de score (força do sinal)", () => {
+  // Sentiment e risk sem dado real -- só 1 dos 3 eixos (trend) tem dado de verdade.
+  const result = analyzeMarket({ closes: bullishCloses(), fearGreedHistory: [], fundingRate: undefined, oiTrendPct: undefined, longShortSkew: undefined, dominanceTrendPct: undefined });
+  assert.equal(result.confidence, Math.round((1 / 3) * 100)); // só trend tinha dado real
+});
+
+test("analyzeMarket: com os 3 eixos tendo dado real, confidence de completude é 100", () => {
+  const result = analyzeMarket({
+    closes: bullishCloses(),
+    fearGreedHistory: [{ value: 80, classification: "Greed", snapshot_time: 1000 }],
+    fundingRate: 0.0002,
+    oiTrendPct: 3,
+    longShortSkew: 0.05,
+    dominanceTrendPct: -1,
+  });
+  assert.equal(result.confidence, 100);
 });
