@@ -14,6 +14,7 @@
     "collect:knowledge": "node scripts/knowledgeCollector.js",
     "backtest": "node scripts/backtest.js",
     "replay": "node scripts/replayEngine.js",
+    "experiments": "node scripts/experiments.js",
     "telegram:login1": "node telegram-radar/login-step1.js",
     "telegram:login2": "node telegram-radar/login-step2.js",
     "telegram:login3": "node telegram-radar/login-step3.js",

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "experiment-structure-liquidity-combo",
+    "name": "Structure+Liquidity combo -- taxa de acerto por combinação de estados",
+    "hypothesis": "Combinações de estado Structure+Liquidity têm taxa de sucesso diferenciada o suficiente pra virar sinal.",
+    "kind": "combo",
+    "brainKeys": ["structure", "liquidity"],
+    "relatedIds": ["brain-structure", "brain-liquidity"]
+  },
+  {
+    "id": "experiment-structure-liquidity-fvg-combo",
+    "name": "Structure+Liquidity+FVG combo -- FVG adiciona poder discriminativo?",
+    "hypothesis": "Adicionar FVG à combinação Structure+Liquidity aumenta a taxa de sucesso da combinação dominante em relação a Structure+Liquidity sozinho.",
+    "kind": "combo",
+    "brainKeys": ["structure", "liquidity", "fvg"],
+    "relatedIds": ["brain-structure", "brain-liquidity", "brain-fvg"]
+  },
+  {
+    "id": "experiment-fvg-accuracy",
+    "name": "FVG Brain sozinho -- acurácia direcional",
+    "hypothesis": "A direção do FVG Brain isolado acerta o retorno real além do acaso.",
+    "kind": "brainAccuracy",
+    "brainKey": "fvg",
+    "relatedIds": ["brain-fvg"]
+  },
+  {
+    "id": "experiment-fvg-redundancy",
+    "name": "Liquidity+Order Block já explicam o FVG?",
+    "hypothesis": "O consenso de Liquidity+Order Block já explica a maior parte da direção do FVG Brain -- taxa de concordância alta é candidato a simplificação futura (FVG vira reforço visual em vez de decisório).",
+    "kind": "redundancy",
+    "targetBrainKey": "fvg",
+    "explainerBrainKeys": ["liquidity", "orderBlock"],
+    "relatedIds": ["brain-fvg", "brain-liquidity", "brain-order-block"]
+  }
+]

@@ -401,6 +401,160 @@
     "updatedAt": "2026-07-27T00:32:42.450Z"
   },
   {
+    "id": "experiment-fvg-accuracy",
+    "type": "experiment",
+    "name": "FVG Brain sozinho -- acurácia direcional",
+    "description": "A direção do FVG Brain isolado acerta o retorno real além do acaso.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "validated",
+    "maturity": 2,
+    "tags": [
+      "experiment",
+      "brainAccuracy"
+    ],
+    "dependsOn": [
+      "brain-fvg"
+    ],
+    "metrics": {
+      "replay": {
+        "snapshots": 117,
+        "accuracy": 9,
+        "precision": 9,
+        "recall": 49
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T01:12:45.324Z",
+        "action": "created",
+        "note": "npm run experiments"
+      },
+      {
+        "date": "2026-07-27T01:12:59.746Z",
+        "action": "status: research → validated",
+        "note": "acurácia baixa mas consistente com amostra pequena"
+      }
+    ],
+    "createdAt": "2026-07-27T01:12:45.324Z",
+    "updatedAt": "2026-07-27T01:13:00.501Z"
+  },
+  {
+    "id": "experiment-fvg-redundancy",
+    "type": "experiment",
+    "name": "Liquidity+Order Block já explicam o FVG?",
+    "description": "O consenso de Liquidity+Order Block já explica a maior parte da direção do FVG Brain -- taxa de concordância alta é candidato a simplificação futura (FVG vira reforço visual em vez de decisório).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "research",
+    "maturity": 2,
+    "tags": [
+      "experiment",
+      "redundancy"
+    ],
+    "dependsOn": [
+      "brain-fvg",
+      "brain-liquidity",
+      "brain-order-block"
+    ],
+    "metrics": {
+      "replay": {
+        "snapshots": 46,
+        "agreementRatePct": 43
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T01:12:45.325Z",
+        "action": "created",
+        "note": "npm run experiments"
+      }
+    ],
+    "createdAt": "2026-07-27T01:12:45.325Z",
+    "updatedAt": "2026-07-27T01:13:00.501Z"
+  },
+  {
+    "id": "experiment-structure-liquidity-combo",
+    "type": "experiment",
+    "name": "Structure+Liquidity combo -- taxa de acerto por combinação de estados",
+    "description": "Combinações de estado Structure+Liquidity têm taxa de sucesso diferenciada o suficiente pra virar sinal.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "research",
+    "maturity": 2,
+    "tags": [
+      "experiment",
+      "combo"
+    ],
+    "dependsOn": [
+      "brain-structure",
+      "brain-liquidity"
+    ],
+    "metrics": {
+      "replay": {
+        "snapshots": 19,
+        "winrate": 11,
+        "avgRR": 0.006
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T01:12:45.322Z",
+        "action": "created",
+        "note": "npm run experiments"
+      }
+    ],
+    "createdAt": "2026-07-27T01:12:45.322Z",
+    "updatedAt": "2026-07-27T01:13:00.499Z"
+  },
+  {
+    "id": "experiment-structure-liquidity-fvg-combo",
+    "type": "experiment",
+    "name": "Structure+Liquidity+FVG combo -- FVG adiciona poder discriminativo?",
+    "description": "Adicionar FVG à combinação Structure+Liquidity aumenta a taxa de sucesso da combinação dominante em relação a Structure+Liquidity sozinho.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "research",
+    "maturity": 2,
+    "tags": [
+      "experiment",
+      "combo"
+    ],
+    "dependsOn": [
+      "brain-structure",
+      "brain-liquidity",
+      "brain-fvg"
+    ],
+    "metrics": {
+      "replay": {
+        "snapshots": 19,
+        "winrate": 11,
+        "avgRR": 0.006
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T01:12:45.323Z",
+        "action": "created",
+        "note": "npm run experiments"
+      }
+    ],
+    "createdAt": "2026-07-27T01:12:45.323Z",
+    "updatedAt": "2026-07-27T01:13:00.500Z"
+  },
+  {
     "id": "feature-adx",
     "type": "indicator",
     "name": "ADX (Average Directional Index)",

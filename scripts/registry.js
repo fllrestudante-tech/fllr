@@ -9,6 +9,7 @@ const {
   listByType,
   listByStatus,
   listConsumers,
+  groupConsumersByStatus,
   validateRegistryIntegrity,
   upsertResearchObject,
 } = require("../lib/registry/registryStore");
@@ -100,6 +101,12 @@ function cmdShow(id) {
     .filter((consumerId) => !direct.includes(consumerId));
   console.log(`\nUsado por (direto): ${direct.length ? direct.join(", ") : "(nenhum)"}`);
   console.log(`Usado por (transitivo): ${transitive.length ? transitive.join(", ") : "(nenhum)"}`);
+
+  const experiments = groupConsumersByStatus(objects, id, { type: "experiment" });
+  if (experiments.total > 0) {
+    const parts = Object.entries(experiments.byStatus).map(([status, count]) => `${status}: ${count}`);
+    console.log(`\nExperiments: ${experiments.total} total (${parts.join(", ")})`);
+  }
 }
 
 function cmdValidate() {

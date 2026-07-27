@@ -10,6 +10,7 @@ const {
   listByType,
   listByStatus,
   listConsumers,
+  groupConsumersByStatus,
   validateRegistryIntegrity,
   upsertResearchObject,
 } = require("../../lib/registry/registryStore");
@@ -158,6 +159,24 @@ test("listConsumers: direto e transitivo, vazio quando ninguém depende", () => 
   );
 
   assert.deepEqual(listConsumers(objects, "engine-isolado"), []);
+});
+
+test("groupConsumersByStatus: agrupa por status, filtra por type, vazio quando não há consumidores desse tipo", () => {
+  const objects = [
+    obj({ id: "brain-fvg" }),
+    obj({ id: "experiment-a", type: "experiment", status: "research", dependsOn: ["brain-fvg"] }),
+    obj({ id: "experiment-b", type: "experiment", status: "validated", dependsOn: ["brain-fvg"] }),
+    obj({ id: "experiment-c", type: "experiment", status: "validated", dependsOn: ["brain-fvg"] }),
+    obj({ id: "brain-outro", type: "brain", status: "production", dependsOn: ["brain-fvg"] }),
+  ];
+
+  const result = groupConsumersByStatus(objects, "brain-fvg", { type: "experiment" });
+  assert.equal(result.total, 3);
+  assert.deepEqual(result.byStatus, { research: 1, validated: 2 });
+
+  const empty = groupConsumersByStatus(objects, "brain-fvg", { type: "paper" });
+  assert.equal(empty.total, 0);
+  assert.deepEqual(empty.byStatus, {});
 });
 
 test("validateRegistryIntegrity: detecta id duplicado e dependsOn quebrado, aceita registro limpo", () => {

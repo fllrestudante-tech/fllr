@@ -8,6 +8,7 @@ data/market.db-wal
 data/market.db-shm
 data/*.tmp
 data/replay/
+data/experiments/
 runtime/
 logs/
 backups/
