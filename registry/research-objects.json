@@ -1,0 +1,916 @@
+[
+  {
+    "id": "brain-fvg",
+    "type": "brain",
+    "name": "FVG Brain",
+    "description": "Estado dos desequilíbrios (EMPTY/IMBALANCED/REBALANCING/FILLED/STACKED/EXHAUSTED), score = alinhamento contextual do gap com Structure/Liquidity/Context Fusion.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "brain"
+    ],
+    "dependsOn": [
+      "feature-fair-value-gap",
+      "brain-structure",
+      "brain-liquidity",
+      "synthesis-context-fusion"
+    ],
+    "metrics": {
+      "replay": {
+        "accuracy": 9,
+        "precision": 9,
+        "recall": 49,
+        "snapshots": 117
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "brain-liquidity",
+    "type": "brain",
+    "name": "Liquidity Brain",
+    "description": "Estado de liquidez (SWEPT_HIGH/SWEPT_LOW/LIQUIDITY_ABOVE/LIQUIDITY_BELOW/BALANCED).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "brain"
+    ],
+    "dependsOn": [
+      "feature-equal-highs-lows",
+      "feature-liquidity-sweep"
+    ],
+    "metrics": {
+      "replay": {
+        "accuracy": 9,
+        "precision": 9,
+        "recall": 56,
+        "snapshots": 117
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "brain-market",
+    "type": "brain",
+    "name": "Market Brain",
+    "description": "Síntese de Fear&Greed/Dominância/Funding/OI em 3 eixos (tendência/sentimento/risco). Puramente observacional -- index.js::cycle() não usa.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "brain"
+    ],
+    "dependsOn": [],
+    "metrics": {
+      "replay": {
+        "accuracy": 11,
+        "precision": 10,
+        "recall": 53,
+        "snapshots": 62
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "brain-order-block",
+    "type": "brain",
+    "name": "Order Block Brain",
+    "description": "Ciclo de vida de 7 estágios (DETECTED..INVALIDATED) do bloco institucional dominante, score = alinhamento contextual.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "brain"
+    ],
+    "dependsOn": [
+      "feature-order-block-detection",
+      "brain-structure",
+      "brain-liquidity",
+      "synthesis-context-fusion"
+    ],
+    "metrics": {
+      "replay": {
+        "accuracy": 8,
+        "precision": 6,
+        "recall": 38,
+        "snapshots": 117
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "brain-structure",
+    "type": "brain",
+    "name": "Structure Brain",
+    "description": "Qualidade da estrutura de mercado (EXCELLENT/GOOD/NEUTRAL/WEAK/BROKEN) a partir de swings/BOS/CHOCH.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "brain"
+    ],
+    "dependsOn": [
+      "feature-bos",
+      "feature-choch"
+    ],
+    "metrics": {
+      "replay": {
+        "accuracy": 10,
+        "precision": 11,
+        "recall": 57,
+        "snapshots": 117
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "engine-backtest",
+    "type": "engine",
+    "name": "Auto-tuning / Backtest Engine",
+    "description": "lib/backtest.js -- roda candidatos, calcula Win Rate/Profit Factor/Expectância/Drawdown/Sharpe (lib/tradingHealth.js) e só promove pra produção via isCandidateBetter (gate estatístico).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "auto-tuning",
+      "live"
+    ],
+    "dependsOn": [
+      "indicator-ema",
+      "indicator-rsi",
+      "indicator-stoch-rsi",
+      "indicator-obv",
+      "indicator-atr"
+    ],
+    "metrics": {
+      "live": {
+        "winrate": 36.8,
+        "profitFactor": 0.87,
+        "snapshots": 38
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.449Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.449Z",
+    "updatedAt": "2026-07-27T00:32:42.449Z"
+  },
+  {
+    "id": "engine-brain-analytics",
+    "type": "engine",
+    "name": "Brain Analytics",
+    "description": "Acurácia/precisão/recall por Brain, contribuição marginal, redundância, critérios de prontidão do Decision Brain.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "engine"
+    ],
+    "dependsOn": [
+      "engine-replay"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "engine-decision-brain",
+    "type": "engine",
+    "name": "Decision Brain",
+    "description": "Consumidor de evidências dos 7 Brains -- LOCKED: amostra 77/20000 snapshots, diversidade de regime e estabilidade ainda insuficientes (lib/brainAnalytics.js::evaluateDecisionBrainReadiness). Aguardando pedido explícito do usuário.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "decision"
+    ],
+    "dependsOn": [
+      "brain-market",
+      "brain-structure",
+      "brain-liquidity",
+      "brain-fvg",
+      "brain-order-block",
+      "synthesis-context-fusion",
+      "synthesis-institutional-context",
+      "engine-replay",
+      "engine-brain-analytics"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "engine-learning-brain",
+    "type": "engine",
+    "name": "Learning Brain",
+    "description": "Evolução do auto-tuning clássico -- consumidor do Hypothesis Engine, só depois de meses de dados reais.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "learning"
+    ],
+    "dependsOn": [
+      "engine-decision-brain"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "engine-narrative",
+    "type": "engine",
+    "name": "Narrative Engine (v0, só Telegram)",
+    "description": "lib/narrativeEngine/* -- pipeline de classificação (sentimento/direção/estrutura/ticker/timeframe/tipo de sinal/confiança) sobre mensagens do Telegram. Implementado, mas não supervisionado nem validado via Replay ainda.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "research",
+    "maturity": 1,
+    "tags": [
+      "narrative"
+    ],
+    "dependsOn": [
+      "engine-telegram-radar"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "engine-replay",
+    "type": "engine",
+    "name": "Replay Engine",
+    "description": "Anda pelo histórico candle a candle, roda todos os Brains, julga o resultado real do preço -- juiz estatístico dos Brains.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "engine"
+    ],
+    "dependsOn": [
+      "brain-market",
+      "brain-structure",
+      "brain-liquidity",
+      "synthesis-context-fusion",
+      "brain-fvg",
+      "brain-order-block",
+      "synthesis-institutional-context"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "engine-telegram-radar",
+    "type": "engine",
+    "name": "Telegram Radar",
+    "description": "Coleta local via GramJS/MTProto -- rodando de forma MANUAL (não supervisionado), heartbeat antigo no health check.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "research",
+    "maturity": 1,
+    "tags": [
+      "collector",
+      "manual"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "feature-adx",
+    "type": "indicator",
+    "name": "ADX (Average Directional Index)",
+    "description": "Filtro de regime (ADX>25 opera, <20 não) mencionado repetidamente no roadmap -- lib/indicators.js confirmado sem ADX.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "regime-filter"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "feature-bos",
+    "type": "feature",
+    "name": "Break of Structure (BOS)",
+    "description": "lib/marketStructure/structureEvidence.js -- rompimento de swing na direção do bias vigente.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "smc",
+      "structure"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.449Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.449Z",
+    "updatedAt": "2026-07-27T00:32:42.449Z"
+  },
+  {
+    "id": "feature-choch",
+    "type": "feature",
+    "name": "Change of Character (CHOCH)",
+    "description": "lib/marketStructure/structureEvidence.js -- rompimento de swing contra o bias vigente.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "smc",
+      "structure"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.449Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.449Z",
+    "updatedAt": "2026-07-27T00:32:42.449Z"
+  },
+  {
+    "id": "feature-cvd",
+    "type": "feature",
+    "name": "CVD (Cumulative Volume Delta)",
+    "description": "Precisa de order book L2 via WebSocket, que a plataforma não coleta hoje -- projeto de infra à parte, não só mais um indicador.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "order-flow",
+      "infra-pendente"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "feature-equal-highs-lows",
+    "type": "feature",
+    "name": "Equal Highs/Lows",
+    "description": "lib/marketStructure/liquidity.js::clusterEqualLevels -- agrupamento de swings por proximidade de preço.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "smc",
+      "liquidity"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.449Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.449Z",
+    "updatedAt": "2026-07-27T00:32:42.449Z"
+  },
+  {
+    "id": "feature-fair-value-gap",
+    "type": "feature",
+    "name": "Fair Value Gap (FVG)",
+    "description": "lib/marketStructure/fvg.js -- detecção + tracking de preenchimento do gap.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "smc",
+      "fvg"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "feature-liquidity-sweep",
+    "type": "feature",
+    "name": "Liquidity Sweep",
+    "description": "lib/marketStructure/liquidity.js::detectSweeps -- pavio rompe o swing mas o close volta pra dentro.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "smc",
+      "liquidity"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.449Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.449Z",
+    "updatedAt": "2026-07-27T00:32:42.449Z"
+  },
+  {
+    "id": "feature-order-block-detection",
+    "type": "feature",
+    "name": "Order Block Detection",
+    "description": "lib/marketStructure/orderBlock.js -- último candle oposto antes do impulso que gerou um BOS.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "smc",
+      "order-block"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "feature-order-flow-footprint",
+    "type": "feature",
+    "name": "Footprint (Order Flow)",
+    "description": "Mesma dependência de order book L2 do feature-cvd.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "order-flow",
+      "infra-pendente"
+    ],
+    "dependsOn": [
+      "feature-cvd"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "feature-smc-order-blocks-advanced",
+    "type": "feature",
+    "name": "Breaker/Mitigation Blocks (SMC nível 2/3)",
+    "description": "Próximo nível de Order Block além do já implementado (DETECTED..INVALIDATED) -- ainda não iniciado.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "smc",
+      "order-block"
+    ],
+    "dependsOn": [
+      "feature-order-block-detection"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "feature-source-reliability-predictive",
+    "type": "feature",
+    "name": "Source Reliability -- Predictive Reliability",
+    "description": "lib/sourceReliability.js::predictiveReliability reservado null desde a Fase B.5 -- depende de hipóteses reais (Hypothesis Engine) pra ser preenchido.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "source-reliability"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "indicator-atr",
+    "type": "indicator",
+    "name": "Average True Range",
+    "description": "Usado por lib/risk.js para sizing de stop-loss/trailing -- não entra na decisão de entrada, mas está em produção real (Demo).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "classic",
+      "risk",
+      "live"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.449Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.449Z",
+    "updatedAt": "2026-07-27T00:32:42.449Z"
+  },
+  {
+    "id": "indicator-ema",
+    "type": "indicator",
+    "name": "EMA (curta/longa)",
+    "description": "Indicador clássico usado por lib/signal.js para decidir buy/sell -- períodos vêm do auto-tuning (data/tuning.json).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "classic",
+      "signal",
+      "live"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.448Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.448Z",
+    "updatedAt": "2026-07-27T00:32:42.448Z"
+  },
+  {
+    "id": "indicator-obv",
+    "type": "indicator",
+    "name": "On-Balance Volume",
+    "description": "Indicador clássico usado por lib/signal.js para decidir buy/sell -- períodos vêm do auto-tuning (data/tuning.json).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "classic",
+      "signal",
+      "live"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.449Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.449Z",
+    "updatedAt": "2026-07-27T00:32:42.449Z"
+  },
+  {
+    "id": "indicator-rsi",
+    "type": "indicator",
+    "name": "RSI",
+    "description": "Indicador clássico usado por lib/signal.js para decidir buy/sell -- períodos vêm do auto-tuning (data/tuning.json).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "classic",
+      "signal",
+      "live"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.449Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.449Z",
+    "updatedAt": "2026-07-27T00:32:42.449Z"
+  },
+  {
+    "id": "indicator-stoch-rsi",
+    "type": "indicator",
+    "name": "Stochastic RSI",
+    "description": "Indicador clássico usado por lib/signal.js para decidir buy/sell -- períodos vêm do auto-tuning (data/tuning.json).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "classic",
+      "signal",
+      "live"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.449Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.449Z",
+    "updatedAt": "2026-07-27T00:32:42.449Z"
+  },
+  {
+    "id": "synthesis-context-fusion",
+    "type": "synthesis",
+    "name": "Context Fusion",
+    "description": "NÃO é um Brain -- combina Market+Structure+Liquidity Brain, penaliza confidence por conflito direcional entre eles.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "synthesis"
+    ],
+    "dependsOn": [
+      "brain-market",
+      "brain-structure",
+      "brain-liquidity"
+    ],
+    "metrics": {
+      "replay": {
+        "accuracy": 13,
+        "precision": 14,
+        "recall": 59,
+        "snapshots": 77
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  },
+  {
+    "id": "synthesis-institutional-context",
+    "type": "synthesis",
+    "name": "Institutional Context",
+    "description": "NÃO é um Brain -- zona de confluência espacial (interseção) entre Liquidity+FVG+Order Block ativos.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "synthesis"
+    ],
+    "dependsOn": [
+      "brain-liquidity",
+      "brain-fvg",
+      "brain-order-block"
+    ],
+    "metrics": {
+      "replay": {
+        "accuracy": 8,
+        "precision": 5,
+        "recall": 45,
+        "snapshots": 111
+      }
+    },
+    "history": [
+      {
+        "date": "2026-07-27T00:32:42.450Z",
+        "action": "created"
+      }
+    ],
+    "createdAt": "2026-07-27T00:32:42.450Z",
+    "updatedAt": "2026-07-27T00:32:42.450Z"
+  }
+]
