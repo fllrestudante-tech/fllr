@@ -1,6 +1,6 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T11:12:21.685Z a partir de `registry/research-objects.json` (62 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T11:57:18.308Z a partir de `registry/research-objects.json` (76 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
 
@@ -47,7 +47,7 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 
 | id | nome | status | prioridade | depende de |
 |---|---|---|---|---|
-| `idea-asset-profile` | Asset Profile | idea | Baixa | `idea-dynamic-universe` |
+| `idea-asset-profile` | Market Knowledge Base (antigo Asset Profile) | idea | Alta | `idea-dynamic-universe` |
 | `idea-causal-event-log` | Causal Event Log (Replay causal) | idea | Média | `engine-replay`, `idea-market-memory` |
 | `idea-confidence-engine` | Confidence Engine (generalizado) | idea | Média | `synthesis-context-fusion` |
 | `idea-cost-engine` | Cost Engine | idea | Baixa | -- |

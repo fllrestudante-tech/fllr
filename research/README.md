@@ -86,6 +86,39 @@ já são cobertos pelos campos que o schema atual tem, sem mudança nenhuma:
   que só se justifica quando o Knowledge Graph (visualização) for
   construído de fato.
 
+## 3 pilares (rodada mais recente) + Engineering Patterns + DNA Matrix
+
+Usuário pediu foco em 3 pilares que multiplicam o valor de todos os Brains
+existentes: **Market Knowledge Base** (`idea-asset-profile`, renomeada --
+biografia por ativo: regimes conhecidos, reação a FOMC/CPI, drawdown médio,
+funding/OI típicos, melhores/piores horários e regimes, setor/narrativa),
+**Opportunity Engine + Dynamic Universe** (pipeline reordenado com filtros
+de narrativa/setor/capital-flow/regime ANTES do scanner + loop vivo
+Radar→Research→Brains→Replay→Analytics→Experiments→Registry→Opportunity→
+Radar) e **Engineering Patterns / DNA Matrix** (este artifact:
+[Engineering Patterns — OpenAlice](https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24)).
+
+Diferença desta rodada: em vez de perguntar "o que o OpenAlice tem",
+pergunta "qual paradigma de engenharia ele usa" -- 14 Research Objects
+novos `type: "pattern"` (Immutable Decision Ledger, Capability Isolation,
+Anti-Corruption Layer, Progressive Commitment, Trust Verification,
+Precedence Resolution, Append-Only Audit Trail, Complexity Rejection,
+Delegated Judgment, Exclusive Ownership, mais 4 sobre decisões que o
+OpenAlice deliberadamente NÃO tomou -- embeddings, planner, FSM formal,
+event sourcing verdadeiro -- e por quê).
+
+**`dna-matrix.md`** -- **gerado**, `npm run dna-matrix` (mesma disciplina
+do `adoption-matrix.md`, nunca editar à mão). Pergunta diferente da
+Adoption Matrix: não "de onde veio e com que prioridade", mas "isso combina
+com os princípios do cripto10" -- `dna-fit:0-100` (alinhamento filosófico),
+classificação (`SUPERIOR/INSPIRADOR/COMPLEMENTAR/EQUIVALENTE/NÃO
+NECESSÁRIO/CONTRÁRIO AOS PRINCÍPIOS`, mais granular que o antigo
+SUPERIOR/EQUIVALENTE/PIOR) e `maintenance-cost:low/medium/high` -- todas
+tags novas, zero mudança de schema. Também introduz `domain:research|
+knowledge|analysis|discovery`, resposta à crítica "muitos motores
+horizontais": os mesmos componentes de sempre, agrupados em 4 domínios
+claros em vez de uma lista plana de "Engines".
+
 ## Por que não virou uma reorganização de pasta
 
 `registry/` e `experiments/` já têm código real apontando pros caminhos

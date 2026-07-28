@@ -21,6 +21,14 @@ antes da execução.
   hot-reload), lista explícita do que NÃO copiar pros 5 princípios do
   cripto10, watchlist/multi-símbolo a fundo, feature engineering. (artifact
   publicado em 2026-07-28)
+- [Engineering Patterns — OpenAlice](https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24) --
+  5ª rodada, camada acima da auditoria: não módulos/arquivos/features, só
+  PADRÕES (Immutable Decision Ledger, Capability Isolation,
+  Anti-Corruption Layer, Progressive Commitment, Trust Verification +
+  4 novos) e o que eles deliberadamente NÃO fizeram (embeddings, planner,
+  FSM formal, event sourcing verdadeiro) e por quê. Alimenta a
+  [DNA Matrix](../dna-matrix.md) (gerada, `npm run dna-matrix`). (artifact
+  publicado em 2026-07-28)
 - [OpenAlice — Deep Reverse Engineering](https://claude.ai/code/artifact/fa16c86c-f3a2-4bba-ac1c-662163179105) --
   4ª rodada, consolida as 3 anteriores em 19 eixos nomeados + 2 eixos novos
   (Escalabilidade, Governança) + investigação dos "10 gaps institucionais"

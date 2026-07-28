@@ -12,7 +12,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "brain"
+      "brain",
+      "domain:analysis"
     ],
     "dependsOn": [
       "feature-fair-value-gap",
@@ -35,7 +36,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "brain-liquidity",
@@ -50,7 +51,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "brain"
+      "brain",
+      "domain:analysis"
     ],
     "dependsOn": [
       "feature-equal-highs-lows",
@@ -71,7 +73,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "brain-market",
@@ -93,7 +95,8 @@
     "maturity": 2,
     "tags": [
       "brain",
-      "validated-by:openalice"
+      "validated-by:openalice",
+      "domain:analysis"
     ],
     "dependsOn": [],
     "metrics": {
@@ -111,7 +114,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T02:26:33.504Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "brain-order-block",
@@ -126,7 +129,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "brain"
+      "brain",
+      "domain:analysis"
     ],
     "dependsOn": [
       "feature-order-block-detection",
@@ -149,7 +153,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "brain-structure",
@@ -164,7 +168,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "brain"
+      "brain",
+      "domain:analysis"
     ],
     "dependsOn": [
       "feature-bos",
@@ -185,7 +190,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "capability-auto-tuning",
@@ -200,7 +205,8 @@
     "status": "production",
     "maturity": 4,
     "tags": [
-      "capability"
+      "capability",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-backtest"
@@ -214,7 +220,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:08:47.044Z",
-    "updatedAt": "2026-07-28T10:08:47.044Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "capability-context-synthesis",
@@ -229,7 +235,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "capability"
+      "capability",
+      "domain:analysis"
     ],
     "dependsOn": [
       "synthesis-context-fusion"
@@ -243,7 +250,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:08:47.044Z",
-    "updatedAt": "2026-07-28T10:08:47.044Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "capability-liquidity-smart-money",
@@ -258,7 +265,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "capability"
+      "capability",
+      "domain:analysis"
     ],
     "dependsOn": [
       "brain-liquidity",
@@ -275,7 +283,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:08:47.044Z",
-    "updatedAt": "2026-07-28T10:08:47.044Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "capability-market-classification",
@@ -290,7 +298,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "capability"
+      "capability",
+      "domain:analysis"
     ],
     "dependsOn": [
       "brain-market",
@@ -306,7 +315,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:08:47.043Z",
-    "updatedAt": "2026-07-28T10:08:47.043Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "capability-opportunity-discovery",
@@ -321,7 +330,8 @@
     "status": "idea",
     "maturity": 0,
     "tags": [
-      "capability"
+      "capability",
+      "domain:discovery"
     ],
     "dependsOn": [
       "idea-opportunity-alice"
@@ -335,7 +345,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:08:47.044Z",
-    "updatedAt": "2026-07-28T10:08:47.044Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "capability-research-validation",
@@ -350,7 +360,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "capability"
+      "capability",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-replay",
@@ -369,7 +380,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:08:47.044Z",
-    "updatedAt": "2026-07-28T10:08:47.044Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "engine-backtest",
@@ -397,7 +408,8 @@
     "tags": [
       "auto-tuning",
       "live",
-      "validated-by:freqtrade"
+      "validated-by:freqtrade",
+      "domain:research"
     ],
     "dependsOn": [
       "indicator-ema",
@@ -420,7 +432,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.449Z",
-    "updatedAt": "2026-07-28T02:26:33.504Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "engine-brain-analytics",
@@ -435,7 +447,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "engine"
+      "engine",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-replay"
@@ -448,7 +461,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "engine-decision-brain",
@@ -463,7 +476,8 @@
     "status": "idea",
     "maturity": 0,
     "tags": [
-      "decision"
+      "decision",
+      "domain:analysis"
     ],
     "dependsOn": [
       "brain-market",
@@ -484,7 +498,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "engine-learning-brain",
@@ -499,7 +513,8 @@
     "status": "idea",
     "maturity": 0,
     "tags": [
-      "learning"
+      "learning",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-decision-brain"
@@ -512,7 +527,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "engine-narrative",
@@ -527,7 +542,8 @@
     "status": "research",
     "maturity": 1,
     "tags": [
-      "narrative"
+      "narrative",
+      "domain:analysis"
     ],
     "dependsOn": [
       "engine-telegram-radar"
@@ -540,7 +556,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "engine-replay",
@@ -580,7 +596,8 @@
       "validated-by:freqtrade",
       "validated-by:hummingbot",
       "validated-by:lean",
-      "validated-by:jesse"
+      "validated-by:jesse",
+      "domain:research"
     ],
     "dependsOn": [
       "brain-market",
@@ -599,7 +616,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T02:26:33.504Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "engine-telegram-radar",
@@ -615,7 +632,8 @@
     "maturity": 1,
     "tags": [
       "collector",
-      "manual"
+      "manual",
+      "domain:discovery"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -626,7 +644,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "experiment-fvg-accuracy",
@@ -1084,8 +1102,8 @@
   {
     "id": "idea-asset-profile",
     "type": "idea",
-    "name": "Asset Profile",
-    "description": "Ficha permanente por moeda (liquidez, volatilidade, spread, slippage, horário ativo, correlação, exchange preferida, latência média, funding histórico, qualidade dos sinais, win rate histórico) -- muda completamente position sizing. Só ganha valor real quando existir mais de 1 símbolo operando -- Dynamic Universe é pré-requisito natural, não o contrário.",
+    "name": "Market Knowledge Base (antigo Asset Profile)",
+    "description": "Elevado a pilar (rodada '3 pilares'): biografia permanente por ativo, consultada por todo Brain antes de decidir -- nao so os campos originais (liquidez/volatilidade/spread/slippage/horario ativo/correlacao/exchange preferida/latencia/funding historico/qualidade dos sinais/win rate historico), mas tambem: regimes conhecidos daquele ativo especifico, comportamento historico em FOMC/CPI (eventos macro nomeados, nao so 'evento generico'), drawdown medio, funding/OI tipicos (faixa normal vs. anomalia), melhores e piores horarios, melhores e piores regimes, setor/narrativa (AI/DeFi/L2/Meme/RWA/Gaming/Infra/Stablecoins/Perpetuals). Diferente do Market Memory (que responde 'essa situacao especifica ja aconteceu' via analogia sobre snapshots do Replay): Market Knowledge Base e uma ficha por ATIVO, semi-estatica, agregada ao longo do tempo -- os dois se alimentam mutuamente (Market Memory descobre o padrao, Market Knowledge Base guarda o resumo consolidado). Nao apareceu em nenhuma das 5 plataformas auditadas nesse nivel de detalhe por ativo.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -1095,7 +1113,12 @@
     "maturity": 0,
     "tags": [
       "fase-4",
-      "priority:low"
+      "dna-fit:96",
+      "classification:superior",
+      "maintenance-cost:medium",
+      "domain:knowledge",
+      "pilar-3-pilares",
+      "priority:high"
     ],
     "dependsOn": [
       "idea-dynamic-universe"
@@ -1109,7 +1132,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T10:47:56.059Z"
+    "updatedAt": "2026-07-28T11:56:15.315Z"
   },
   {
     "id": "idea-causal-event-log",
@@ -1132,7 +1155,11 @@
     "tags": [
       "fase-4",
       "priority:medium",
-      "replay-evolution"
+      "replay-evolution",
+      "dna-fit:90",
+      "classification:superior",
+      "maintenance-cost:high",
+      "domain:knowledge"
     ],
     "dependsOn": [
       "engine-replay",
@@ -1147,7 +1174,7 @@
       }
     ],
     "createdAt": "2026-07-28T11:12:15.394Z",
-    "updatedAt": "2026-07-28T11:12:15.394Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-confidence-engine",
@@ -1170,7 +1197,11 @@
     "tags": [
       "fase-4",
       "priority:medium",
-      "temos-parcialmente"
+      "temos-parcialmente",
+      "dna-fit:92",
+      "classification:superior",
+      "maintenance-cost:low",
+      "domain:knowledge"
     ],
     "dependsOn": [
       "synthesis-context-fusion"
@@ -1184,7 +1215,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T11:12:15.394Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-cost-engine",
@@ -1200,7 +1231,11 @@
     "maturity": 0,
     "tags": [
       "fase-4",
-      "priority:low"
+      "priority:low",
+      "dna-fit:55",
+      "classification:nao-necessario",
+      "maintenance-cost:medium",
+      "domain:research"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1212,13 +1247,13 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T10:47:56.059Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-dynamic-universe",
     "type": "idea",
     "name": "Dynamic Universe",
-    "description": "Watchlist que nunca fica fixa -- pipeline de filtragem em cascata: Universo -> Filtragem -> Liquidez -> Volume -> OI -> Funding -> Volatilidade -> Correlação -> Narrativa -> Watchlist dinâmica. Camada própria dentro do Opportunity Engine, não um estágio solto. Por que é diferente do que o OpenAlice tem: EntityStore do OpenAlice é curadoria manual (o agente decide o que rastrear) -- esse padrão não serve pra varrer 1000+ ativos continuamente, precisa de scoring/filtro algorítmico desde o dia 1. Camada de 'Radar Institucional' pedida na rodada 'Deep Reverse Engineering', antes do próprio scanner de moedas: Universo -> Market Regime Filter -> Capital Flow -> Sector Rotation (por narrativa: AI/DeFi/L2/Meme/RWA/Gaming/Infra/Stablecoins/Perpetuals) -> Opportunity Scanner -> Ranking -> Brains. Decide ONDE no mercado vale olhar antes de decidir QUAL moeda olhar. Inspiração conceitual (não copiada): OpenAlice tem um board de sector-rotation real (equities/ETF, não cripto) que faz ranking cross-sectional de retorno relativo por setor via z-score -- a metodologia de ranking é o que vale adaptar pra narrativas cripto, não o código.",
+    "description": "Watchlist que nunca fica fixa -- pipeline reordenado na rodada '3 pilares' pra filtrar macro ANTES de olhar moeda por moeda: Market Universe -> Narrative Filter -> Sector Rotation -> Capital Flow -> Liquidity Filter -> Regime Filter -> Scanner -> Ranking -> Radar -> Brains -> Replay -> Dynamic Universe -> Watchlist. O Scanner nao deveria varrer as 1000+ moedas do universo -- deveria varrer so as ~80 que fazem sentido NAQUELE momento (regime/narrativa/fluxo de capital primeiro, simbolo depois). Por que e diferente do que o OpenAlice tem: EntityStore do OpenAlice e curadoria manual (o agente decide o que rastrear) -- esse padrao nao serve pra varrer continuamente, precisa de scoring/filtro algoritmico desde o dia 1. Inspiracao conceitual (nao copiada): o board sector-rotation.ts do OpenAlice (equities/ETF, nao cripto) faz ranking cross-sectional de retorno relativo por setor via z-score -- a metodologia de ranking e o que vale adaptar pra narrativas cripto, nao o codigo.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -1235,7 +1270,12 @@
     "tags": [
       "fase-4",
       "priority:high",
-      "opportunity-engine"
+      "opportunity-engine",
+      "dna-fit:95",
+      "classification:superior",
+      "maintenance-cost:high",
+      "domain:discovery",
+      "pilar-3-pilares"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1247,7 +1287,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T11:12:15.394Z"
+    "updatedAt": "2026-07-28T11:56:15.315Z"
   },
   {
     "id": "idea-evolution-engine",
@@ -1263,7 +1303,11 @@
     "maturity": 0,
     "tags": [
       "fase-4",
-      "priority:low"
+      "priority:low",
+      "dna-fit:78",
+      "classification:complementar",
+      "maintenance-cost:medium",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-brain-analytics",
@@ -1278,7 +1322,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T10:47:56.059Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-executor-state-machine",
@@ -1301,7 +1345,10 @@
     "tags": [
       "exit-engine",
       "multi-position",
-      "priority:low"
+      "priority:low",
+      "dna-fit:65",
+      "classification:complementar",
+      "maintenance-cost:medium"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1313,7 +1360,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T02:26:33.503Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-feature-builder",
@@ -1329,7 +1376,11 @@
     "maturity": 0,
     "tags": [
       "fase-4",
-      "priority:high"
+      "priority:high",
+      "dna-fit:85",
+      "classification:superior",
+      "maintenance-cost:low",
+      "domain:analysis"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1341,7 +1392,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T10:47:56.058Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-hypothesis-ledger",
@@ -1375,7 +1426,11 @@
       "hypothesis-engine",
       "ledger",
       "fase3-candidate",
-      "priority:high"
+      "priority:high",
+      "dna-fit:98",
+      "classification:superior",
+      "maintenance-cost:medium",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-replay",
@@ -1392,7 +1447,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.502Z",
-    "updatedAt": "2026-07-28T11:12:15.394Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-kelly-edge-sizing",
@@ -1427,7 +1482,10 @@
       "rejected",
       "validated-by:openalice",
       "validated-by:freqtrade",
-      "validated-by:jesse"
+      "validated-by:jesse",
+      "dna-fit:15",
+      "classification:contrario-aos-principios",
+      "maintenance-cost:n/a"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1439,7 +1497,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T02:26:33.504Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-knowledge-graph",
@@ -1462,7 +1520,11 @@
     "tags": [
       "fase-4",
       "priority:medium",
-      "cheap-win"
+      "cheap-win",
+      "dna-fit:90",
+      "classification:superior",
+      "maintenance-cost:low",
+      "domain:knowledge"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1474,7 +1536,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T11:12:15.394Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-market-memory",
@@ -1490,7 +1552,11 @@
     "maturity": 0,
     "tags": [
       "fase-4",
-      "priority:medium"
+      "priority:medium",
+      "dna-fit:90",
+      "classification:superior",
+      "maintenance-cost:medium",
+      "domain:knowledge"
     ],
     "dependsOn": [
       "engine-replay"
@@ -1504,7 +1570,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T10:47:56.058Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-meta-analytics",
@@ -1527,7 +1593,11 @@
     "tags": [
       "fase-4",
       "priority:low",
-      "temos-parcialmente"
+      "temos-parcialmente",
+      "dna-fit:82",
+      "classification:complementar",
+      "maintenance-cost:low",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-brain-analytics",
@@ -1543,7 +1613,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T11:12:15.393Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-monte-carlo-mode",
@@ -1567,7 +1637,11 @@
       "statistics",
       "robustness",
       "fase3-candidate",
-      "priority:high"
+      "priority:high",
+      "dna-fit:90",
+      "classification:superior",
+      "maintenance-cost:medium",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-replay"
@@ -1581,7 +1655,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T02:26:33.503Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-multi-exchange-plugin-pattern",
@@ -1622,7 +1696,10 @@
       "validated-by:openalice",
       "validated-by:freqtrade",
       "validated-by:hummingbot",
-      "validated-by:lean"
+      "validated-by:lean",
+      "dna-fit:60",
+      "classification:nao-necessario",
+      "maintenance-cost:high"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1634,13 +1711,13 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T02:26:33.504Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-opportunity-alice",
     "type": "idea",
     "name": "Opportunity Engine (Opportunity Alice)",
-    "description": "O cérebro de descoberta do sistema, maior que um scanner: Exchange -> 1000+ ativos -> Coleta -> Normalização -> Feature Builder -> Ranking -> Radar -> Dynamic Universe -> Brains -> Replay -> Analytics -> Experiments -> Decision (futuro). Decide continuamente quais ativos merecem processamento profundo pelos Brains, e quando -- porta de entrada do pipeline analítico. Restrições de desenho confirmadas pela auditoria 'OpenAlice como laboratório' (nenhum atalho de cópia disponível): (1) paralelismo real com limite de concorrência explícito, não paralelismo anunciado mas sequencial de fato; (2) circuit breaker escopado por recurso real, nunca uma variável compartilhada entre exchanges/endpoints diferentes; (3) anti-churn/histerese desde o primeiro princípio -- nunca trocar de ativo a cada candle; (4) teto de universo configurável desde o início.",
+    "description": "O cérebro de descoberta do sistema, maior que um scanner: Exchange -> 1000+ ativos -> Coleta -> Normalização -> Feature Builder -> Ranking -> Radar -> Dynamic Universe -> Brains -> Replay -> Analytics -> Experiments -> Decision (futuro). Decide continuamente quais ativos merecem processamento profundo pelos Brains, e quando -- porta de entrada do pipeline analítico. Restrições de desenho confirmadas pela auditoria 'OpenAlice como laboratório' (nenhum atalho de cópia disponível): (1) paralelismo real com limite de concorrência explícito, não paralelismo anunciado mas sequencial de fato; (2) circuit breaker escopado por recurso real, nunca uma variável compartilhada entre exchanges/endpoints diferentes; (3) anti-churn/histerese desde o primeiro princípio -- nunca trocar de ativo a cada candle; (4) teto de universo configurável desde o início. Loop vivo pedido na rodada '3 pilares' -- o Radar deixa de ser so uma entrada do pipeline e vira sistema com retroalimentacao continua: Radar descobre -> Research entende -> Brains avaliam -> Replay julga -> Analytics mede -> Experiments aprendem -> Registry registra -> Opportunity realimenta o Radar. Cada oportunidade descoberta e processada vira dado que ajusta a proxima rodada de descoberta -- nenhuma das 5 plataformas auditadas tem esse fechamento (OpenAlice nem chega a ter descoberta continua, e um scanner pontual sob demanda do LLM).",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -1666,7 +1743,12 @@
       "roadmap-fase-futura",
       "pipeline-documented",
       "fase-4",
-      "priority:high"
+      "priority:high",
+      "dna-fit:96",
+      "classification:superior",
+      "maintenance-cost:high",
+      "domain:discovery",
+      "pilar-3-pilares"
     ],
     "dependsOn": [
       "idea-dynamic-universe",
@@ -1681,7 +1763,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T10:49:01.313Z"
+    "updatedAt": "2026-07-28T11:56:15.315Z"
   },
   {
     "id": "idea-optimizer-overfit-clustering",
@@ -1705,7 +1787,11 @@
       "auto-tuning",
       "overfitting",
       "fase3-candidate",
-      "priority:high"
+      "priority:high",
+      "dna-fit:87",
+      "classification:superior",
+      "maintenance-cost:medium",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-backtest"
@@ -1719,7 +1805,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T02:26:33.503Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-order-reconciliation-audit",
@@ -1742,7 +1828,10 @@
     "tags": [
       "reconciliation",
       "verify-first",
-      "priority:medium"
+      "priority:medium",
+      "dna-fit:72",
+      "classification:complementar",
+      "maintenance-cost:low"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1754,7 +1843,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T02:26:33.504Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-output-truncation-transparency",
@@ -1777,7 +1866,10 @@
     "tags": [
       "dx",
       "cheap-win",
-      "priority:medium"
+      "priority:medium",
+      "dna-fit:88",
+      "classification:superior",
+      "maintenance-cost:low"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1789,7 +1881,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T02:26:33.504Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-regime-engine",
@@ -1805,7 +1897,11 @@
     "maturity": 0,
     "tags": [
       "fase-4",
-      "priority:high"
+      "priority:high",
+      "dna-fit:85",
+      "classification:complementar",
+      "maintenance-cost:medium",
+      "domain:analysis"
     ],
     "dependsOn": [
       "brain-market",
@@ -1822,7 +1918,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T10:47:56.058Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-risk-guard-pipeline",
@@ -1864,7 +1960,10 @@
       "validated-by:openalice",
       "validated-by:freqtrade",
       "validated-by:hummingbot",
-      "validated-by:lean"
+      "validated-by:lean",
+      "dna-fit:90",
+      "classification:superior",
+      "maintenance-cost:medium"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1876,7 +1975,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T02:26:33.503Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "idea-significance-testing",
@@ -1900,7 +1999,11 @@
       "statistics",
       "overfitting",
       "fase3-candidate",
-      "priority:high"
+      "priority:high",
+      "dna-fit:95",
+      "classification:superior",
+      "maintenance-cost:low",
+      "domain:research"
     ],
     "dependsOn": [
       "engine-replay"
@@ -1914,7 +2017,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T02:26:33.503Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "indicator-atr",
@@ -2057,6 +2160,523 @@
     "updatedAt": "2026-07-27T00:32:42.449Z"
   },
   {
+    "id": "pattern-anti-corruption-layer",
+    "type": "pattern",
+    "name": "Anti-Corruption Layer",
+    "description": "Por que a UTA existe: nao e sobre ter uma camada de abstracao de corretora, e sobre impedir que o vocabulario de trading da Alice vaze pro (ou seja poluido pelo) vocabulario nativo da exchange -- traduzir na fronteira, nunca misturar os dois modelos. Sem consumidor real hoje (cripto10 fala direto com 1 API).",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:90",
+      "classification:nao-necessario",
+      "maintenance-cost:high"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-append-only-audit-trail",
+    "type": "pattern",
+    "name": "Append-Only Audit Trail",
+    "description": "Por que event-log/tool-call-log/provenance-store existem: da pra debugar o que aconteceu, mas nunca da pra debugar o que voce sobrescreveu. Ja praticado pelo cripto10 de forma independente -- o `history[]` de todo Research Object no Feature Registry segue exatamente esse principio.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:90",
+      "classification:equivalente",
+      "maintenance-cost:low"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-capability-isolation",
+    "type": "pattern",
+    "name": "Capability Isolation",
+    "description": "Por que Broker Packs existem: nao e sobre plugin ser moderno, e sobre conter o raio de explosao de uma integracao de corretora ruim numa unidade instalavel isolada, com checksum proprio, incapaz de corromper o core. Alinhamento filosofico alto com 'Brains desacoplados' mesmo sem consumidor real hoje (1 exchange so).",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:100",
+      "classification:nao-necessario",
+      "maintenance-cost:high"
+    ],
+    "dependsOn": [
+      "idea-multi-exchange-plugin-pattern"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-complexity-rejection",
+    "type": "pattern",
+    "name": "Complexity Rejection",
+    "description": "O event bus e o loop de IA em processo foram CONSTRUIDOS e depois REMOVIDOS, porque o overhead de coordenacao superou o valor entregue -- um padrao de recuar complexidade deliberadamente, nao so evitar construir de saida. E uma disciplina operante, nao um componente pra construir -- o cripto10 ja pratica a mesma logica ('campo so vira codigo quando tem consumidor real', ver historico do Feature Registry).",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:95",
+      "classification:superior",
+      "maintenance-cost:n/a"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-delegated-judgment",
+    "type": "pattern",
+    "name": "Delegated Judgment",
+    "description": "Por que a orquestracao de sub-agentes existe sem um juiz central: o sistema se recusa deliberadamente a deixar a automacao corrigir a propria prova -- um humano, ou um limiar estatistico conquistado a parte, faz isso. Ja praticado pelo cripto10 de forma independente (Confidence Engine em modo sombra, IA sempre consultiva, nunca decide sozinha).",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:93",
+      "classification:equivalente",
+      "maintenance-cost:n/a"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-exclusive-ownership",
+    "type": "pattern",
+    "name": "Exclusive Ownership",
+    "description": "Por que o Guardian Runtime (trava de instancia unica, heartbeat + takeover) existe: garantir que dois processos nunca acreditem que sao donos exclusivos da mesma conta/estado ao mesmo tempo. Sem consumidor real hoje -- cripto10 ja roda single-instance por design, sem risco de duplicidade ainda.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:60",
+      "classification:nao-necessario",
+      "maintenance-cost:n/a"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-immutable-decision-ledger",
+    "type": "pattern",
+    "name": "Immutable Decision Ledger",
+    "description": "Por que Git-para-trading existe: nao e sobre versionar codigo, e sobre garantir que nenhuma decisao pode ser reescrita silenciosamente depois do fato -- cada commit e encadeado por hash ao anterior, forcando uma tese explicita e datada antes de qualquer acao financeira irreversivel. O padrao, nao a implementacao.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:97",
+      "classification:superior",
+      "maintenance-cost:medium"
+    ],
+    "dependsOn": [
+      "idea-hypothesis-ledger"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.314Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.314Z",
+    "updatedAt": "2026-07-28T11:56:15.314Z"
+  },
+  {
+    "id": "pattern-no-embeddings-semantic-memory",
+    "type": "pattern",
+    "name": "Ausencia deliberada de embeddings/memoria semantica",
+    "description": "Decisao que o OpenAlice NAO tomou: memoria semantica/embeddings. Motivo inferido, nao documentado explicitamente pelo projeto: filosofia + simplicidade + custo, nao limitacao tecnica -- arquivos Markdown sao git-diffable/revisaveis por humano; embeddings exigiriam dependencia de vector DB/infra que contradiz a filosofia de 'workspace de 1 maquina, 1 usuario'; e o LLM externo ja faz a sintese melhor do que uma busca vetorial isolada faria. Esse motivo especifico NAO se aplica 1:1 ao cripto10 (nao ha um LLM externo orquestrando a sessao) -- fit baixo reflete que a razao do Alice para evitar nao e a mesma razao que o cripto10 teria.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:35",
+      "classification:nao-necessario",
+      "maintenance-cost:high"
+    ],
+    "dependsOn": [
+      "idea-market-memory"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-no-formal-fsm",
+    "type": "pattern",
+    "name": "Ausencia de FSM formal",
+    "description": "Decisao que o OpenAlice NAO tomou: maquina de estados formal (usa enums com `if` espalhado). Motivo inferido: simplicidade/escala -- suficiente pro volume de estados que eles tem hoje. Fit razoavel porque o cripto10 tambem nao precisa de FSM pro escopo atual (1 posicao por vez), mas `idea-executor-state-machine` ja marca isso como candidato pra quando multi-posicao existir -- aqui a ausencia do Alice e um contraexemplo a evitar copiar indefinidamente, nao uma validacao permanente.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:82",
+      "classification:complementar",
+      "maintenance-cost:medium"
+    ],
+    "dependsOn": [
+      "idea-executor-state-machine"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-no-planner",
+    "type": "pattern",
+    "name": "Ausencia de planner/critic",
+    "description": "Decisao que o OpenAlice NAO tomou: planner/critic/reflection formais. Motivo inferido: filosofia (nao competir com o loop de raciocinio do LLM externo que ja orquestra a sessao) + simplicidade. Fit baixo porque os Brains do cripto10 JA SAO, na pratica, um sistema de agregacao de evidencia que caminha na direcao de planejamento formal (Context Fusion) -- 'nao ter planner' nao reflete a direcao que o cripto10 esta tomando.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:22",
+      "classification:contrario-aos-principios",
+      "maintenance-cost:high"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-no-true-event-sourcing",
+    "type": "pattern",
+    "name": "Ausencia de event sourcing verdadeiro",
+    "description": "Decisao que o OpenAlice NAO tomou (apesar de parecer que sim): o TradingGit parece event sourcing mas consulta o broker ao vivo pra cada snapshot, nao reconstroi nada da sequencia causal. Fit alto porque event sourcing DE VERDADE esta altamente alinhado com os principios do cripto10 (Replay ja e uma disciplina proxima) -- `idea-causal-event-log` ataca essa lacuna indo alem do que o proprio OpenAlice tem, nao copiando nada dele.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:95",
+      "classification:superior",
+      "maintenance-cost:high"
+    ],
+    "dependsOn": [
+      "engine-replay",
+      "idea-causal-event-log"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-precedence-resolution",
+    "type": "pattern",
+    "name": "Precedence Resolution",
+    "description": "Por que a precedencia env>config>auto com razao textual existe: um override em camadas onde a ORIGEM da decisao importa tanto quanto a decisao em si, e negar sempre vem com um motivo declarado. Nenhum consumidor real hoje (cripto10 nao tem um sistema de configuracao em camadas), mas pattern barato de aplicar quando um existir.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:70",
+      "classification:inspirador",
+      "maintenance-cost:low"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-progressive-commitment",
+    "type": "pattern",
+    "name": "Progressive Commitment",
+    "description": "Por que staging existe: nao e sobre um passo extra de UI, e sobre tornar uma acao irreversivel REVERSIVEL ate o ultimo momento possivel (stage -> revisar -> commit), confianca graduada em vez de um salto so. Ja praticado pelo cripto10 de forma independente (LOCKED -> paper -> capital limitado -> producao do Decision Brain).",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:92",
+      "classification:equivalente",
+      "maintenance-cost:low"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
+    "id": "pattern-trust-verification",
+    "type": "pattern",
+    "name": "Trust Verification",
+    "description": "Por que checksum existe: nao e sobre integridade de arquivo, e sobre nunca confiar em algo so porque esta presente -- verificar antes de depender. Ja praticado pelo cripto10 de forma independente via Data Confidence Score (desconta confianca por qualidade/disponibilidade de dado, mesmo principio aplicado a dado em vez de a pacote instalado).",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/674a6c7e-783c-4bad-a5e1-7d91f6cacf24",
+        "note": "Engineering Patterns"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "pattern",
+      "dna-fit:80",
+      "classification:equivalente",
+      "maintenance-cost:low"
+    ],
+    "dependsOn": [
+      "idea-confidence-engine"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:56:15.315Z",
+        "action": "created",
+        "note": "Engineering Patterns + DNA Matrix + 3 pilares"
+      }
+    ],
+    "createdAt": "2026-07-28T11:56:15.315Z",
+    "updatedAt": "2026-07-28T11:56:15.315Z"
+  },
+  {
     "id": "synthesis-context-fusion",
     "type": "synthesis",
     "name": "Context Fusion",
@@ -2076,7 +2696,8 @@
     "maturity": 2,
     "tags": [
       "synthesis",
-      "validated-by:openalice"
+      "validated-by:openalice",
+      "domain:analysis"
     ],
     "dependsOn": [
       "brain-market",
@@ -2098,7 +2719,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T02:26:33.504Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
     "id": "synthesis-institutional-context",
@@ -2113,7 +2734,8 @@
     "status": "production",
     "maturity": 2,
     "tags": [
-      "synthesis"
+      "synthesis",
+      "domain:analysis"
     ],
     "dependsOn": [
       "brain-liquidity",
@@ -2135,6 +2757,6 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T11:56:15.316Z"
   }
 ]
