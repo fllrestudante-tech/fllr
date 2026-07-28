@@ -82,11 +82,18 @@
       "type": "internal",
       "name": "internal"
     },
-    "references": [],
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/6eefdd6b-1a4c-40a4-ab7c-a832eaf435a0",
+        "note": "validação: OpenAlice não tem classificador de regime, delega ao LLM"
+      }
+    ],
     "status": "production",
     "maturity": 2,
     "tags": [
-      "brain"
+      "brain",
+      "validated-by:openalice"
     ],
     "dependsOn": [],
     "metrics": {
@@ -104,7 +111,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T02:26:33.504Z"
   },
   {
     "id": "brain-order-block",
@@ -189,12 +196,24 @@
       "type": "internal",
       "name": "internal"
     },
-    "references": [],
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa6a12ac-9bc1-4e70-b9aa-a4d618cdcb8a",
+        "note": "validação: isCandidateBetter é mais rigoroso que Hyperopt (sem proteção automática contra overfitting)"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/332ad697-e73a-47e8-a3c9-b6d5fec7a3d6",
+        "note": "ver idea-optimizer-overfit-clustering para diagnóstico complementar"
+      }
+    ],
     "status": "production",
     "maturity": 4,
     "tags": [
       "auto-tuning",
-      "live"
+      "live",
+      "validated-by:freqtrade"
     ],
     "dependsOn": [
       "indicator-ema",
@@ -217,7 +236,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.449Z",
-    "updatedAt": "2026-07-27T00:32:42.449Z"
+    "updatedAt": "2026-07-28T02:26:33.504Z"
   },
   {
     "id": "engine-brain-analytics",
@@ -348,11 +367,36 @@
       "type": "internal",
       "name": "internal"
     },
-    "references": [],
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa6a12ac-9bc1-4e70-b9aa-a4d618cdcb8a",
+        "note": "validação: motor de backtest separado do live é armadilha conhecida, já evitada"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/1356f3fd-badd-4237-9b8a-c49512d53092",
+        "note": "validação: backtest V2 reusa só a decisão, não a execução -- reuso parcial"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/332ad697-e73a-47e8-a3c9-b6d5fec7a3d6",
+        "note": "validação mais forte: LEAN unifica live/backtest no mesmo nível"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/82fa5615-2322-4550-955e-4f95e20cebf0",
+        "note": "validação: mesmo simulador para backtest/optimize/monte-carlo/significance-test"
+      }
+    ],
     "status": "production",
     "maturity": 2,
     "tags": [
-      "engine"
+      "engine",
+      "validated-by:freqtrade",
+      "validated-by:hummingbot",
+      "validated-by:lean",
+      "validated-by:jesse"
     ],
     "dependsOn": [
       "brain-market",
@@ -371,7 +415,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T02:26:33.504Z"
   },
   {
     "id": "engine-telegram-radar",
@@ -854,6 +898,460 @@
     "updatedAt": "2026-07-27T00:32:42.450Z"
   },
   {
+    "id": "idea-executor-state-machine",
+    "type": "idea",
+    "name": "Executor (state machine autônoma por posição)",
+    "description": "Hummingbot V2 separa Controller (decide, produz ExecutorAction) de Executor (state machine autônoma que gerencia sozinha stop-loss/take-profit/trailing-stop/time-limit -- as 'três barreiras' -- com CloseType tipado no fechamento). Formaliza como objeto com ciclo de vida próprio o que o Exit Engine (Fase D) já faz hoje como lógica procedural no ciclo principal. Só vale a pena refatorar se/quando o cripto10 precisar gerenciar múltiplas posições concorrentes -- hoje é 1 posição por vez.",
+    "owner": {
+      "type": "external",
+      "name": "Hummingbot"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/1356f3fd-badd-4237-9b8a-c49512d53092",
+        "note": "hummingbot/strategy_v2/executors/position_executor/"
+      }
+    ],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "exit-engine",
+      "multi-position",
+      "priority:low"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.503Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.503Z",
+    "updatedAt": "2026-07-28T02:26:33.503Z"
+  },
+  {
+    "id": "idea-hypothesis-ledger",
+    "type": "idea",
+    "name": "Hypothesis Ledger (Trading-as-Git)",
+    "description": "Ledger de decisões hash-encadeado (stage->commit->push), commit = tese estruturada + snapshot completo do estado no momento da decisão. Veículo de implementação do Hypothesis Engine já no roadmap -- como tabela nova no market.db (não arquivos, preserva a filosofia Market Database). O OpenAlice tem o ledger mas nunca construiu a agregação/score em cima dele -- o cripto10 deve fechar esse ciclo via padrão já dominado (Brain Analytics).",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/862459ec-f4d2-4883-a28c-d6f134c401a0",
+        "note": "Trading-as-Git"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/6eefdd6b-1a4c-40a4-ab7c-a832eaf435a0",
+        "note": "achado: OpenAlice nunca fechou o ciclo de agregação"
+      }
+    ],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "hypothesis-engine",
+      "ledger",
+      "fase3-candidate",
+      "priority:high"
+    ],
+    "dependsOn": [
+      "engine-replay",
+      "engine-brain-analytics"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.502Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.502Z",
+    "updatedAt": "2026-07-28T02:26:33.502Z"
+  },
+  {
+    "id": "idea-kelly-edge-sizing",
+    "type": "idea",
+    "name": "Kelly Criterion / Edge Positioning (sizing por expectância)",
+    "description": "Position sizing baseado em Kelly Criterion/expectância histórica (edge). Descartado deliberadamente: 3 confirmações independentes de que essa ambição não vingou nem em projetos maduros -- OpenAlice removeu o módulo Edge, Freqtrade removeu o módulo Edge (deprecado 2023.9, removido 2025.6), Jesse só tem helpers opcionais (risk_to_qty/kelly_criterion em jesse.utils) nunca invocados automaticamente pelo framework. Registrado aqui pra não ser re-proposto sem essa memória.",
+    "owner": {
+      "type": "external",
+      "name": "Freqtrade"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/862459ec-f4d2-4883-a28c-d6f134c401a0",
+        "note": "1ª confirmação -- Edge module removido"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa6a12ac-9bc1-4e70-b9aa-a4d618cdcb8a",
+        "note": "2ª confirmação -- Edge module removido em 2025.6"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/82fa5615-2322-4550-955e-4f95e20cebf0",
+        "note": "3ª confirmação -- helpers opcionais nunca invocados"
+      }
+    ],
+    "status": "rejected",
+    "maturity": 0,
+    "tags": [
+      "position-sizing",
+      "rejected",
+      "validated-by:openalice",
+      "validated-by:freqtrade",
+      "validated-by:jesse"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.504Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.504Z",
+    "updatedAt": "2026-07-28T02:26:33.504Z"
+  },
+  {
+    "id": "idea-monte-carlo-mode",
+    "type": "idea",
+    "name": "Monte Carlo Mode (perturbação de candles)",
+    "description": "Jesse perturba candles (ruído gaussiano + moving block bootstrap, preserva autocorrelação) e reroda o backtest milhares de vezes, gerando uma distribuição de métricas em vez de um número único. Responde 'esse resultado é sorte de um caminho de preço específico, ou é robusto a variações plausíveis do mesmo histórico?'. Reaproveitaria candles já coletados + o Replay Engine, rodado N vezes sobre séries perturbadas. Candidata forte de Fase 3, complementa o Significance Testing.",
+    "owner": {
+      "type": "external",
+      "name": "Jesse"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/82fa5615-2322-4550-955e-4f95e20cebf0",
+        "note": "jesse/candle_pipelines/"
+      }
+    ],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "statistics",
+      "robustness",
+      "fase3-candidate",
+      "priority:high"
+    ],
+    "dependsOn": [
+      "engine-replay"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.503Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.503Z",
+    "updatedAt": "2026-07-28T02:26:33.503Z"
+  },
+  {
+    "id": "idea-multi-exchange-plugin-pattern",
+    "type": "idea",
+    "name": "Padrão de plugin pra multi-exchange (Broker Packs / conector template)",
+    "description": "Confirmado de forma independente em 4 projetos: OpenAlice (Broker Packs, instalação atômica com checksum SHA-256), Freqtrade (subclasse por exchange sobre ccxt), Hummingbot (RateOracle + suíte de conformidade AbstractExchangeConnectorTests aplicada a ~48 conectores), Lean (IBrokerage + IBrokerageFactory carregados via MEF). Só relevante quando o cripto10 diversificar de bolsa (hoje: só Bybit) -- guardar como referência arquitetural, não construir agora.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/862459ec-f4d2-4883-a28c-d6f134c401a0",
+        "note": "Broker Packs"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa6a12ac-9bc1-4e70-b9aa-a4d618cdcb8a",
+        "note": "subclasse por exchange sobre ccxt"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/1356f3fd-badd-4237-9b8a-c49512d53092",
+        "note": "RateOracle + conformance tests"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/332ad697-e73a-47e8-a3c9-b6d5fec7a3d6",
+        "note": "IBrokerage/IBrokerageFactory via MEF"
+      }
+    ],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "multi-exchange",
+      "priority:low",
+      "validated-by:openalice",
+      "validated-by:freqtrade",
+      "validated-by:hummingbot",
+      "validated-by:lean"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.504Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.504Z",
+    "updatedAt": "2026-07-28T02:26:33.504Z"
+  },
+  {
+    "id": "idea-opportunity-alice",
+    "type": "idea",
+    "name": "Opportunity Alice (Radar de Oportunidades)",
+    "description": "Pipeline: Universo -> Scanner -> Ranking -> Radar -> Contexto -> Brains -> Replay -> Score -> Watchlist dinâmica -> Trade. O ativo deixa de ser escolhido manualmente -- o sistema descobre oportunidades continuamente, detecta regimes favoráveis, atualiza a watchlist dinâmica e prioriza símbolos pra análise profunda dos Brains. Vira a porta de entrada nova do pipeline analítico. Achado importante do mergulho profundo no OpenAlice: nem ele resolveu isso bem (watchlist fragmentada em 2 sistemas desconectados -- EntityStore backend vs. localStorage do frontend -- sem descoberta automática de ativos) -- não há atalho a copiar, precisa de desenho próprio. Subsistema grande: documentado como arquitetura-alvo agora, implementação só depois do Feature Registry consolidado (Passo B/D) e da Fase 3 (2-3 conceitos das auditorias) em andamento.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/6eefdd6b-1a4c-40a4-ab7c-a832eaf435a0",
+        "note": "achado: watchlist/multi-símbolo do OpenAlice são rasos"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "opportunity-alice",
+      "multi-symbol",
+      "watchlist",
+      "roadmap-fase-futura",
+      "priority:medium"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.504Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.504Z",
+    "updatedAt": "2026-07-28T02:26:33.504Z"
+  },
+  {
+    "id": "idea-optimizer-overfit-clustering",
+    "type": "idea",
+    "name": "Diagnóstico de overfitting via clustering do grid de parâmetros",
+    "description": "Optimizer/Analysis do LEAN (OptimizationClustering + OptimizationModes) roda k-means sobre o espaço de parâmetros do grid inteiro pra distinguir região estável de bons resultados (plateau) de pico isolado suspeito de overfitting -- complementa isCandidateBetter (que só valida 1 candidato por vez vs. baseline). Exigiria mudar lib/backtest.js de 'testa 1 candidato' pra 'acumula um grid de candidatos e analisa a superfície' -- mudança real de arquitetura, não ajuste pequeno. Candidata forte de Fase 3.",
+    "owner": {
+      "type": "external",
+      "name": "Lean/QuantConnect"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/332ad697-e73a-47e8-a3c9-b6d5fec7a3d6",
+        "note": "Optimizer/Analysis/OptimizationClustering.cs"
+      }
+    ],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "auto-tuning",
+      "overfitting",
+      "fase3-candidate",
+      "priority:high"
+    ],
+    "dependsOn": [
+      "engine-backtest"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.503Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.503Z",
+    "updatedAt": "2026-07-28T02:26:33.503Z"
+  },
+  {
+    "id": "idea-order-reconciliation-audit",
+    "type": "idea",
+    "name": "Auditoria da reconciliação de ordens (verificar antes de classificar)",
+    "description": "Hummingbot tem order tracking dual-canal (websocket primário + polling REST com intervalo adaptativo que acelera quando desconfia que o websocket parou de reportar + rastreamento de 'lost order' após N tentativas consecutivas sem encontrar a ordem). Não foi possível confirmar na auditoria se o ciclo de reconciliação atual do cripto10 (index.js, a cada ciclo contra a Bybit) tem robustez equivalente. Item sinalizado pra checagem pontual interna antes de qualquer implementação -- não classificado às cegas.",
+    "owner": {
+      "type": "external",
+      "name": "Hummingbot"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/1356f3fd-badd-4237-9b8a-c49512d53092",
+        "note": "exchange_py_base.py -- order tracking dual-canal"
+      }
+    ],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "reconciliation",
+      "verify-first",
+      "priority:medium"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.504Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.504Z",
+    "updatedAt": "2026-07-28T02:26:33.504Z"
+  },
+  {
+    "id": "idea-output-truncation-transparency",
+    "type": "idea",
+    "name": "Transparência de truncamento em outputs (\"omitted: N\")",
+    "description": "OpenAlice nunca trunca output em silêncio -- toda ferramenta que pode devolver muito dado (busca de notícias, painéis do DSL de análise) declara explicitamente quanto foi omitido (omitted: N) em vez de cortar sem avisar. Barato, sem risco, aplicável já em scripts/registry.js/scripts/health.js quando algum output crescer demais. Único item de menor porte marcado 'implementaria já' em toda a série de 5 auditorias, fora do Hypothesis Ledger.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/862459ec-f4d2-4883-a28c-d6f134c401a0",
+        "note": "disciplina 'nunca truncar em silêncio'"
+      }
+    ],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "dx",
+      "cheap-win",
+      "priority:medium"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.504Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.504Z",
+    "updatedAt": "2026-07-28T02:26:33.504Z"
+  },
+  {
+    "id": "idea-risk-guard-pipeline",
+    "type": "idea",
+    "name": "Guard Pipeline (risk veto plugável)",
+    "description": "Padrão confirmado independentemente em 4/4 projetos com camada de risco (OpenAlice Guard Pipeline, Freqtrade Protections, Hummingbot Protections, Lean Risk Management Models): guards/models resolvidos por nome, cada um só vê contexto montado (nunca a conta bruta), vetam retornando um alvo de 'zerar posição' com precedência sobre o alvo original. Molde de implementação pra quando lib/risk.js evoluir de portão binário pra recomendação graduada de exposição -- não é uma feature nova isolada, é a forma certa de construir uma evolução já planejada.",
+    "owner": {
+      "type": "external",
+      "name": "OpenAlice"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/862459ec-f4d2-4883-a28c-d6f134c401a0",
+        "note": "Guard Pipeline"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa6a12ac-9bc1-4e70-b9aa-a4d618cdcb8a",
+        "note": "Protections"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/1356f3fd-badd-4237-9b8a-c49512d53092",
+        "note": "Protections"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/332ad697-e73a-47e8-a3c9-b6d5fec7a3d6",
+        "note": "Risk Management Models"
+      }
+    ],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "risk-brain",
+      "unanimous-4-4",
+      "priority:high",
+      "validated-by:openalice",
+      "validated-by:freqtrade",
+      "validated-by:hummingbot",
+      "validated-by:lean"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.503Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.503Z",
+    "updatedAt": "2026-07-28T02:26:33.503Z"
+  },
+  {
+    "id": "idea-significance-testing",
+    "type": "idea",
+    "name": "Significance Testing (bootstrap p-value de regra de entrada)",
+    "description": "Jesse testa formalmente H0='essa regra de entrada não tem poder preditivo real, os retornos são coincidência' via bootstrap resampling (2000 simulações default) dos retornos de um backtest 'só sinal' (sem executar ordem). Devolve um p-value real. Reaproveitaria o Replay Engine quase inteiro -- ele já roda os Brains sobre histórico real sem executar ordem. Candidata forte de Fase 3, ataca diretamente a disciplina estatística já praticada no projeto (nenhuma feature sem prova estatística).",
+    "owner": {
+      "type": "external",
+      "name": "Jesse"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/82fa5615-2322-4550-955e-4f95e20cebf0",
+        "note": "jesse/research/rule_significance_testing/"
+      }
+    ],
+    "status": "backlog",
+    "maturity": 0,
+    "tags": [
+      "statistics",
+      "overfitting",
+      "fase3-candidate",
+      "priority:high"
+    ],
+    "dependsOn": [
+      "engine-replay"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T02:26:33.503Z",
+        "action": "created",
+        "note": "auditoria de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse)"
+      }
+    ],
+    "createdAt": "2026-07-28T02:26:33.503Z",
+    "updatedAt": "2026-07-28T02:26:33.503Z"
+  },
+  {
     "id": "indicator-atr",
     "type": "indicator",
     "name": "Average True Range",
@@ -1002,11 +1500,18 @@
       "type": "internal",
       "name": "internal"
     },
-    "references": [],
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/6eefdd6b-1a4c-40a4-ab7c-a832eaf435a0",
+        "note": "validação: OpenAlice não tem contexto centralizado, tudo pull sob demanda"
+      }
+    ],
     "status": "production",
     "maturity": 2,
     "tags": [
-      "synthesis"
+      "synthesis",
+      "validated-by:openalice"
     ],
     "dependsOn": [
       "brain-market",
@@ -1028,7 +1533,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-27T00:32:42.450Z"
+    "updatedAt": "2026-07-28T02:26:33.504Z"
   },
   {
     "id": "synthesis-institutional-context",

@@ -22,7 +22,8 @@
     "telegram:summary": "node telegram-radar/summarize.js",
     "classify:telegram": "node scripts/narrativeEngine.js",
     "backup": "node scripts/runBackupOnce.js",
-    "registry": "node scripts/registry.js"
+    "registry": "node scripts/registry.js",
+    "adoption-matrix": "node scripts/adoptionMatrix.js"
   },
   "keywords": [],
   "author": "",
