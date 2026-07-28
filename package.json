@@ -24,7 +24,8 @@
     "backup": "node scripts/runBackupOnce.js",
     "registry": "node scripts/registry.js",
     "adoption-matrix": "node scripts/adoptionMatrix.js",
-    "dna-matrix": "node scripts/dnaMatrix.js"
+    "dna-matrix": "node scripts/dnaMatrix.js",
+    "knowledge-base": "node scripts/knowledgeBase.js"
   },
   "keywords": [],
   "author": "",

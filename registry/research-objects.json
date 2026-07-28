@@ -1102,15 +1102,15 @@
   {
     "id": "idea-asset-profile",
     "type": "idea",
-    "name": "Market Knowledge Base (antigo Asset Profile)",
-    "description": "Elevado a pilar (rodada '3 pilares'): biografia permanente por ativo, consultada por todo Brain antes de decidir -- nao so os campos originais (liquidez/volatilidade/spread/slippage/horario ativo/correlacao/exchange preferida/latencia/funding historico/qualidade dos sinais/win rate historico), mas tambem: regimes conhecidos daquele ativo especifico, comportamento historico em FOMC/CPI (eventos macro nomeados, nao so 'evento generico'), drawdown medio, funding/OI tipicos (faixa normal vs. anomalia), melhores e piores horarios, melhores e piores regimes, setor/narrativa (AI/DeFi/L2/Meme/RWA/Gaming/Infra/Stablecoins/Perpetuals). Diferente do Market Memory (que responde 'essa situacao especifica ja aconteceu' via analogia sobre snapshots do Replay): Market Knowledge Base e uma ficha por ATIVO, semi-estatica, agregada ao longo do tempo -- os dois se alimentam mutuamente (Market Memory descobre o padrao, Market Knowledge Base guarda o resumo consolidado). Nao apareceu em nenhuma das 5 plataformas auditadas nesse nivel de detalhe por ativo. Campos adicionais pedidos pelo usuario pro 'DNA' do ativo: eventos de calendario (ETF? Token Unlock?), principais influenciadores, exchange dominante, volume por exchange, reacao historica especifica a CPI/FOMC/BTC/ETH/DXY/Nasdaq (nao so 'evento macro generico' -- cada relacao nomeada separadamente), FVG/OB comuns daquele ativo especifico.",
+    "name": "Market Knowledge Base (Asset)",
+    "description": "v1 ENTREGUE nesta rodada: tabela `asset` (lib/infra/migrations/0011_asset.sql) com identidade estável do ativo (symbol/assetId/aliases/category/subCategory/sector/narrative/tags/supply/officialLinks/primaryExchange/contractType/baseAsset/quoteAsset/status/relations) + proveniência (origin/confidence/confidenceReason/confidenceSource/lastVerification/verificationMethod) + version incremental. Arquitetura final, corrigida em 2 rodadas de revisão do usuário: Knowledge Base (fatos, lib/knowledgeBase/assetStore.js) -> Knowledge Resolver (interpreta, lib/knowledgeBase/resolver.js -- v1 pass-through de config.structure.* com envelope {context,knowledgeVersion,confidence,generatedAt,source}) -> Knowledge Signals (sinais reutilizaveis, lib/knowledgeBase/signals.js -- registry vazio nesta rodada, nenhum sinal real ainda) -> Context Builder (monta o contexto final, lib/knowledgeBase/contextBuilder.js -- unica API que os Brains chamam) -> Brain. O Brain nunca consulta a tabela/Resolver/Signals diretamente. Consumidores reais hoje: os 4 *BrainData.js (structure/liquidity/fvg/orderBlock) que antes liam config.structure.* direto, agora chamam contextBuilder.buildXContext -- zero mudanca de assinatura/logica nos Brains puros, zero regressao (789 testes passando). Identidade do ativo (sector/narrative/tags/relations) continua SEM consumidor real hoje -- excecao deliberada, pedida pelo usuario, justificada por ser metadado estatico/barato com consumidor documentado (nao hipotetico) em idea-dynamic-universe/idea-opportunity-alice/idea-knowledge-graph/idea-correlation-brain. Explicitamente FORA desta rodada, documentado pra depois: Knowledge Snapshot (ligar decisao de Brain ao conhecimento exato usado, paralelo ao Replay Snapshot), cache no Resolver (sem problema de performance real ainda), append-only completo (version incremental ja da o numero, historico de revisao completa fica pra quando houver mudanca de asset com frequencia real), Knowledge Graph com traversal de relations (campo so prepara o dado), Asset Statistics/Memory/Hypotheses (as outras 3 camadas do Market Knowledge Base, continuam idea). tickSize/qtyStep/minOrderQty deliberadamente NAO entram no Asset -- ja resolvidos ao vivo por simbolo via lib/bybit.js::getInstrumentInfo + lib/risk.js, duplicar criaria 2a fonte de verdade. Opportunity Engine (idea, nao implementado) sera o produtor principal de novos `asset` quando existir -- criacao manual via `npm run knowledge-base -- set` e so o caminho de bootstrap.",
     "owner": {
       "type": "internal",
       "name": "internal"
     },
     "references": [],
-    "status": "idea",
-    "maturity": 0,
+    "status": "research",
+    "maturity": 1,
     "tags": [
       "fase-4",
       "dna-fit:96",
@@ -1129,10 +1129,20 @@
         "date": "2026-07-28T10:47:56.059Z",
         "action": "created",
         "note": "blueprint de pesquisa contínua (Fase 4)"
+      },
+      {
+        "date": "2026-07-28T19:05:43.319Z",
+        "action": "status: idea → research",
+        "note": "Market Knowledge Base v1 (Asset + Resolver + Signals + Context Builder) implementado"
+      },
+      {
+        "date": "2026-07-28T19:05:43.319Z",
+        "action": "maturity: 0 → 1",
+        "note": "Market Knowledge Base v1 (Asset + Resolver + Signals + Context Builder) implementado"
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T14:31:55.159Z"
+    "updatedAt": "2026-07-28T19:05:43.319Z"
   },
   {
     "id": "idea-capital-flow-engine",

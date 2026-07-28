@@ -1,6 +1,6 @@
 # DNA Matrix
 
-_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T14:32:02.460Z a partir de `registry/research-objects.json` (42 objetos com DNA Fit calculado, de 82 totais). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T19:05:45.480Z a partir de `registry/research-objects.json` (42 objetos com DNA Fit calculado, de 82 totais). Não editar este arquivo à mão._
 
 Pergunta que este documento responde: **essa ideia/padrão combina com os princípios do cripto10** (Replay antes de promoção, evidência antes de decisão, Brains desacoplados, contexto antes de entrada, estatística antes de automação)? DNA Fit é alinhamento filosófico -- não é a mesma pergunta que "vale a pena construir agora" (isso é a Classificação) nem "quanto custa manter" (Custo de Manutenção). Uma ideia pode ter DNA Fit alto e ainda assim ser `NÃO NECESSÁRIO` hoje, se não houver consumidor real -- ver `research/competitor-intelligence/openalice.md` e o artifact "Engineering Patterns" pro raciocínio por trás de cada score.
 
@@ -10,7 +10,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 |---|---|---|---|---|
 | `idea-hypothesis-ledger` | Hypothesis Ledger (Trading-as-Git) | 98% | Médio | research |
 | `pattern-immutable-decision-ledger` | Immutable Decision Ledger | 97% | Médio | -- |
-| `idea-asset-profile` | Market Knowledge Base (antigo Asset Profile) | 96% | Médio | knowledge |
+| `idea-asset-profile` | Market Knowledge Base (Asset) | 96% | Médio | knowledge |
 | `idea-opportunity-alice` | Opportunity Engine (Opportunity Alice) | 96% | Alto | discovery |
 | `idea-dynamic-universe` | Dynamic Universe | 95% | Alto | discovery |
 | `idea-significance-testing` | Significance Testing (bootstrap p-value de regra de entrada) | 95% | Baixo | research |
