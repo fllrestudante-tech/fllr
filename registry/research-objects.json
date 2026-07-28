@@ -1082,6 +1082,155 @@
     "updatedAt": "2026-07-27T00:32:42.450Z"
   },
   {
+    "id": "idea-asset-profile",
+    "type": "idea",
+    "name": "Asset Profile",
+    "description": "Ficha permanente por moeda (liquidez, volatilidade, spread, slippage, horário ativo, correlação, exchange preferida, latência média, funding histórico, qualidade dos sinais, win rate histórico) -- muda completamente position sizing. Só ganha valor real quando existir mais de 1 símbolo operando -- Dynamic Universe é pré-requisito natural, não o contrário.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:low"
+    ],
+    "dependsOn": [
+      "idea-dynamic-universe"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.059Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.059Z",
+    "updatedAt": "2026-07-28T10:47:56.059Z"
+  },
+  {
+    "id": "idea-confidence-engine",
+    "type": "idea",
+    "name": "Confidence Engine",
+    "description": "'Quanto confiar neste Brain HOJE' -- desconta confidence por qualidade/disponibilidade de dado no momento exato (exchange instável, OI atrasado, funding congelado, Telegram offline). Diferente do confidence que cada Brain já autorreporta, e diferente do Context Fusion (que penaliza por conflito ENTRE Brains, não por qualidade de dado individual). Temos parcialmente: lib/dataConfidenceScore.js e lib/freshnessScore.js já calculam isso por domínio no dashboard -- falta threadear esse número de volta pro confidence de cada BrainResult no momento do cálculo, não construir do zero.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:medium",
+      "temos-parcialmente"
+    ],
+    "dependsOn": [
+      "synthesis-context-fusion"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.059Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.059Z",
+    "updatedAt": "2026-07-28T10:47:56.059Z"
+  },
+  {
+    "id": "idea-cost-engine",
+    "type": "idea",
+    "name": "Cost Engine",
+    "description": "ROI computacional por feature/Brain (tempo/CPU/RAM/IO/API/tokens vs. ganho estatístico) -- ex: 'Footprint: ganho 0.4%, custo 300% -> desligar'. Honestidade: na escala atual do cripto10 (Node.js, 1 símbolo, coleta em cron) custo computacional não é um problema real ainda -- documentado, não priorizado, até o Opportunity Engine rodar contra centenas de símbolos.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:low"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.059Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.059Z",
+    "updatedAt": "2026-07-28T10:47:56.059Z"
+  },
+  {
+    "id": "idea-dynamic-universe",
+    "type": "idea",
+    "name": "Dynamic Universe",
+    "description": "Watchlist que nunca fica fixa -- pipeline de filtragem em cascata: Universo -> Filtragem -> Liquidez -> Volume -> OI -> Funding -> Volatilidade -> Correlação -> Narrativa -> Watchlist dinâmica. Camada própria dentro do Opportunity Engine, não um estágio solto. Por que é diferente do que o OpenAlice tem: EntityStore do OpenAlice é curadoria manual (o agente decide o que rastrear) -- esse padrão não serve pra varrer 1000+ ativos continuamente, precisa de scoring/filtro algorítmico desde o dia 1.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:high",
+      "opportunity-engine"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.058Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.058Z",
+    "updatedAt": "2026-07-28T10:47:56.058Z"
+  },
+  {
+    "id": "idea-evolution-engine",
+    "type": "idea",
+    "name": "Evolution Engine",
+    "description": "Consome Analytics + Experiments + Research e só sugere -- nunca promove sozinho. Exemplo: 'A feature X aumentou 18% a precisão em 9.000 snapshots. Recomenda iniciar Paper Trading.' Quem decide continua sendo humano -- mesmo espírito do Confidence Engine em modo sombra e de toda a disciplina de promoção estatística já praticada no projeto.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:low"
+    ],
+    "dependsOn": [
+      "engine-brain-analytics",
+      "engine-replay"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.059Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.059Z",
+    "updatedAt": "2026-07-28T10:47:56.059Z"
+  },
+  {
     "id": "idea-executor-state-machine",
     "type": "idea",
     "name": "Executor (state machine autônoma por posição)",
@@ -1115,6 +1264,34 @@
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
     "updatedAt": "2026-07-28T02:26:33.503Z"
+  },
+  {
+    "id": "idea-feature-builder",
+    "type": "idea",
+    "name": "Feature Builder",
+    "description": "Raw Data -> Derived Features (ATR/VWAP/VWMA/Volume Profile/Session/ADR/Relative Volume/Funding Delta/OI Delta) -> cache -> Brains. Centraliza o cálculo de features derivadas uma única vez, em vez de cada Brain recalcular por conta própria -- reduz custo, duplicação e superfície de bug conforme mais Brains nascerem. Hoje cada detector (Structure/Liquidity/FVG/Order Block) deriva o que precisa direto do candle bruto sem uma camada comum -- ainda não é duplicação grave, mas também não há reuso.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:high"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.058Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.058Z",
+    "updatedAt": "2026-07-28T10:47:56.058Z"
   },
   {
     "id": "idea-hypothesis-ledger",
@@ -1206,6 +1383,96 @@
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
     "updatedAt": "2026-07-28T02:26:33.504Z"
+  },
+  {
+    "id": "idea-knowledge-graph",
+    "type": "idea",
+    "name": "Knowledge Graph",
+    "description": "O grafo já existe de fato -- dependsOn/listConsumers do Feature Registry já conectam Research Objects, Capabilities e Experiments. O que falta é representar (visualizar/navegar), não modelar um dado novo. Mais barato que os outros motores desta fase: um script que renderiza o grafo já latente no Registry (ex: Mermaid a partir de dependsOn), sem mudança de schema.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:medium",
+      "cheap-win"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.058Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.058Z",
+    "updatedAt": "2026-07-28T10:47:56.058Z"
+  },
+  {
+    "id": "idea-market-memory",
+    "type": "idea",
+    "name": "Market Memory",
+    "description": "Diferente do Replay: Replay responde 'o que aconteceu' rodando o histórico; Market Memory responde 'isso já aconteceu antes' -- busca por analogia num contexto atual (ex: funding 0.09 + OI +14% + range + liquidez empilhada) contra os snapshots já julgados pelo Replay, devolvendo estatística real ('58 ocorrências, 74% romperam pra cima, 12% falso rompimento, 14% lateral'). Reaproveita os snapshots que o Replay Engine já gera -- é uma consulta nova sobre dado que já existe, não uma coleta nova.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:medium"
+    ],
+    "dependsOn": [
+      "engine-replay"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.058Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.058Z",
+    "updatedAt": "2026-07-28T10:47:56.058Z"
+  },
+  {
+    "id": "idea-meta-analytics",
+    "type": "idea",
+    "name": "Meta Analytics",
+    "description": "'Quais features ajudam, quais são redundantes, qual Brain envelheceu' -- redundância e contribuição marginal já existem em lib/brainAnalytics.js (computeRedundancy/computeMarginalContribution). O que genuinamente falta é o eixo temporal: acompanhar se uma feature piorou/melhorou ao longo do tempo, não só um cálculo pontual a cada replay. É extensão do Brain Analytics existente, não um motor novo do zero.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:low",
+      "temos-parcialmente"
+    ],
+    "dependsOn": [
+      "engine-brain-analytics"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.059Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.059Z",
+    "updatedAt": "2026-07-28T10:47:56.059Z"
   },
   {
     "id": "idea-monte-carlo-mode",
@@ -1301,8 +1568,8 @@
   {
     "id": "idea-opportunity-alice",
     "type": "idea",
-    "name": "Opportunity Alice (Radar de Oportunidades)",
-    "description": "Pipeline: Universe Manager -> Exchange Discovery -> Symbol Filter -> Liquidity Filter -> Volatility Filter -> Regime Detector -> Opportunity Scanner -> Ranking Engine -> Watchlist Builder -> Context Scheduler -> Brains -> Replay -> Research -> Decision (futuro). O ativo deixa de ser escolhido manualmente -- o sistema descobre oportunidades continuamente, detecta regimes favoráveis, atualiza a watchlist dinâmica e prioriza símbolos pra análise profunda dos Brains. Vira o orquestrador do universo negociável, decidindo quais ativos merecem processamento profundo e quando -- porta de entrada nova do pipeline analítico. Restrições de desenho confirmadas pela auditoria 'OpenAlice como laboratório' (nenhum atalho de cópia disponível -- watchlist/multi-símbolo do OpenAlice são rasos ou quebrados por baixo do capô): (1) o 'panel' multi-símbolo do OpenAlice é anunciado como paralelo mas roda sequencial de verdade -- o Opportunity Scanner precisa de paralelismo real com limite de concorrência explícito, não só a promessa; (2) o circuit breaker do OpenAlice compartilha uma única variável entre uma família inteira de métodos -- qualquer rate limiter aqui precisa ser escopado por recurso real (por exchange/endpoint); (3) não existe anti-churn no OpenAlice (troca de watchlist é instantânea, sem debounce/cooldown/histerese) -- o Watchlist Builder precisa de histerese desde o primeiro princípio pra evitar trocar de ativo a cada candle; (4) não existe teto de universo em lugar nenhum do OpenAlice -- o Universe Manager precisa de um limite configurável explícito desde o início, não adicionado depois.",
+    "name": "Opportunity Engine (Opportunity Alice)",
+    "description": "O cérebro de descoberta do sistema, maior que um scanner: Exchange -> 1000+ ativos -> Coleta -> Normalização -> Feature Builder -> Ranking -> Radar -> Dynamic Universe -> Brains -> Replay -> Analytics -> Experiments -> Decision (futuro). Decide continuamente quais ativos merecem processamento profundo pelos Brains, e quando -- porta de entrada do pipeline analítico. Restrições de desenho confirmadas pela auditoria 'OpenAlice como laboratório' (nenhum atalho de cópia disponível): (1) paralelismo real com limite de concorrência explícito, não paralelismo anunciado mas sequencial de fato; (2) circuit breaker escopado por recurso real, nunca uma variável compartilhada entre exchanges/endpoints diferentes; (3) anti-churn/histerese desde o primeiro princípio -- nunca trocar de ativo a cada candle; (4) teto de universo configurável desde o início.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -1326,10 +1593,14 @@
       "multi-symbol",
       "watchlist",
       "roadmap-fase-futura",
-      "priority:medium",
-      "pipeline-documented"
+      "pipeline-documented",
+      "fase-4",
+      "priority:high"
     ],
-    "dependsOn": [],
+    "dependsOn": [
+      "idea-dynamic-universe",
+      "idea-feature-builder"
+    ],
     "metrics": {},
     "history": [
       {
@@ -1339,7 +1610,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T10:08:47.042Z"
+    "updatedAt": "2026-07-28T10:49:01.313Z"
   },
   {
     "id": "idea-optimizer-overfit-clustering",
@@ -1448,6 +1719,39 @@
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
     "updatedAt": "2026-07-28T02:26:33.504Z"
+  },
+  {
+    "id": "idea-regime-engine",
+    "type": "idea",
+    "name": "Regime Engine",
+    "description": "Síntese de regime (Expansion/Compression/News/Panic/Distribution/Accumulation/Blow-off/Mean-reversion) consumida por todos os Brains antes de decidir -- evita Brains discordando sobre 'que tipo de mercado é esse' sem fonte comum. Os Brains produzem, o Regime sintetiza, todo mundo consulta. Decisão de desenho pendente: o Market Brain já cobre Trend/Range e Sentimento/Risco -- avaliar se o Regime Engine estende o Market Brain ou nasce como camada acima dele, para não competir pela mesma classificação.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:high"
+    ],
+    "dependsOn": [
+      "brain-market",
+      "brain-structure",
+      "brain-liquidity",
+      "synthesis-context-fusion"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:47:56.058Z",
+        "action": "created",
+        "note": "blueprint de pesquisa contínua (Fase 4)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:47:56.058Z",
+    "updatedAt": "2026-07-28T10:47:56.058Z"
   },
   {
     "id": "idea-risk-guard-pipeline",

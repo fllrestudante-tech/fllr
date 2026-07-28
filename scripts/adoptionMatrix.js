@@ -64,15 +64,30 @@ function main() {
     lines.push("");
   }
 
+  lines.push("## Ideias extraídas de auditorias de concorrentes");
+  lines.push("");
   for (const priority of PRIORITY_ORDER) {
     const group = activeExternal.filter((o) => priorityOf(o) === priority);
     if (group.length === 0) continue;
-    lines.push(`## Prioridade ${PRIORITY_LABEL[priority]}`);
+    lines.push(`### Prioridade ${PRIORITY_LABEL[priority]}`);
     lines.push("");
     lines.push("| id | nome | origem | status | depende de |");
     lines.push("|---|---|---|---|---|");
     for (const obj of group.sort((a, b) => a.id.localeCompare(b.id))) {
       lines.push(row(obj));
+    }
+    lines.push("");
+  }
+
+  const fase4 = ideas.filter((o) => o.tags.includes("fase-4")).sort((a, b) => a.id.localeCompare(b.id));
+  if (fase4.length > 0) {
+    lines.push("## Blueprint de pesquisa contínua (Fase 4 -- síntese própria, não de auditoria)");
+    lines.push("");
+    lines.push("| id | nome | status | prioridade | depende de |");
+    lines.push("|---|---|---|---|---|");
+    for (const obj of fase4) {
+      const deps = obj.dependsOn.length ? obj.dependsOn.map((d) => `\`${d}\``).join(", ") : "--";
+      lines.push(`| \`${obj.id}\` | ${obj.name} | ${obj.status} | ${priorityOf(obj) ? PRIORITY_LABEL[priorityOf(obj)] : "--"} | ${deps} |`);
     }
     lines.push("");
   }

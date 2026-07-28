@@ -33,6 +33,20 @@ gente revisita, não um relatório que expira no dia em que foi escrito.
   atual -- nunca editar este arquivo diretamente, ele fica desatualizado
   na primeira mudança no Registry.
 
+## Blueprint de pesquisa contínua (Fase 4)
+
+Além de comparar plataforma-a-plataforma, existe uma síntese própria --
+[artifact "Cripto10 — Blueprint de Pesquisa Contínua"](../..) -- propondo
+7 motores novos que não substituem Brains/Replay/Analytics/Registry/
+Experiments, só os alimentam com mais robustez: **Opportunity Engine**
+(com **Dynamic Universe** dentro), **Feature Builder**, **Regime Engine**,
+**Market Memory**, **Knowledge Graph**, **Confidence Engine**, **Evolution
+Engine** -- mais 2 camadas de apoio de prioridade menor (**Asset
+Profile**, **Cost Engine**). Todos registrados como `type: "idea"` com a
+tag `fase-4` -- `npm run registry -- list --tags=fase-4` lista os 11.
+Nenhuma implementação começou; é roadmap documentado, não compromisso de
+prazo.
+
 ## Por que não virou uma reorganização de pasta
 
 `registry/` e `experiments/` já têm código real apontando pros caminhos

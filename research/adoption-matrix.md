@@ -1,6 +1,6 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T10:09:22.497Z a partir de `registry/research-objects.json` (51 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T10:49:07.968Z a partir de `registry/research-objects.json` (61 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
 
@@ -17,7 +17,9 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 | **Opportunity Discovery** | idea | `idea-opportunity-alice` (idea) |
 | **Research & Validation** | production | `engine-replay` (production), `engine-brain-analytics` (production), `experiment-fvg-accuracy` (validated), `experiment-fvg-redundancy` (research), `experiment-structure-liquidity-combo` (research), `experiment-structure-liquidity-fvg-combo` (research) |
 
-## Prioridade Alta
+## Ideias extraídas de auditorias de concorrentes
+
+### Prioridade Alta
 
 | id | nome | origem | status | depende de |
 |---|---|---|---|---|
@@ -27,19 +29,35 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 | `idea-risk-guard-pipeline` | Guard Pipeline (risk veto plugável) | openalice, freqtrade, hummingbot, lean | backlog | -- |
 | `idea-significance-testing` | Significance Testing (bootstrap p-value de regra de entrada) | Jesse | backlog | `engine-replay` |
 
-## Prioridade Média
+### Prioridade Média
 
 | id | nome | origem | status | depende de |
 |---|---|---|---|---|
 | `idea-order-reconciliation-audit` | Auditoria da reconciliação de ordens (verificar antes de classificar) | Hummingbot | backlog | -- |
 | `idea-output-truncation-transparency` | Transparência de truncamento em outputs ("omitted: N") | OpenAlice | backlog | -- |
 
-## Prioridade Baixa
+### Prioridade Baixa
 
 | id | nome | origem | status | depende de |
 |---|---|---|---|---|
 | `idea-executor-state-machine` | Executor (state machine autônoma por posição) | Hummingbot | backlog | -- |
 | `idea-multi-exchange-plugin-pattern` | Padrão de plugin pra multi-exchange (Broker Packs / conector template) | openalice, freqtrade, hummingbot, lean | backlog | -- |
+
+## Blueprint de pesquisa contínua (Fase 4 -- síntese própria, não de auditoria)
+
+| id | nome | status | prioridade | depende de |
+|---|---|---|---|---|
+| `idea-asset-profile` | Asset Profile | idea | Baixa | `idea-dynamic-universe` |
+| `idea-confidence-engine` | Confidence Engine | idea | Média | `synthesis-context-fusion` |
+| `idea-cost-engine` | Cost Engine | idea | Baixa | -- |
+| `idea-dynamic-universe` | Dynamic Universe | idea | Alta | -- |
+| `idea-evolution-engine` | Evolution Engine | idea | Baixa | `engine-brain-analytics`, `engine-replay` |
+| `idea-feature-builder` | Feature Builder | idea | Alta | -- |
+| `idea-knowledge-graph` | Knowledge Graph | idea | Média | -- |
+| `idea-market-memory` | Market Memory | idea | Média | `engine-replay` |
+| `idea-meta-analytics` | Meta Analytics | idea | Baixa | `engine-brain-analytics` |
+| `idea-opportunity-alice` | Opportunity Engine (Opportunity Alice) | idea | Alta | `idea-dynamic-universe`, `idea-feature-builder` |
+| `idea-regime-engine` | Regime Engine | idea | Alta | `brain-market`, `brain-structure`, `brain-liquidity`, `synthesis-context-fusion` |
 
 ## Descartado
 

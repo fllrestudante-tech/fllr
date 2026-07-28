@@ -69,6 +69,10 @@ function cmdList(flags) {
   let objects = loadRegistry();
   if (flags.type) objects = listByType(objects, flags.type);
   if (flags.status) objects = listByStatus(objects, flags.status);
+  if (flags.tags) {
+    const wanted = splitCsv(flags.tags);
+    objects = objects.filter((obj) => wanted.some((tag) => obj.tags.includes(tag)));
+  }
   if (objects.length === 0) {
     console.log("(registry vazio ou filtro sem resultados)");
     return;
