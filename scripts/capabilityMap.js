@@ -13,14 +13,24 @@ const { loadRegistry, listConsumers } = require("../lib/registry/registryStore")
 
 const OUT_PATH = path.join(__dirname, "..", "research", "capability-map.md");
 
-const DOMAIN_ORDER = ["knowledge", "analysis", "discovery", "execution", "research", "infrastructure"];
+const DOMAIN_ORDER = ["knowledge", "analysis", "discovery", "execution", "research", "intelligence", "infrastructure"];
 const DOMAIN_LABEL = {
   knowledge: "1. Knowledge Domain",
   analysis: "2. Analysis Domain",
   discovery: "3. Discovery Domain",
   execution: "4. Execution Domain",
   research: "5. Research Domain",
-  infrastructure: "6. Infrastructure Domain",
+  intelligence: "6. Intelligence Domain",
+  infrastructure: "7. Infrastructure Domain",
+};
+
+const NATURE_LABEL = { cognitive: "🧠 Cognitive (pensa)", knowledge: "📖 Knowledge (sabe)", operational: "⚙️ Operational (executa)" };
+const CRITICALITY_LABEL = {
+  "mission-critical": "🔴 Mission Critical", core: "🟠 Core", supporting: "🟡 Supporting",
+  experimental: "🔵 Experimental", optional: "⚪ Optional",
+};
+const PROOF_LABEL = {
+  reasoning: "Reasoning", benchmark: "Benchmark", replay: "Replay", production: "Production", "live-profit": "Live Profit",
 };
 
 function tagValue(obj, prefix) {
@@ -64,6 +74,9 @@ function card(obj, objects) {
   lines.push("|---|---|");
   lines.push(`| Research Object | \`${obj.id}\` |`);
   lines.push(`| Capability Stage | ${stage.emoji} ${stage.label} |`);
+  lines.push(`| Nature | ${NATURE_LABEL[tagValue(obj, "nature")] || "--"} |`);
+  lines.push(`| Criticality | ${CRITICALITY_LABEL[tagValue(obj, "criticality")] || "--"} |`);
+  lines.push(`| Proof | ${PROOF_LABEL[tagValue(obj, "proof")] || "--"} |`);
   lines.push(`| Status | ${obj.status} |`);
   lines.push(`| Maturity | ${obj.maturity} |`);
   lines.push(`| Depends On | ${obj.dependsOn.length ? obj.dependsOn.map((d) => `\`${d}\``).join(", ") : "--"} |`);
@@ -106,9 +119,15 @@ function main() {
     }
   }
 
-  lines.push("## Legenda — Capability Stage");
+  lines.push("## Legenda");
   lines.push("");
-  lines.push("💡 Idea · 📚 Research · 🧪 Prototype · 🔁 Replay · ✅ Validated · 🚀 Production · 🛠 Deprecated");
+  lines.push("**Capability Stage** (ciclo de vida): 💡 Idea · 📚 Research · 🧪 Prototype · 🔁 Replay · ✅ Validated · 🚀 Production · 🛠 Deprecated");
+  lines.push("");
+  lines.push("**Nature** (o que a capability É): 🧠 Cognitive -- pensa/julga (Brains, Resolvers) · 📖 Knowledge -- sabe/representa fato (Asset Profile, Market Memory) · ⚙️ Operational -- executa/roda (Replay, Scheduler, Collectors, Risk)");
+  lines.push("");
+  lines.push("**Criticality** (o quanto o sistema depende disso hoje, independente do Capability Stage): 🔴 Mission Critical (dinheiro/segurança na mesa) · 🟠 Core (o sistema quebra sem isso) · 🟡 Supporting (ajuda, não é indispensável) · 🔵 Experimental (candidato de peso, ainda não construído) · ⚪ Optional (baixa prioridade)");
+  lines.push("");
+  lines.push("**Proof** (nível de evidência, complementa Maturity -- \"nenhuma feature sem evidência\"): Reasoning (só desenho) · Benchmark (testado contra dado real) · Replay (validado estatisticamente via Replay Engine) · Production (rodando de verdade) · Live Profit (provado com capital real -- nenhuma capability chegou aqui ainda)");
   lines.push("");
 
   fs.writeFileSync(OUT_PATH, lines.join("\n") + "\n");

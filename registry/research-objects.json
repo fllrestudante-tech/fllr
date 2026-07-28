@@ -15,7 +15,10 @@
       "brain",
       "domain:analysis",
       "capmap-domain:analysis",
-      "capmap-subdomain:Market Analysis"
+      "capmap-subdomain:Market Analysis",
+      "nature:cognitive",
+      "criticality:core",
+      "proof:replay"
     ],
     "dependsOn": [
       "feature-fair-value-gap",
@@ -38,7 +41,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "brain-liquidity",
@@ -56,7 +59,10 @@
       "brain",
       "domain:analysis",
       "capmap-domain:analysis",
-      "capmap-subdomain:Market Analysis"
+      "capmap-subdomain:Market Analysis",
+      "nature:cognitive",
+      "criticality:core",
+      "proof:replay"
     ],
     "dependsOn": [
       "feature-equal-highs-lows",
@@ -77,7 +83,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "brain-market",
@@ -102,7 +108,10 @@
       "validated-by:openalice",
       "domain:analysis",
       "capmap-domain:analysis",
-      "capmap-subdomain:Market Analysis"
+      "capmap-subdomain:Market Analysis",
+      "nature:cognitive",
+      "criticality:core",
+      "proof:replay"
     ],
     "dependsOn": [],
     "metrics": {
@@ -120,7 +129,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.506Z"
   },
   {
     "id": "brain-order-block",
@@ -138,7 +147,10 @@
       "brain",
       "domain:analysis",
       "capmap-domain:analysis",
-      "capmap-subdomain:Market Analysis"
+      "capmap-subdomain:Market Analysis",
+      "nature:cognitive",
+      "criticality:core",
+      "proof:replay"
     ],
     "dependsOn": [
       "feature-order-block-detection",
@@ -161,7 +173,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "brain-structure",
@@ -179,7 +191,10 @@
       "brain",
       "domain:analysis",
       "capmap-domain:analysis",
-      "capmap-subdomain:Market Analysis"
+      "capmap-subdomain:Market Analysis",
+      "nature:cognitive",
+      "criticality:core",
+      "proof:replay"
     ],
     "dependsOn": [
       "feature-bos",
@@ -200,7 +215,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "capability-adoption-matrix",
@@ -217,7 +232,10 @@
     "tags": [
       "capability",
       "capmap-domain:research",
-      "capmap-subdomain:Intelligence"
+      "capmap-subdomain:Intelligence",
+      "nature:operational",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [
       "capability-feature-registry"
@@ -231,7 +249,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-auto-tuning",
@@ -278,7 +296,10 @@
     "tags": [
       "capability",
       "capmap-domain:research",
-      "capmap-subdomain:Intelligence"
+      "capmap-subdomain:Intelligence",
+      "nature:operational",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [
       "capability-feature-registry"
@@ -292,7 +313,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-competitor-intelligence",
@@ -309,7 +330,10 @@
     "tags": [
       "capability",
       "capmap-domain:research",
-      "capmap-subdomain:Intelligence"
+      "capmap-subdomain:Intelligence",
+      "nature:knowledge",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -321,7 +345,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-configuration",
@@ -338,7 +362,10 @@
     "tags": [
       "capability",
       "capmap-domain:infrastructure",
-      "capmap-subdomain:Runtime"
+      "capmap-subdomain:Runtime",
+      "nature:operational",
+      "criticality:core",
+      "proof:production"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -350,7 +377,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-context-builder",
@@ -367,7 +394,10 @@
     "tags": [
       "capability",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Knowledge Services"
+      "capmap-subdomain:Knowledge Services",
+      "nature:operational",
+      "criticality:core",
+      "proof:production"
     ],
     "dependsOn": [
       "capability-knowledge-resolver"
@@ -381,7 +411,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "capability-context-synthesis",
@@ -428,7 +458,10 @@
     "tags": [
       "capability",
       "capmap-domain:infrastructure",
-      "capmap-subdomain:Data"
+      "capmap-subdomain:Data",
+      "nature:operational",
+      "criticality:mission-critical",
+      "proof:production"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -440,7 +473,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-dna-matrix",
@@ -457,7 +490,10 @@
     "tags": [
       "capability",
       "capmap-domain:research",
-      "capmap-subdomain:Intelligence"
+      "capmap-subdomain:Intelligence",
+      "nature:operational",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [
       "capability-feature-registry"
@@ -471,7 +507,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-engineering-patterns",
@@ -488,7 +524,10 @@
     "tags": [
       "capability",
       "capmap-domain:research",
-      "capmap-subdomain:Intelligence"
+      "capmap-subdomain:Intelligence",
+      "nature:knowledge",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [
       "capability-feature-registry"
@@ -502,7 +541,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-event-log",
@@ -519,7 +558,10 @@
     "tags": [
       "capability",
       "capmap-domain:infrastructure",
-      "capmap-subdomain:Data"
+      "capmap-subdomain:Data",
+      "nature:operational",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [
       "capability-market-database"
@@ -533,7 +575,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-experiments-engine",
@@ -550,7 +592,10 @@
     "tags": [
       "capability",
       "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "capmap-subdomain:Scientific Method",
+      "nature:operational",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [
       "engine-replay",
@@ -565,7 +610,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "capability-feature-registry",
@@ -582,7 +627,10 @@
     "tags": [
       "capability",
       "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "capmap-subdomain:Scientific Method",
+      "nature:operational",
+      "criticality:core",
+      "proof:production"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -594,7 +642,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "capability-health-dashboard",
@@ -611,7 +659,10 @@
     "tags": [
       "capability",
       "capmap-domain:infrastructure",
-      "capmap-subdomain:Runtime"
+      "capmap-subdomain:Runtime",
+      "nature:operational",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [
       "capability-market-database"
@@ -625,7 +676,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-knowledge-resolver",
@@ -642,7 +693,10 @@
     "tags": [
       "capability",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Knowledge Services"
+      "capmap-subdomain:Knowledge Services",
+      "nature:cognitive",
+      "criticality:core",
+      "proof:production"
     ],
     "dependsOn": [
       "idea-asset-profile"
@@ -656,7 +710,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.222Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "capability-liquidity-smart-money",
@@ -738,7 +792,10 @@
     "tags": [
       "capability",
       "capmap-domain:infrastructure",
-      "capmap-subdomain:Data"
+      "capmap-subdomain:Data",
+      "nature:operational",
+      "criticality:mission-critical",
+      "proof:production"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -750,7 +807,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-monitoring",
@@ -767,7 +824,10 @@
     "tags": [
       "capability",
       "capmap-domain:infrastructure",
-      "capmap-subdomain:Runtime"
+      "capmap-subdomain:Runtime",
+      "nature:operational",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [
       "capability-market-database"
@@ -781,7 +841,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-opportunity-discovery",
@@ -799,7 +859,10 @@
       "capability",
       "domain:discovery",
       "capmap-domain:discovery",
-      "capmap-subdomain:Universe Management"
+      "nature:cognitive",
+      "criticality:optional",
+      "proof:reasoning",
+      "capmap-subdomain:Opportunity Discovery"
     ],
     "dependsOn": [
       "idea-opportunity-alice"
@@ -813,7 +876,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:08:47.044Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "capability-order-execution",
@@ -830,7 +893,10 @@
     "tags": [
       "capability",
       "capmap-domain:execution",
-      "capmap-subdomain:Trading"
+      "capmap-subdomain:Trading",
+      "nature:operational",
+      "criticality:mission-critical",
+      "proof:production"
     ],
     "dependsOn": [
       "capability-risk-management"
@@ -844,7 +910,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "capability-research-validation",
@@ -896,7 +962,10 @@
     "tags": [
       "capability",
       "capmap-domain:execution",
-      "capmap-subdomain:Trading"
+      "capmap-subdomain:Trading",
+      "nature:operational",
+      "criticality:mission-critical",
+      "proof:production"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -908,7 +977,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "capability-scheduler",
@@ -925,7 +994,10 @@
     "tags": [
       "capability",
       "capmap-domain:infrastructure",
-      "capmap-subdomain:Runtime"
+      "capmap-subdomain:Runtime",
+      "nature:operational",
+      "criticality:core",
+      "proof:production"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -937,7 +1009,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "capability-signal-registry",
@@ -954,7 +1026,10 @@
     "tags": [
       "capability",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Knowledge Services"
+      "capmap-subdomain:Knowledge Services",
+      "nature:operational",
+      "criticality:optional",
+      "proof:reasoning"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -966,7 +1041,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "capability-statistical-resolver",
@@ -983,7 +1058,10 @@
     "tags": [
       "capability",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Knowledge Services"
+      "capmap-subdomain:Knowledge Services",
+      "nature:cognitive",
+      "criticality:supporting",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "idea-asset-profile"
@@ -997,7 +1075,7 @@
       }
     ],
     "createdAt": "2026-07-28T23:03:45.224Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "engine-backtest",
@@ -1067,7 +1145,10 @@
       "engine",
       "domain:research",
       "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "capmap-subdomain:Scientific Method",
+      "nature:cognitive",
+      "criticality:supporting",
+      "proof:production"
     ],
     "dependsOn": [
       "engine-replay"
@@ -1080,7 +1161,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "engine-decision-brain",
@@ -1218,7 +1299,10 @@
       "validated-by:jesse",
       "domain:research",
       "capmap-domain:execution",
-      "capmap-subdomain:Validation"
+      "capmap-subdomain:Validation",
+      "nature:operational",
+      "criticality:core",
+      "proof:production"
     ],
     "dependsOn": [
       "brain-market",
@@ -1237,7 +1321,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "engine-telegram-radar",
@@ -1256,7 +1340,10 @@
       "manual",
       "domain:discovery",
       "capmap-domain:discovery",
-      "capmap-subdomain:Opportunity Discovery"
+      "nature:operational",
+      "criticality:supporting",
+      "proof:production",
+      "capmap-subdomain:Opportunity Tracking"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1267,7 +1354,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "experiment-fvg-accuracy",
@@ -1743,7 +1830,10 @@
       "pilar-3-pilares",
       "priority:high",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Asset Knowledge"
+      "capmap-subdomain:Asset Knowledge",
+      "nature:knowledge",
+      "criticality:experimental",
+      "proof:benchmark"
     ],
     "dependsOn": [
       "idea-dynamic-universe"
@@ -1767,7 +1857,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-capital-flow-engine",
@@ -1789,7 +1879,10 @@
       "classification:superior",
       "maintenance-cost:high",
       "capmap-domain:analysis",
-      "capmap-subdomain:Market Analysis"
+      "capmap-subdomain:Market Analysis",
+      "nature:cognitive",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "idea-dynamic-universe"
@@ -1803,7 +1896,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.158Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-causal-event-log",
@@ -1832,7 +1925,10 @@
       "maintenance-cost:high",
       "domain:knowledge",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Asset Knowledge"
+      "capmap-subdomain:Asset Knowledge",
+      "nature:knowledge",
+      "criticality:optional",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "engine-replay",
@@ -1847,7 +1943,7 @@
       }
     ],
     "createdAt": "2026-07-28T11:12:15.394Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-confidence-engine",
@@ -1876,7 +1972,10 @@
       "maintenance-cost:low",
       "domain:knowledge",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Asset Knowledge"
+      "capmap-subdomain:Asset Knowledge",
+      "nature:knowledge",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "synthesis-context-fusion"
@@ -1890,7 +1989,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-correlation-brain",
@@ -1912,7 +2011,10 @@
       "classification:superior",
       "maintenance-cost:medium",
       "capmap-domain:analysis",
-      "capmap-subdomain:Market Analysis"
+      "capmap-subdomain:Market Analysis",
+      "nature:cognitive",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "brain-market"
@@ -1926,7 +2028,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-cost-engine",
@@ -1988,7 +2090,10 @@
       "domain:discovery",
       "pilar-3-pilares",
       "capmap-domain:discovery",
-      "capmap-subdomain:Opportunity Discovery"
+      "nature:cognitive",
+      "criticality:experimental",
+      "proof:reasoning",
+      "capmap-subdomain:Universe Discovery"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -2000,7 +2105,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-evolution-engine",
@@ -2021,8 +2126,11 @@
       "classification:complementar",
       "maintenance-cost:medium",
       "domain:research",
-      "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "nature:cognitive",
+      "criticality:optional",
+      "proof:reasoning",
+      "capmap-domain:intelligence",
+      "capmap-subdomain:Evolution"
     ],
     "dependsOn": [
       "engine-brain-analytics",
@@ -2037,7 +2145,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "idea-executor-state-machine",
@@ -2097,7 +2205,10 @@
       "maintenance-cost:low",
       "domain:analysis",
       "capmap-domain:analysis",
-      "capmap-subdomain:Context"
+      "capmap-subdomain:Context",
+      "nature:operational",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -2109,7 +2220,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-hypothesis-builder",
@@ -2130,8 +2241,11 @@
       "dna-fit:90",
       "classification:superior",
       "maintenance-cost:medium",
-      "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "nature:cognitive",
+      "criticality:optional",
+      "proof:reasoning",
+      "capmap-domain:intelligence",
+      "capmap-subdomain:Learning"
     ],
     "dependsOn": [
       "idea-hypothesis-ledger",
@@ -2146,7 +2260,7 @@
       }
     ],
     "createdAt": "2026-07-28T20:32:30.495Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "idea-hypothesis-ledger",
@@ -2186,7 +2300,10 @@
       "maintenance-cost:medium",
       "domain:research",
       "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "capmap-subdomain:Scientific Method",
+      "nature:knowledge",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "engine-replay",
@@ -2203,7 +2320,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.502Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "idea-kelly-edge-sizing",
@@ -2282,7 +2399,10 @@
       "maintenance-cost:low",
       "domain:knowledge",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Asset Knowledge"
+      "capmap-subdomain:Asset Knowledge",
+      "nature:knowledge",
+      "criticality:optional",
+      "proof:reasoning"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -2294,7 +2414,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-market-memory",
@@ -2316,7 +2436,10 @@
       "domain:knowledge",
       "dna-fit:93",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Asset Knowledge"
+      "capmap-subdomain:Asset Knowledge",
+      "nature:knowledge",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "engine-replay"
@@ -2330,7 +2453,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-meta-analytics",
@@ -2358,8 +2481,11 @@
       "classification:complementar",
       "maintenance-cost:low",
       "domain:research",
-      "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "nature:cognitive",
+      "criticality:optional",
+      "proof:reasoning",
+      "capmap-domain:intelligence",
+      "capmap-subdomain:Feedback"
     ],
     "dependsOn": [
       "engine-brain-analytics",
@@ -2375,7 +2501,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "idea-metric-models",
@@ -2397,7 +2523,10 @@
       "classification:complementar",
       "maintenance-cost:medium",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Asset Knowledge"
+      "capmap-subdomain:Asset Knowledge",
+      "nature:knowledge",
+      "criticality:optional",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "idea-asset-profile"
@@ -2411,7 +2540,7 @@
       }
     ],
     "createdAt": "2026-07-28T20:32:30.495Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-monte-carlo-mode",
@@ -2441,7 +2570,10 @@
       "maintenance-cost:medium",
       "domain:research",
       "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "capmap-subdomain:Scientific Method",
+      "nature:operational",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "engine-replay"
@@ -2455,7 +2587,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "idea-multi-exchange-plugin-pattern",
@@ -2533,7 +2665,10 @@
       "classification:superior",
       "maintenance-cost:high",
       "capmap-domain:analysis",
-      "capmap-subdomain:Market Analysis"
+      "capmap-subdomain:Market Analysis",
+      "nature:cognitive",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "brain-structure",
@@ -2550,7 +2685,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-opportunity-alice",
@@ -2589,6 +2724,9 @@
       "domain:discovery",
       "pilar-3-pilares",
       "capmap-domain:discovery",
+      "nature:cognitive",
+      "criticality:experimental",
+      "proof:reasoning",
       "capmap-subdomain:Opportunity Discovery"
     ],
     "dependsOn": [
@@ -2604,7 +2742,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-optimizer-overfit-clustering",
@@ -2634,7 +2772,10 @@
       "maintenance-cost:medium",
       "domain:research",
       "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "capmap-subdomain:Scientific Method",
+      "nature:operational",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "engine-backtest"
@@ -2648,7 +2789,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "idea-order-reconciliation-audit",
@@ -2745,7 +2886,10 @@
       "classification:complementar",
       "maintenance-cost:high",
       "capmap-domain:execution",
-      "capmap-subdomain:Trading"
+      "capmap-subdomain:Trading",
+      "nature:cognitive",
+      "criticality:optional",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "idea-executor-state-machine"
@@ -2759,7 +2903,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "idea-regime-engine",
@@ -2781,7 +2925,10 @@
       "maintenance-cost:medium",
       "domain:analysis",
       "capmap-domain:analysis",
-      "capmap-subdomain:Context"
+      "capmap-subdomain:Context",
+      "nature:cognitive",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "brain-market",
@@ -2798,7 +2945,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-replay-attribution",
@@ -2820,7 +2967,10 @@
       "classification:superior",
       "maintenance-cost:medium",
       "capmap-domain:execution",
-      "capmap-subdomain:Validation"
+      "capmap-subdomain:Validation",
+      "nature:cognitive",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "engine-replay",
@@ -2835,7 +2985,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "idea-risk-guard-pipeline",
@@ -2922,7 +3072,10 @@
       "maintenance-cost:low",
       "domain:research",
       "capmap-domain:research",
-      "capmap-subdomain:Scientific Method"
+      "capmap-subdomain:Scientific Method",
+      "nature:operational",
+      "criticality:experimental",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "engine-replay"
@@ -2936,7 +3089,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.509Z"
   },
   {
     "id": "idea-statistical-narrative",
@@ -2958,7 +3111,10 @@
       "classification:complementar",
       "maintenance-cost:medium",
       "capmap-domain:knowledge",
-      "capmap-subdomain:Asset Knowledge"
+      "capmap-subdomain:Asset Knowledge",
+      "nature:knowledge",
+      "criticality:optional",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "idea-asset-profile"
@@ -2972,7 +3128,7 @@
       }
     ],
     "createdAt": "2026-07-28T20:32:30.493Z",
-    "updatedAt": "2026-07-28T23:03:45.224Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-structured-evidence",
@@ -2994,7 +3150,10 @@
       "classification:complementar",
       "maintenance-cost:low",
       "capmap-domain:analysis",
-      "capmap-subdomain:Context"
+      "capmap-subdomain:Context",
+      "nature:knowledge",
+      "criticality:optional",
+      "proof:reasoning"
     ],
     "dependsOn": [
       "idea-weight-engine",
@@ -3009,7 +3168,7 @@
       }
     ],
     "createdAt": "2026-07-28T22:41:37.825Z",
-    "updatedAt": "2026-07-28T23:03:45.226Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "idea-weight-engine",
@@ -3030,8 +3189,11 @@
       "dna-fit:90",
       "classification:superior",
       "maintenance-cost:medium",
-      "capmap-domain:analysis",
-      "capmap-subdomain:Context"
+      "nature:cognitive",
+      "criticality:experimental",
+      "proof:reasoning",
+      "capmap-domain:intelligence",
+      "capmap-subdomain:Optimization"
     ],
     "dependsOn": [
       "engine-brain-analytics",
@@ -3047,7 +3209,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.510Z"
   },
   {
     "id": "indicator-atr",
@@ -3729,7 +3891,10 @@
       "validated-by:openalice",
       "domain:analysis",
       "capmap-domain:analysis",
-      "capmap-subdomain:Context"
+      "capmap-subdomain:Context",
+      "nature:cognitive",
+      "criticality:core",
+      "proof:replay"
     ],
     "dependsOn": [
       "brain-market",
@@ -3751,7 +3916,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
     "id": "synthesis-institutional-context",
@@ -3769,7 +3934,10 @@
       "synthesis",
       "domain:analysis",
       "capmap-domain:analysis",
-      "capmap-subdomain:Context"
+      "capmap-subdomain:Context",
+      "nature:cognitive",
+      "criticality:core",
+      "proof:replay"
     ],
     "dependsOn": [
       "brain-liquidity",
@@ -3791,6 +3959,6 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T23:03:45.225Z"
+    "updatedAt": "2026-07-28T23:35:00.508Z"
   }
 ]

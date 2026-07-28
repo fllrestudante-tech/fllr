@@ -228,6 +228,48 @@ append-only (`events_log`), não um event bus/pub-sub de verdade (e nunca
 precisou, ver achado da auditoria OpenAlice: o próprio OpenAlice
 construiu e removeu o event bus que tinha).
 
+## Capability Map — congelado
+
+Última rodada do Capability Map (usuário confirmou explicitamente: "depois
+dessa atualização, o Capability Map deve ser considerado congelado --
+próximas evoluções só via Research Objects + consumidor real + validação
+por Replay/Experiments"). Acrescentou, tudo mecânico (tags novas sobre
+Research Objects já existentes, zero código de Brain tocado):
+
+- **Nature** -- 🧠 Cognitive (pensa/julga: Brains, Resolvers) · 📖
+  Knowledge (sabe/representa fato: Asset Profile, Market Memory) · ⚙️
+  Operational (executa/roda: Replay, Scheduler, Collectors, Risk).
+- **Criticality** -- 🔴 Mission Critical · 🟠 Core · 🟡 Supporting · 🔵
+  Experimental · ⚪ Optional -- independente do Capability Stage (Context
+  Builder é mais crítico que Telegram Radar mesmo os dois sendo
+  "Production").
+- **Proof** -- Reasoning · Benchmark · Replay · Production · Live Profit
+  -- complementa `maturity` com o nível de evidência real por trás de
+  cada capability, reforçando "nenhuma feature sem evidência".
+- **7º domínio: Intelligence** (Learning/Evolution/Feedback/Optimization)
+  -- separado de Research porque não é mais método científico, é
+  aprendizado do próprio sistema sobre si mesmo (`idea-hypothesis-builder`,
+  `idea-evolution-engine`, `idea-meta-analytics`, `idea-weight-engine`).
+- **Sub-domínios de Discovery refinados** (Universe Discovery/Opportunity
+  Discovery/Opportunity Tracking -- Ranking/Learning ficam vazios por
+  enquanto, sem objeto ainda, o que é honesto: Opportunity Alice ainda
+  não diferencia essas etapas de verdade).
+
+**Explicitamente NÃO implementado nesta rodada, documentado como próximo
+passo só quando houver consumidor real**: quebrar "Capability" em 4
+níveis (Capability→Service→Component→Consumer -- exigiria registrar
+arquivos individuais como Research Object, ex: `StatisticsComputer`,
+explosão de escopo sem consumidor claro ainda); Ownership/Produced-By
+graph explícito (hoje já coberto por `dependsOn`/`listConsumers`, um
+grafo formal separado seria redundante sem um caso de uso novo); cadeia
+de rastreabilidade Pattern→Capability→Feature Registry→Git (boa
+narrativa, sem ferramenta nova clara ainda); e o **Cripto10 Architecture
+Manifest** (documento de 4-5 páginas, Vision→Principles→Domains→
+Capabilities→Research→Implementation→Replay→Production, porta de entrada
+pra qualquer pessoa ou IA que for contribuir) -- fica pro próximo pedido
+explícito, propositalmente depois da arquitetura estar de fato parada,
+não durante uma rodada que ainda está mexendo nela.
+
 ## Por que não virou uma reorganização de pasta
 
 `registry/` e `experiments/` já têm código real apontando pros caminhos

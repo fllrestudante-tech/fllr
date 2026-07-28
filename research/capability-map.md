@@ -1,6 +1,6 @@
 # Cripto10 — Capability Map
 
-_Gerado automaticamente por `npm run capability-map` em 2026-07-28T23:04:23.060Z a partir de `registry/research-objects.json` (106 Research Objects, 56 mapeados). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run capability-map` em 2026-07-28T23:35:39.119Z a partir de `registry/research-objects.json` (106 Research Objects, 56 mapeados). Não editar este arquivo à mão._
 
 ## Objetivo
 
@@ -16,6 +16,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-context-builder` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟠 Core |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | `capability-knowledge-resolver` |
@@ -29,6 +32,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-knowledge-resolver` |
 | Capability Stage | 🚀 Production |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟠 Core |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | `idea-asset-profile` |
@@ -42,6 +48,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-signal-registry` |
 | Capability Stage | 🧪 Prototype |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
 | Status | research |
 | Maturity | 1 |
 | Depends On | -- |
@@ -55,6 +64,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-statistical-resolver` |
 | Capability Stage | 🧪 Prototype |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟡 Supporting |
+| Proof | Reasoning |
 | Status | research |
 | Maturity | 1 |
 | Depends On | `idea-asset-profile` |
@@ -70,6 +82,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-asset-profile` |
 | Capability Stage | 🧪 Prototype |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | 🔵 Experimental |
+| Proof | Benchmark |
 | Status | research |
 | Maturity | 1 |
 | Depends On | `idea-dynamic-universe` |
@@ -83,6 +98,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-causal-event-log` |
 | Capability Stage | 💡 Idea |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `engine-replay`, `idea-market-memory` |
@@ -96,6 +114,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-confidence-engine` |
 | Capability Stage | 💡 Idea |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `synthesis-context-fusion` |
@@ -109,6 +130,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-knowledge-graph` |
 | Capability Stage | 💡 Idea |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | -- |
@@ -122,6 +146,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-market-memory` |
 | Capability Stage | 💡 Idea |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `engine-replay` |
@@ -135,6 +162,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-metric-models` |
 | Capability Stage | 💡 Idea |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `idea-asset-profile` |
@@ -148,6 +178,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-statistical-narrative` |
 | Capability Stage | 💡 Idea |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `idea-asset-profile` |
@@ -165,6 +198,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `brain-fvg` |
 | Capability Stage | 🚀 Production |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟠 Core |
+| Proof | Replay |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `feature-fair-value-gap`, `brain-structure`, `brain-liquidity`, `synthesis-context-fusion` |
@@ -178,6 +214,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `brain-liquidity` |
 | Capability Stage | 🚀 Production |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟠 Core |
+| Proof | Replay |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `feature-equal-highs-lows`, `feature-liquidity-sweep` |
@@ -191,6 +230,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `brain-market` |
 | Capability Stage | 🚀 Production |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟠 Core |
+| Proof | Replay |
 | Status | production |
 | Maturity | 2 |
 | Depends On | -- |
@@ -204,6 +246,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `brain-order-block` |
 | Capability Stage | 🚀 Production |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟠 Core |
+| Proof | Replay |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `feature-order-block-detection`, `brain-structure`, `brain-liquidity`, `synthesis-context-fusion` |
@@ -217,6 +262,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `brain-structure` |
 | Capability Stage | 🚀 Production |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟠 Core |
+| Proof | Replay |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `feature-bos`, `feature-choch` |
@@ -230,6 +278,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-capital-flow-engine` |
 | Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `idea-dynamic-universe` |
@@ -243,6 +294,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-correlation-brain` |
 | Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `brain-market` |
@@ -256,6 +310,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-multi-timeframe-brain` |
 | Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `brain-structure`, `brain-liquidity`, `brain-fvg`, `brain-order-block` |
@@ -271,6 +328,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-feature-builder` |
 | Capability Stage | 💡 Idea |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | -- |
@@ -284,6 +344,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-regime-engine` |
 | Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `brain-market`, `brain-structure`, `brain-liquidity`, `synthesis-context-fusion` |
@@ -297,23 +360,13 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-structured-evidence` |
 | Capability Stage | 💡 Idea |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `idea-weight-engine`, `idea-replay-attribution` |
 | Consumer | -- |
-| Replay Validated | ❌ |
-| Production | ❌ |
-
-#### 💡 Weight Engine
-
-| Campo | Valor |
-|---|---|
-| Research Object | `idea-weight-engine` |
-| Capability Stage | 💡 Idea |
-| Status | idea |
-| Maturity | 0 |
-| Depends On | `engine-brain-analytics`, `engine-replay`, `synthesis-context-fusion` |
-| Consumer | `idea-structured-evidence` |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -323,6 +376,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `synthesis-context-fusion` |
 | Capability Stage | 🚀 Production |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟠 Core |
+| Proof | Replay |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `brain-market`, `brain-structure`, `brain-liquidity` |
@@ -336,6 +392,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `synthesis-institutional-context` |
 | Capability Stage | 🚀 Production |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟠 Core |
+| Proof | Replay |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `brain-liquidity`, `brain-fvg`, `brain-order-block` |
@@ -345,7 +404,7 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 
 ## 3. Discovery Domain
 
-### Universe Management
+### Opportunity Discovery
 
 #### 💡 Opportunity Discovery
 
@@ -353,38 +412,13 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-opportunity-discovery` |
 | Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `idea-opportunity-alice` |
 | Consumer | -- |
-| Replay Validated | ❌ |
-| Production | ❌ |
-
-### Opportunity Discovery
-
-#### 🧪 Telegram Radar
-
-| Campo | Valor |
-|---|---|
-| Research Object | `engine-telegram-radar` |
-| Capability Stage | 🧪 Prototype |
-| Status | research |
-| Maturity | 1 |
-| Depends On | -- |
-| Consumer | `engine-narrative` |
-| Replay Validated | ❌ |
-| Production | ❌ |
-
-#### 💡 Dynamic Universe
-
-| Campo | Valor |
-|---|---|
-| Research Object | `idea-dynamic-universe` |
-| Capability Stage | 💡 Idea |
-| Status | idea |
-| Maturity | 0 |
-| Depends On | -- |
-| Consumer | `idea-asset-profile`, `idea-capital-flow-engine`, `idea-opportunity-alice` |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -394,10 +428,49 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-opportunity-alice` |
 | Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `idea-dynamic-universe`, `idea-feature-builder` |
 | Consumer | `capability-opportunity-discovery` |
+| Replay Validated | ❌ |
+| Production | ❌ |
+
+### Opportunity Tracking
+
+#### 🧪 Telegram Radar
+
+| Campo | Valor |
+|---|---|
+| Research Object | `engine-telegram-radar` |
+| Capability Stage | 🧪 Prototype |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
+| Status | research |
+| Maturity | 1 |
+| Depends On | -- |
+| Consumer | `engine-narrative` |
+| Replay Validated | ❌ |
+| Production | ❌ |
+
+### Universe Discovery
+
+#### 💡 Dynamic Universe
+
+| Campo | Valor |
+|---|---|
+| Research Object | `idea-dynamic-universe` |
+| Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
+| Status | idea |
+| Maturity | 0 |
+| Depends On | -- |
+| Consumer | `idea-asset-profile`, `idea-capital-flow-engine`, `idea-opportunity-alice` |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -411,6 +484,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-order-execution` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🔴 Mission Critical |
+| Proof | Production |
 | Status | production |
 | Maturity | 4 |
 | Depends On | `capability-risk-management` |
@@ -424,6 +500,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-risk-management` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🔴 Mission Critical |
+| Proof | Production |
 | Status | production |
 | Maturity | 4 |
 | Depends On | -- |
@@ -437,6 +516,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-portfolio-intelligence` |
 | Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `idea-executor-state-machine` |
@@ -452,6 +534,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `engine-replay` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟠 Core |
+| Proof | Production |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `brain-market`, `brain-structure`, `brain-liquidity`, `synthesis-context-fusion`, `brain-fvg`, `brain-order-block`, `synthesis-institutional-context` |
@@ -465,6 +550,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-replay-attribution` |
 | Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `engine-replay`, `engine-brain-analytics` |
@@ -482,6 +570,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-adoption-matrix` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | `capability-feature-registry` |
@@ -495,6 +586,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-capability-map` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `capability-feature-registry` |
@@ -508,6 +602,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-competitor-intelligence` |
 | Capability Stage | 🚀 Production |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | -- |
@@ -521,6 +618,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-dna-matrix` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | `capability-feature-registry` |
@@ -534,6 +634,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-engineering-patterns` |
 | Capability Stage | 🚀 Production |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `capability-feature-registry` |
@@ -549,6 +652,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-experiments-engine` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | `engine-replay`, `engine-brain-analytics` |
@@ -562,6 +668,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-feature-registry` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟠 Core |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | -- |
@@ -575,6 +684,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `engine-brain-analytics` |
 | Capability Stage | 🚀 Production |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `engine-replay` |
@@ -582,55 +694,19 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Replay Validated | ❌ |
 | Production | ✅ |
 
-#### 💡 Evolution Engine
-
-| Campo | Valor |
-|---|---|
-| Research Object | `idea-evolution-engine` |
-| Capability Stage | 💡 Idea |
-| Status | idea |
-| Maturity | 0 |
-| Depends On | `engine-brain-analytics`, `engine-replay` |
-| Consumer | -- |
-| Replay Validated | ❌ |
-| Production | ❌ |
-
-#### 💡 Hypothesis Builder
-
-| Campo | Valor |
-|---|---|
-| Research Object | `idea-hypothesis-builder` |
-| Capability Stage | 💡 Idea |
-| Status | idea |
-| Maturity | 0 |
-| Depends On | `idea-hypothesis-ledger`, `idea-asset-profile` |
-| Consumer | -- |
-| Replay Validated | ❌ |
-| Production | ❌ |
-
 #### 📚 Hypothesis Ledger (Trading-as-Git)
 
 | Campo | Valor |
 |---|---|
 | Research Object | `idea-hypothesis-ledger` |
 | Capability Stage | 📚 Research |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | backlog |
 | Maturity | 0 |
 | Depends On | `engine-replay`, `engine-brain-analytics`, `idea-significance-testing`, `idea-monte-carlo-mode` |
 | Consumer | `idea-hypothesis-builder`, `pattern-immutable-decision-ledger` |
-| Replay Validated | ❌ |
-| Production | ❌ |
-
-#### 💡 Meta Analytics
-
-| Campo | Valor |
-|---|---|
-| Research Object | `idea-meta-analytics` |
-| Capability Stage | 💡 Idea |
-| Status | idea |
-| Maturity | 0 |
-| Depends On | `engine-brain-analytics`, `engine-replay`, `idea-regime-engine` |
-| Consumer | -- |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -640,6 +716,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-monte-carlo-mode` |
 | Capability Stage | 📚 Research |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | backlog |
 | Maturity | 0 |
 | Depends On | `engine-replay` |
@@ -653,6 +732,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-optimizer-overfit-clustering` |
 | Capability Stage | 📚 Research |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | backlog |
 | Maturity | 0 |
 | Depends On | `engine-backtest` |
@@ -666,6 +748,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `idea-significance-testing` |
 | Capability Stage | 📚 Research |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
 | Status | backlog |
 | Maturity | 0 |
 | Depends On | `engine-replay` |
@@ -673,7 +758,81 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Replay Validated | ❌ |
 | Production | ❌ |
 
-## 6. Infrastructure Domain
+## 6. Intelligence Domain
+
+### Evolution
+
+#### 💡 Evolution Engine
+
+| Campo | Valor |
+|---|---|
+| Research Object | `idea-evolution-engine` |
+| Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
+| Status | idea |
+| Maturity | 0 |
+| Depends On | `engine-brain-analytics`, `engine-replay` |
+| Consumer | -- |
+| Replay Validated | ❌ |
+| Production | ❌ |
+
+### Learning
+
+#### 💡 Hypothesis Builder
+
+| Campo | Valor |
+|---|---|
+| Research Object | `idea-hypothesis-builder` |
+| Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
+| Status | idea |
+| Maturity | 0 |
+| Depends On | `idea-hypothesis-ledger`, `idea-asset-profile` |
+| Consumer | -- |
+| Replay Validated | ❌ |
+| Production | ❌ |
+
+### Feedback
+
+#### 💡 Meta Analytics
+
+| Campo | Valor |
+|---|---|
+| Research Object | `idea-meta-analytics` |
+| Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
+| Status | idea |
+| Maturity | 0 |
+| Depends On | `engine-brain-analytics`, `engine-replay`, `idea-regime-engine` |
+| Consumer | -- |
+| Replay Validated | ❌ |
+| Production | ❌ |
+
+### Optimization
+
+#### 💡 Weight Engine
+
+| Campo | Valor |
+|---|---|
+| Research Object | `idea-weight-engine` |
+| Capability Stage | 💡 Idea |
+| Nature | 🧠 Cognitive (pensa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
+| Status | idea |
+| Maturity | 0 |
+| Depends On | `engine-brain-analytics`, `engine-replay`, `synthesis-context-fusion` |
+| Consumer | `idea-structured-evidence` |
+| Replay Validated | ❌ |
+| Production | ❌ |
+
+## 7. Infrastructure Domain
 
 ### Runtime
 
@@ -683,6 +842,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-configuration` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟠 Core |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | -- |
@@ -696,6 +858,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-health-dashboard` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | `capability-market-database` |
@@ -709,6 +874,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-monitoring` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | `capability-market-database` |
@@ -722,6 +890,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-scheduler` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟠 Core |
+| Proof | Production |
 | Status | production |
 | Maturity | 3 |
 | Depends On | -- |
@@ -737,6 +908,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-data-collectors` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🔴 Mission Critical |
+| Proof | Production |
 | Status | production |
 | Maturity | 4 |
 | Depends On | -- |
@@ -750,6 +924,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-event-log` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🟡 Supporting |
+| Proof | Production |
 | Status | production |
 | Maturity | 2 |
 | Depends On | `capability-market-database` |
@@ -763,6 +940,9 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 |---|---|
 | Research Object | `capability-market-database` |
 | Capability Stage | 🚀 Production |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🔴 Mission Critical |
+| Proof | Production |
 | Status | production |
 | Maturity | 4 |
 | Depends On | -- |
@@ -770,7 +950,13 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Replay Validated | ❌ |
 | Production | ✅ |
 
-## Legenda — Capability Stage
+## Legenda
 
-💡 Idea · 📚 Research · 🧪 Prototype · 🔁 Replay · ✅ Validated · 🚀 Production · 🛠 Deprecated
+**Capability Stage** (ciclo de vida): 💡 Idea · 📚 Research · 🧪 Prototype · 🔁 Replay · ✅ Validated · 🚀 Production · 🛠 Deprecated
+
+**Nature** (o que a capability É): 🧠 Cognitive -- pensa/julga (Brains, Resolvers) · 📖 Knowledge -- sabe/representa fato (Asset Profile, Market Memory) · ⚙️ Operational -- executa/roda (Replay, Scheduler, Collectors, Risk)
+
+**Criticality** (o quanto o sistema depende disso hoje, independente do Capability Stage): 🔴 Mission Critical (dinheiro/segurança na mesa) · 🟠 Core (o sistema quebra sem isso) · 🟡 Supporting (ajuda, não é indispensável) · 🔵 Experimental (candidato de peso, ainda não construído) · ⚪ Optional (baixa prioridade)
+
+**Proof** (nível de evidência, complementa Maturity -- "nenhuma feature sem evidência"): Reasoning (só desenho) · Benchmark (testado contra dado real) · Replay (validado estatisticamente via Replay Engine) · Production (rodando de verdade) · Live Profit (provado com capital real -- nenhuma capability chegou aqui ainda)
 

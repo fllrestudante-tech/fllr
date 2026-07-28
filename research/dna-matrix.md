@@ -1,6 +1,6 @@
 # DNA Matrix
 
-_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T23:06:27.223Z a partir de `registry/research-objects.json` (46 objetos com DNA Fit calculado, de 106 totais). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T23:36:57.939Z a partir de `registry/research-objects.json` (46 objetos com DNA Fit calculado, de 106 totais). Não editar este arquivo à mão._
 
 Pergunta que este documento responde: **essa ideia/padrão combina com os princípios do cripto10** (Replay antes de promoção, evidência antes de decisão, Brains desacoplados, contexto antes de entrada, estatística antes de automação)? DNA Fit é alinhamento filosófico -- não é a mesma pergunta que "vale a pena construir agora" (isso é a Classificação) nem "quanto custa manter" (Custo de Manutenção). Uma ideia pode ter DNA Fit alto e ainda assim ser `NÃO NECESSÁRIO` hoje, se não houver consumidor real -- ver `research/competitor-intelligence/openalice.md` e o artifact "Engineering Patterns" pro raciocínio por trás de cada score.
 
