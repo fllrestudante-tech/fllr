@@ -188,6 +188,190 @@
     "updatedAt": "2026-07-27T00:32:42.450Z"
   },
   {
+    "id": "capability-auto-tuning",
+    "type": "capability",
+    "name": "Auto-tuning",
+    "description": "Ajustar parâmetros do sinal de trading em produção com gate estatístico automático (promove só se melhora vs. baseline) -- confirmado nas auditorias como mais rigoroso que o Hyperopt do Freqtrade ou a otimização do Jesse.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "capability"
+    ],
+    "dependsOn": [
+      "engine-backtest"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:08:47.044Z",
+        "action": "created",
+        "note": "auditoria OpenAlice como laboratório (padrões arquiteturais)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:08:47.044Z",
+    "updatedAt": "2026-07-28T10:08:47.044Z"
+  },
+  {
+    "id": "capability-context-synthesis",
+    "type": "capability",
+    "name": "Context Synthesis",
+    "description": "Combinar a saída de múltiplos Brains numa direção dominante única, penalizando confidence por conflito entre eles.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "capability"
+    ],
+    "dependsOn": [
+      "synthesis-context-fusion"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:08:47.044Z",
+        "action": "created",
+        "note": "auditoria OpenAlice como laboratório (padrões arquiteturais)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:08:47.044Z",
+    "updatedAt": "2026-07-28T10:08:47.044Z"
+  },
+  {
+    "id": "capability-liquidity-smart-money",
+    "type": "capability",
+    "name": "Liquidity & Smart Money",
+    "description": "Detectar zonas de liquidez, sweeps, Fair Value Gaps e Order Blocks, e sintetizar confluência espacial entre eles (Institutional Context).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "capability"
+    ],
+    "dependsOn": [
+      "brain-liquidity",
+      "brain-fvg",
+      "brain-order-block",
+      "synthesis-institutional-context"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:08:47.044Z",
+        "action": "created",
+        "note": "auditoria OpenAlice como laboratório (padrões arquiteturais)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:08:47.044Z",
+    "updatedAt": "2026-07-28T10:08:47.044Z"
+  },
+  {
+    "id": "capability-market-classification",
+    "type": "capability",
+    "name": "Market Classification",
+    "description": "Classificar o estado do mercado (tendência, sentimento, risco, estrutura) em rótulos estruturados e auditáveis -- não deixado ao julgamento do LLM (achado confirmado nas auditorias: nenhum dos 5 projetos concorrentes tem um classificador de regime real).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "capability"
+    ],
+    "dependsOn": [
+      "brain-market",
+      "brain-structure",
+      "brain-liquidity"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:08:47.043Z",
+        "action": "created",
+        "note": "auditoria OpenAlice como laboratório (padrões arquiteturais)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:08:47.043Z",
+    "updatedAt": "2026-07-28T10:08:47.043Z"
+  },
+  {
+    "id": "capability-opportunity-discovery",
+    "type": "capability",
+    "name": "Opportunity Discovery",
+    "description": "Descobrir e priorizar continuamente quais ativos merecem processamento profundo pelos Brains, sem escolha manual do usuário. Ainda não implementado -- ver idea-opportunity-alice para o pipeline completo.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "capability"
+    ],
+    "dependsOn": [
+      "idea-opportunity-alice"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:08:47.044Z",
+        "action": "created",
+        "note": "auditoria OpenAlice como laboratório (padrões arquiteturais)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:08:47.044Z",
+    "updatedAt": "2026-07-28T10:08:47.044Z"
+  },
+  {
+    "id": "capability-research-validation",
+    "type": "capability",
+    "name": "Research & Validation",
+    "description": "Validar hipóteses sobre os Brains contra histórico real (Replay), medir acurácia/contribuição marginal/redundância entre eles (Brain Analytics), e testar combinações específicas (Experiments) -- infraestrutura de pesquisa sistemática que nenhum dos 5 projetos concorrentes auditados possui no mesmo nível.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "capability"
+    ],
+    "dependsOn": [
+      "engine-replay",
+      "engine-brain-analytics",
+      "experiment-fvg-accuracy",
+      "experiment-fvg-redundancy",
+      "experiment-structure-liquidity-combo",
+      "experiment-structure-liquidity-fvg-combo"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T10:08:47.044Z",
+        "action": "created",
+        "note": "auditoria OpenAlice como laboratório (padrões arquiteturais)"
+      }
+    ],
+    "createdAt": "2026-07-28T10:08:47.044Z",
+    "updatedAt": "2026-07-28T10:08:47.044Z"
+  },
+  {
     "id": "engine-backtest",
     "type": "engine",
     "name": "Auto-tuning / Backtest Engine",
@@ -1118,7 +1302,7 @@
     "id": "idea-opportunity-alice",
     "type": "idea",
     "name": "Opportunity Alice (Radar de Oportunidades)",
-    "description": "Pipeline: Universo -> Scanner -> Ranking -> Radar -> Contexto -> Brains -> Replay -> Score -> Watchlist dinâmica -> Trade. O ativo deixa de ser escolhido manualmente -- o sistema descobre oportunidades continuamente, detecta regimes favoráveis, atualiza a watchlist dinâmica e prioriza símbolos pra análise profunda dos Brains. Vira a porta de entrada nova do pipeline analítico. Achado importante do mergulho profundo no OpenAlice: nem ele resolveu isso bem (watchlist fragmentada em 2 sistemas desconectados -- EntityStore backend vs. localStorage do frontend -- sem descoberta automática de ativos) -- não há atalho a copiar, precisa de desenho próprio. Subsistema grande: documentado como arquitetura-alvo agora, implementação só depois do Feature Registry consolidado (Passo B/D) e da Fase 3 (2-3 conceitos das auditorias) em andamento.",
+    "description": "Pipeline: Universe Manager -> Exchange Discovery -> Symbol Filter -> Liquidity Filter -> Volatility Filter -> Regime Detector -> Opportunity Scanner -> Ranking Engine -> Watchlist Builder -> Context Scheduler -> Brains -> Replay -> Research -> Decision (futuro). O ativo deixa de ser escolhido manualmente -- o sistema descobre oportunidades continuamente, detecta regimes favoráveis, atualiza a watchlist dinâmica e prioriza símbolos pra análise profunda dos Brains. Vira o orquestrador do universo negociável, decidindo quais ativos merecem processamento profundo e quando -- porta de entrada nova do pipeline analítico. Restrições de desenho confirmadas pela auditoria 'OpenAlice como laboratório' (nenhum atalho de cópia disponível -- watchlist/multi-símbolo do OpenAlice são rasos ou quebrados por baixo do capô): (1) o 'panel' multi-símbolo do OpenAlice é anunciado como paralelo mas roda sequencial de verdade -- o Opportunity Scanner precisa de paralelismo real com limite de concorrência explícito, não só a promessa; (2) o circuit breaker do OpenAlice compartilha uma única variável entre uma família inteira de métodos -- qualquer rate limiter aqui precisa ser escopado por recurso real (por exchange/endpoint); (3) não existe anti-churn no OpenAlice (troca de watchlist é instantânea, sem debounce/cooldown/histerese) -- o Watchlist Builder precisa de histerese desde o primeiro princípio pra evitar trocar de ativo a cada candle; (4) não existe teto de universo em lugar nenhum do OpenAlice -- o Universe Manager precisa de um limite configurável explícito desde o início, não adicionado depois.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -1128,6 +1312,11 @@
         "type": "audit",
         "url": "https://claude.ai/code/artifact/6eefdd6b-1a4c-40a4-ab7c-a832eaf435a0",
         "note": "achado: watchlist/multi-símbolo do OpenAlice são rasos"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/dacc41c2-7acb-4e9f-9a3e-27eab2dd3023",
+        "note": "pipeline detalhado + anti-padrões (paralelismo falso, circuit breaker de escopo compartilhado, sem anti-churn, sem teto de universo)"
       }
     ],
     "status": "idea",
@@ -1137,7 +1326,8 @@
       "multi-symbol",
       "watchlist",
       "roadmap-fase-futura",
-      "priority:medium"
+      "priority:medium",
+      "pipeline-documented"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1149,7 +1339,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T02:26:33.504Z"
+    "updatedAt": "2026-07-28T10:08:47.042Z"
   },
   {
     "id": "idea-optimizer-overfit-clustering",

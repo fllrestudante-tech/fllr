@@ -14,6 +14,13 @@ antes da execução.
 - [Mergulho profundo](../../) -- 9 eixos: contexto, memória, classificação
   de mercado, múltiplos símbolos, watchlist, eventos, organização de IA,
   aprendizado, desacoplamento. (artifact publicado em 2026-07-27)
+- [OpenAlice como Laboratório](../../) -- 3ª rodada, focada em PADRÕES
+  arquiteturais (não funcionalidades): representação interna (FSM/grafo/
+  blackboard/event sourcing), arquitetura de pastas, organização de IA
+  (planner/critic/orquestração), desacoplamento avançado (capabilities/DI/
+  hot-reload), lista explícita do que NÃO copiar pros 5 princípios do
+  cripto10, watchlist/multi-símbolo a fundo, feature engineering. (artifact
+  publicado em 2026-07-28)
 
 ## O que ficou provado ao ler o código (não o marketing)
 
@@ -36,6 +43,21 @@ antes da execução.
 - **Guard Pipeline**: risco vetado por classes resolvidas por nome, cada
   uma só vê contexto montado (nunca a conta bruta) -- 1º de 4 projetos a
   confirmar esse padrão.
+- **Como laboratório, é radicalmente mais simples do que parece**: sem FSM
+  formal, sem blackboard, sem event sourcing de verdade (o `TradingGit`
+  parece mas consulta o broker ao vivo pra cada snapshot, não reconstrói
+  nada), sem planner/critic/reflection, sem prompt graph, sem memory
+  manager, sem feature store, sem validação estatística sistemática. O que
+  existe de maduro é pequeno: cache com staleness explícita (`meta.stale`),
+  capability/feature-flag com precedência `env > config > auto` +
+  razão textual, e orquestração de sub-agentes real mas deliberadamente sem
+  nenhum componente que julgue/funda respostas.
+- **Achado que muda o desenho do Opportunity Alice**: o "panel" multi-
+  símbolo do OpenAlice é anunciado como paralelo mas roda sequencial de
+  verdade por baixo do capô; o circuit breaker de 60s compartilha uma
+  única variável entre uma família inteira de métodos; não existe
+  anti-churn nem teto de universo em lugar nenhum. Confirmação final de que
+  não há atalho de cópia aqui.
 
 ## Ideias extraídas -- Research Objects no Feature Registry
 
@@ -45,11 +67,14 @@ antes da execução.
 | `idea-risk-guard-pipeline` | Risk veto plugável (1º de 4 origens) | ★★★★☆ |
 | `idea-multi-exchange-plugin-pattern` | Broker Packs (1º de 4 origens) | ★★☆☆☆ |
 | `idea-output-truncation-transparency` | "omitted: N" em vez de truncar em silêncio | ★★★☆☆ |
-| `idea-opportunity-alice` | Nota: watchlist/multi-símbolo do OpenAlice são rasos -- não há atalho a copiar | -- |
+| `idea-opportunity-alice` | Pipeline completo documentado (Universe Manager→...→Decision) + 4 anti-padrões a evitar | -- |
 | `idea-kelly-edge-sizing` | Edge module removido pelo OpenAlice (1ª de 3 confirmações) | descartado |
 
 ## O que NÃO vale importar
 
 Estado 100% em arquivo (sem banco de dados) -- contradiz a base Market
 Database do cripto10. Sistema multi-agente/event bus interno -- o próprio
-OpenAlice construiu e removeu.
+OpenAlice construiu e removeu. Ver a auditoria "Laboratório" para a lista
+completa de padrões que quebrariam os 5 princípios do cripto10 se copiados
+sem adaptar (aprovação humana pontual como gate de promoção, feature flags
+sem prova estatística, scheduler cego disparando automação, etc.).

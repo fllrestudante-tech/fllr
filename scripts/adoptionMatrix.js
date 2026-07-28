@@ -4,7 +4,7 @@
 // nenhuma lógica nova de negócio aqui.
 const fs = require("fs");
 const path = require("path");
-const { loadRegistry } = require("../lib/registry/registryStore");
+const { loadRegistry, findById } = require("../lib/registry/registryStore");
 
 const OUT_PATH = path.join(__dirname, "..", "research", "adoption-matrix.md");
 const PRIORITY_ORDER = ["high", "medium", "low"];
@@ -43,6 +43,26 @@ function main() {
   lines.push("");
   lines.push("Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).");
   lines.push("");
+
+  const capabilities = objects.filter((o) => o.type === "capability").sort((a, b) => a.id.localeCompare(b.id));
+  if (capabilities.length > 0) {
+    lines.push("## Mapa de Capacidades");
+    lines.push("");
+    lines.push("O que o sistema sabe fazer, não só quais componentes existem. Cada capability é um `type: \"capability\"` no Registry -- `dependsOn` lista quem implementa.");
+    lines.push("");
+    lines.push("| capability | status | implementado por |");
+    lines.push("|---|---|---|");
+    for (const cap of capabilities) {
+      const implementers = cap.dependsOn
+        .map((id) => {
+          const impl = findById(objects, id);
+          return impl ? `\`${id}\` (${impl.status})` : `\`${id}\` (?)`;
+        })
+        .join(", ");
+      lines.push(`| **${cap.name}** | ${cap.status} | ${implementers || "--"} |`);
+    }
+    lines.push("");
+  }
 
   for (const priority of PRIORITY_ORDER) {
     const group = activeExternal.filter((o) => priorityOf(o) === priority);

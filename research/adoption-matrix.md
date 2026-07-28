@@ -1,8 +1,21 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T02:27:49.987Z a partir de `registry/research-objects.json` (45 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T10:09:22.497Z a partir de `registry/research-objects.json` (51 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
+
+## Mapa de Capacidades
+
+O que o sistema sabe fazer, não só quais componentes existem. Cada capability é um `type: "capability"` no Registry -- `dependsOn` lista quem implementa.
+
+| capability | status | implementado por |
+|---|---|---|
+| **Auto-tuning** | production | `engine-backtest` (production) |
+| **Context Synthesis** | production | `synthesis-context-fusion` (production) |
+| **Liquidity & Smart Money** | production | `brain-liquidity` (production), `brain-fvg` (production), `brain-order-block` (production), `synthesis-institutional-context` (production) |
+| **Market Classification** | production | `brain-market` (production), `brain-structure` (production), `brain-liquidity` (production) |
+| **Opportunity Discovery** | idea | `idea-opportunity-alice` (idea) |
+| **Research & Validation** | production | `engine-replay` (production), `engine-brain-analytics` (production), `experiment-fvg-accuracy` (validated), `experiment-fvg-redundancy` (research), `experiment-structure-liquidity-combo` (research), `experiment-structure-liquidity-fvg-combo` (research) |
 
 ## Prioridade Alta
 
