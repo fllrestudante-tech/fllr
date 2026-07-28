@@ -47,6 +47,45 @@ tag `fase-4` -- `npm run registry -- list --tags=fase-4` lista os 11.
 Nenhuma implementação começou; é roadmap documentado, não compromisso de
 prazo.
 
+## OpenAlice Deep Reverse Engineering
+
+Auditoria mais recente -- [artifact "OpenAlice — Deep Reverse Engineering"](https://claude.ai/code/artifact/fa16c86c-f3a2-4bba-ac1c-662163179105),
+consolidando as 3 rodadas anteriores em 19 eixos (Filosofia, Arquitetura,
+Fluxo de dados, Modelo de contexto, Memória, IA, Organização do código,
+Eventos, Watchlists, Multi-symbol, Estado interno, Pesquisa, Backtesting,
+Aprendizado, Escalabilidade, Observabilidade, Governança, Pontos fortes,
+Limitações) + 2 eixos genuinamente novos (Escalabilidade, Governança
+formal). Regra de incorporação, sem exceção: **nada é copiado -- cada
+descoberta vira Research Object, passa por Experiments/Replay/Analytics, só
+então é cogitada pra promoção.**
+
+Refinou 4 ideias já existentes com o detalhe extra pedido nos "10 gaps
+institucionais" desta rodada (`idea-meta-analytics`, `idea-confidence-engine`,
+`idea-hypothesis-ledger`, `idea-dynamic-universe`, `idea-knowledge-graph`) e
+registrou 1 ideia nova: `idea-causal-event-log` (Replay evoluindo de
+snapshots de estado pra cadeia causal de eventos -- algo que nenhuma das 5
+plataformas auditadas tem). 4 dos 10 gaps não viraram Research Object porque
+já são cobertos pelos campos que o schema atual tem, sem mudança nenhuma:
+
+- **Feature Lifecycle completo** (Idea→Research→Experiment→Replay→Paper
+  Trading→Live Shadow→Limited Capital→Production→Monitoring→Retirement) --
+  `status` já é vocabulário aberto (string livre). Vocabulário recomendado
+  daqui pra frente, sem mudança de código: `idea → backlog → research →
+  experiment → replay-validated → paper-trading → live-shadow →
+  limited-capital → production → monitoring → retired/deprecated`.
+- **Provenance/linhagem** (por que existe, quem criou, quando, que
+  experimento validou, que replay aprovou) -- já coberto por
+  `owner`+`references`+`history`+`dependsOn`+`listConsumers`; o que falta é
+  uso consistente, não schema novo.
+- **Cognitive Architecture** (Perception→Memory→Reasoning→Planning→
+  Execution→Reflection→Learning) -- é uma lente de avaliação, não um motor
+  pra construir; mapeada no artifact acima, não vira Research Object.
+- **Relações tipadas no Knowledge Graph** (derivesFrom/validates/
+  contradicts/...) -- deferido de propósito: exigiria mudar `dependsOn` de
+  array de strings pra array de `{id, relation}`, mudança de schema real
+  que só se justifica quando o Knowledge Graph (visualização) for
+  construído de fato.
+
 ## Por que não virou uma reorganização de pasta
 
 `registry/` e `experiments/` já têm código real apontando pros caminhos

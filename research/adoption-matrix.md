@@ -1,6 +1,6 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T10:49:07.968Z a partir de `registry/research-objects.json` (61 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T11:12:21.685Z a partir de `registry/research-objects.json` (62 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
 
@@ -23,7 +23,7 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 
 | id | nome | origem | status | depende de |
 |---|---|---|---|---|
-| `idea-hypothesis-ledger` | Hypothesis Ledger (Trading-as-Git) | OpenAlice | backlog | `engine-replay`, `engine-brain-analytics` |
+| `idea-hypothesis-ledger` | Hypothesis Ledger (Trading-as-Git) | OpenAlice | backlog | `engine-replay`, `engine-brain-analytics`, `idea-significance-testing`, `idea-monte-carlo-mode` |
 | `idea-monte-carlo-mode` | Monte Carlo Mode (perturbação de candles) | Jesse | backlog | `engine-replay` |
 | `idea-optimizer-overfit-clustering` | Diagnóstico de overfitting via clustering do grid de parâmetros | Lean/QuantConnect | backlog | `engine-backtest` |
 | `idea-risk-guard-pipeline` | Guard Pipeline (risk veto plugável) | openalice, freqtrade, hummingbot, lean | backlog | -- |
@@ -48,14 +48,15 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 | id | nome | status | prioridade | depende de |
 |---|---|---|---|---|
 | `idea-asset-profile` | Asset Profile | idea | Baixa | `idea-dynamic-universe` |
-| `idea-confidence-engine` | Confidence Engine | idea | Média | `synthesis-context-fusion` |
+| `idea-causal-event-log` | Causal Event Log (Replay causal) | idea | Média | `engine-replay`, `idea-market-memory` |
+| `idea-confidence-engine` | Confidence Engine (generalizado) | idea | Média | `synthesis-context-fusion` |
 | `idea-cost-engine` | Cost Engine | idea | Baixa | -- |
 | `idea-dynamic-universe` | Dynamic Universe | idea | Alta | -- |
 | `idea-evolution-engine` | Evolution Engine | idea | Baixa | `engine-brain-analytics`, `engine-replay` |
 | `idea-feature-builder` | Feature Builder | idea | Alta | -- |
 | `idea-knowledge-graph` | Knowledge Graph | idea | Média | -- |
 | `idea-market-memory` | Market Memory | idea | Média | `engine-replay` |
-| `idea-meta-analytics` | Meta Analytics | idea | Baixa | `engine-brain-analytics` |
+| `idea-meta-analytics` | Meta Analytics | idea | Baixa | `engine-brain-analytics`, `engine-replay`, `idea-regime-engine` |
 | `idea-opportunity-alice` | Opportunity Engine (Opportunity Alice) | idea | Alta | `idea-dynamic-universe`, `idea-feature-builder` |
 | `idea-regime-engine` | Regime Engine | idea | Alta | `brain-market`, `brain-structure`, `brain-liquidity`, `synthesis-context-fusion` |
 

@@ -21,6 +21,13 @@ antes da execução.
   hot-reload), lista explícita do que NÃO copiar pros 5 princípios do
   cripto10, watchlist/multi-símbolo a fundo, feature engineering. (artifact
   publicado em 2026-07-28)
+- [OpenAlice — Deep Reverse Engineering](https://claude.ai/code/artifact/fa16c86c-f3a2-4bba-ac1c-662163179105) --
+  4ª rodada, consolida as 3 anteriores em 19 eixos nomeados + 2 eixos novos
+  (Escalabilidade, Governança) + investigação dos "10 gaps institucionais"
+  (Cognitive Architecture, Memória profunda, Feature Lifecycle, Knowledge
+  Graph tipado, Provenance, Confidence generalizado, Institutional Radar,
+  Event Sourcing causal, fluxo científico do Hypothesis Ledger, Meta layer
+  dos Brains). (artifact publicado em 2026-07-28)
 
 ## O que ficou provado ao ler o código (não o marketing)
 
@@ -69,6 +76,11 @@ antes da execução.
 | `idea-output-truncation-transparency` | "omitted: N" em vez de truncar em silêncio | ★★★☆☆ |
 | `idea-opportunity-alice` | Pipeline completo documentado (Universe Manager→...→Decision) + 4 anti-padrões a evitar | -- |
 | `idea-kelly-edge-sizing` | Edge module removido pelo OpenAlice (1ª de 3 confirmações) | descartado |
+| `idea-causal-event-log` | Replay evoluindo pra cadeia causal de eventos (gap 8, nenhuma das 5 plataformas tem) | ★★★☆☆ |
+| `idea-dynamic-universe` | + camada "Institutional Radar" (Regime→Capital Flow→Sector Rotation) inspirada no board sector-rotation.ts | ★★★★★ |
+| `idea-hypothesis-ledger` | + fluxo científico explícito (Hipótese→...→Reprodução→Conclusão→Adoção) | ★★★★★ |
+| `idea-meta-analytics` | + ângulos específicos (erro por regime, drift, redundância persistente) | ★★☆☆☆ |
+| `idea-confidence-engine` | + generalização além do Brain (qualquer Research Object) | ★★★☆☆ |
 
 ## O que NÃO vale importar
 

@@ -1112,15 +1112,59 @@
     "updatedAt": "2026-07-28T10:47:56.059Z"
   },
   {
-    "id": "idea-confidence-engine",
+    "id": "idea-causal-event-log",
     "type": "idea",
-    "name": "Confidence Engine",
-    "description": "'Quanto confiar neste Brain HOJE' -- desconta confidence por qualidade/disponibilidade de dado no momento exato (exchange instável, OI atrasado, funding congelado, Telegram offline). Diferente do confidence que cada Brain já autorreporta, e diferente do Context Fusion (que penaliza por conflito ENTRE Brains, não por qualidade de dado individual). Temos parcialmente: lib/dataConfidenceScore.js e lib/freshnessScore.js já calculam isso por domínio no dashboard -- falta threadear esse número de volta pro confidence de cada BrainResult no momento do cálculo, não construir do zero.",
+    "name": "Causal Event Log (Replay causal)",
+    "description": "Evolução do Replay Engine de snapshots de estado (candle a candle, cada BrainResult isolado no tempo) para cadeia causal de eventos: Funding mudou -> OI aumentou -> Sweep -> CHOCH -> FVG -> Order Block -> Trade. Hoje o Replay sabe 'o que cada Brain disse em cada candle', mas não 'o que disparou o quê' -- não há nenhuma das 5 plataformas auditadas (nem OpenAlice, que tem TradingGit como jornal de auditoria mas não reconstrução causal de estado) com esse tipo de encadeamento. Consumidor natural: Market Memory (idea-market-memory) responderia não só 'isso já aconteceu' mas 'essa sequência causal específica já aconteceu, e nas vezes anteriores o que veio depois'.",
     "owner": {
       "type": "internal",
       "name": "internal"
     },
-    "references": [],
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa16c86c-f3a2-4bba-ac1c-662163179105",
+        "note": "gap 8 -- Event Sourcing evolution do Replay"
+      }
+    ],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:medium",
+      "replay-evolution"
+    ],
+    "dependsOn": [
+      "engine-replay",
+      "idea-market-memory"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T11:12:15.394Z",
+        "action": "created",
+        "note": "OpenAlice Deep Reverse Engineering -- 10 gaps institucionais"
+      }
+    ],
+    "createdAt": "2026-07-28T11:12:15.394Z",
+    "updatedAt": "2026-07-28T11:12:15.394Z"
+  },
+  {
+    "id": "idea-confidence-engine",
+    "type": "idea",
+    "name": "Confidence Engine (generalizado)",
+    "description": "'Quanto confiar neste Brain HOJE' -- desconta confidence por qualidade/disponibilidade de dado no momento exato (exchange instável, OI atrasado, funding congelado, Telegram offline). Diferente do confidence que cada Brain já autorreporta, e diferente do Context Fusion (que penaliza por conflito ENTRE Brains, não por qualidade de dado individual). Temos parcialmente: lib/dataConfidenceScore.js e lib/freshnessScore.js já calculam isso por domínio no dashboard -- falta threadear esse número de volta pro confidence de cada BrainResult no momento do cálculo, não construir do zero. Generalização pedida na rodada 'Deep Reverse Engineering': as mesmas 7 propriedades (confidence, freshness, coverage, stability, volatility, consensus, provenance) deveriam poder ser anexadas a QUALQUER Research Object -- uma feature, uma ideia extraída de auditoria, um Hypothesis Ledger entry -- não só a um BrainResult em tempo de execução. Ainda não schema novo: os campos usados hoje (owner/references/history/metrics) já cobrem provenance na prática; confidence/freshness/coverage/stability/volatility/consensus generalizados ficam documentados como extensão futura do Confidence Engine, não implementados até haver um consumidor real fora dos Brains.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa16c86c-f3a2-4bba-ac1c-662163179105",
+        "note": "gap 6 -- Confidence generalizado além do Brain"
+      }
+    ],
     "status": "idea",
     "maturity": 0,
     "tags": [
@@ -1140,7 +1184,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T10:47:56.059Z"
+    "updatedAt": "2026-07-28T11:12:15.394Z"
   },
   {
     "id": "idea-cost-engine",
@@ -1174,12 +1218,18 @@
     "id": "idea-dynamic-universe",
     "type": "idea",
     "name": "Dynamic Universe",
-    "description": "Watchlist que nunca fica fixa -- pipeline de filtragem em cascata: Universo -> Filtragem -> Liquidez -> Volume -> OI -> Funding -> Volatilidade -> Correlação -> Narrativa -> Watchlist dinâmica. Camada própria dentro do Opportunity Engine, não um estágio solto. Por que é diferente do que o OpenAlice tem: EntityStore do OpenAlice é curadoria manual (o agente decide o que rastrear) -- esse padrão não serve pra varrer 1000+ ativos continuamente, precisa de scoring/filtro algorítmico desde o dia 1.",
+    "description": "Watchlist que nunca fica fixa -- pipeline de filtragem em cascata: Universo -> Filtragem -> Liquidez -> Volume -> OI -> Funding -> Volatilidade -> Correlação -> Narrativa -> Watchlist dinâmica. Camada própria dentro do Opportunity Engine, não um estágio solto. Por que é diferente do que o OpenAlice tem: EntityStore do OpenAlice é curadoria manual (o agente decide o que rastrear) -- esse padrão não serve pra varrer 1000+ ativos continuamente, precisa de scoring/filtro algorítmico desde o dia 1. Camada de 'Radar Institucional' pedida na rodada 'Deep Reverse Engineering', antes do próprio scanner de moedas: Universo -> Market Regime Filter -> Capital Flow -> Sector Rotation (por narrativa: AI/DeFi/L2/Meme/RWA/Gaming/Infra/Stablecoins/Perpetuals) -> Opportunity Scanner -> Ranking -> Brains. Decide ONDE no mercado vale olhar antes de decidir QUAL moeda olhar. Inspiração conceitual (não copiada): OpenAlice tem um board de sector-rotation real (equities/ETF, não cripto) que faz ranking cross-sectional de retorno relativo por setor via z-score -- a metodologia de ranking é o que vale adaptar pra narrativas cripto, não o código.",
     "owner": {
       "type": "internal",
       "name": "internal"
     },
-    "references": [],
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa16c86c-f3a2-4bba-ac1c-662163179105",
+        "note": "gap 7 -- Institutional Radar / Sector Rotation"
+      }
+    ],
     "status": "idea",
     "maturity": 0,
     "tags": [
@@ -1197,7 +1247,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T10:47:56.058Z"
+    "updatedAt": "2026-07-28T11:12:15.394Z"
   },
   {
     "id": "idea-evolution-engine",
@@ -1297,7 +1347,7 @@
     "id": "idea-hypothesis-ledger",
     "type": "idea",
     "name": "Hypothesis Ledger (Trading-as-Git)",
-    "description": "Ledger de decisões hash-encadeado (stage->commit->push), commit = tese estruturada + snapshot completo do estado no momento da decisão. Veículo de implementação do Hypothesis Engine já no roadmap -- como tabela nova no market.db (não arquivos, preserva a filosofia Market Database). O OpenAlice tem o ledger mas nunca construiu a agregação/score em cima dele -- o cripto10 deve fechar esse ciclo via padrão já dominado (Brain Analytics).",
+    "description": "Ledger de decisões hash-encadeado (stage->commit->push), commit = tese estruturada + snapshot completo do estado no momento da decisão. Veículo de implementação do Hypothesis Engine já no roadmap -- como tabela nova no market.db (não arquivos, preserva a filosofia Market Database). O OpenAlice tem o ledger mas nunca construiu a agregação/score em cima dele -- o cripto10 deve fechar esse ciclo via padrão já dominado (Brain Analytics). Fluxo científico explícito pedido na rodada 'Deep Reverse Engineering': Hipótese -> Experimento -> Resultado -> Significância -> Reprodução -> Conclusão -> Adoção. 'Significância' é o idea-significance-testing (bootstrap p-value); 'Reprodução' é novo -- o mesmo experimento repetido numa janela de tempo diferente precisa bater dentro de uma tolerância antes de 'Conclusão', senão o resultado é descartado como sorte de uma janela específica (idea-monte-carlo-mode ataca a mesma pergunta por outro ângulo, perturbando candles em vez de repetir em outra janela). Sem esses 2 estágios, o Ledger vira só um textbook de teses sem rigor estatístico -- ambos já são candidatos de Fase 3, este flow é o que os costura num pipeline único.",
     "owner": {
       "type": "external",
       "name": "OpenAlice"
@@ -1312,6 +1362,11 @@
         "type": "audit",
         "url": "https://claude.ai/code/artifact/6eefdd6b-1a4c-40a4-ab7c-a832eaf435a0",
         "note": "achado: OpenAlice nunca fechou o ciclo de agregação"
+      },
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa16c86c-f3a2-4bba-ac1c-662163179105",
+        "note": "gap 9 -- fluxo científico explícito"
       }
     ],
     "status": "backlog",
@@ -1324,7 +1379,9 @@
     ],
     "dependsOn": [
       "engine-replay",
-      "engine-brain-analytics"
+      "engine-brain-analytics",
+      "idea-significance-testing",
+      "idea-monte-carlo-mode"
     ],
     "metrics": {},
     "history": [
@@ -1335,7 +1392,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.502Z",
-    "updatedAt": "2026-07-28T02:26:33.502Z"
+    "updatedAt": "2026-07-28T11:12:15.394Z"
   },
   {
     "id": "idea-kelly-edge-sizing",
@@ -1388,12 +1445,18 @@
     "id": "idea-knowledge-graph",
     "type": "idea",
     "name": "Knowledge Graph",
-    "description": "O grafo já existe de fato -- dependsOn/listConsumers do Feature Registry já conectam Research Objects, Capabilities e Experiments. O que falta é representar (visualizar/navegar), não modelar um dado novo. Mais barato que os outros motores desta fase: um script que renderiza o grafo já latente no Registry (ex: Mermaid a partir de dependsOn), sem mudança de schema.",
+    "description": "O grafo já existe de fato -- dependsOn/listConsumers do Feature Registry já conectam Research Objects, Capabilities e Experiments. O que falta é representar (visualizar/navegar), não modelar um dado novo. Mais barato que os outros motores desta fase: um script que renderiza o grafo já latente no Registry (ex: Mermaid a partir de dependsOn), sem mudança de schema. Vocabulário de relações tipadas pedido na rodada 'Deep Reverse Engineering' (dependsOn hoje só significa 'depende de', sem nuance): derivesFrom, validates, contradicts, replaces, supersedes, inspiredBy, usesDataFrom, consumes, produces, improves, invalidates. Deliberadamente NÃO implementado agora -- exigiria mudar dependsOn de array de strings pra array de {id, relation}, e essa mudança de schema só se justifica quando o Knowledge Graph (visualização) for de fato construído e precisar renderizar a relação, não antes.",
     "owner": {
       "type": "internal",
       "name": "internal"
     },
-    "references": [],
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa16c86c-f3a2-4bba-ac1c-662163179105",
+        "note": "gap 4 -- relações tipadas (deferido)"
+      }
+    ],
     "status": "idea",
     "maturity": 0,
     "tags": [
@@ -1411,7 +1474,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T10:47:56.058Z"
+    "updatedAt": "2026-07-28T11:12:15.394Z"
   },
   {
     "id": "idea-market-memory",
@@ -1447,12 +1510,18 @@
     "id": "idea-meta-analytics",
     "type": "idea",
     "name": "Meta Analytics",
-    "description": "'Quais features ajudam, quais são redundantes, qual Brain envelheceu' -- redundância e contribuição marginal já existem em lib/brainAnalytics.js (computeRedundancy/computeMarginalContribution). O que genuinamente falta é o eixo temporal: acompanhar se uma feature piorou/melhorou ao longo do tempo, não só um cálculo pontual a cada replay. É extensão do Brain Analytics existente, não um motor novo do zero.",
+    "description": "'Quais features ajudam, quais são redundantes, qual Brain envelheceu' -- redundância e contribuição marginal já existem em lib/brainAnalytics.js (computeRedundancy/computeMarginalContribution). O que genuinamente falta é o eixo temporal: acompanhar se uma feature piorou/melhorou ao longo do tempo, não só um cálculo pontual a cada replay. É extensão do Brain Analytics existente, não um motor novo do zero. Ângulos específicos pedidos na rodada 'Deep Reverse Engineering': qual Brain erra mais em qual regime (precisa do eixo regime x accuracy, não só accuracy agregada), qual combinação de Brains melhora ao ser somada vs. qual só adiciona ruído (extensão de computeMarginalContribution ao longo do tempo), qual Brain degrada após uma mudança de mercado ou de código (drift), qual evidência específica dentro de um Brain parou de agregar valor preditivo (nível mais fino que o Brain inteiro), quais combinações são redundantes de forma persistente (não só num replay pontual).",
     "owner": {
       "type": "internal",
       "name": "internal"
     },
-    "references": [],
+    "references": [
+      {
+        "type": "audit",
+        "url": "https://claude.ai/code/artifact/fa16c86c-f3a2-4bba-ac1c-662163179105",
+        "note": "gap 10 -- Meta layer analisando os próprios Brains"
+      }
+    ],
     "status": "idea",
     "maturity": 0,
     "tags": [
@@ -1461,7 +1530,9 @@
       "temos-parcialmente"
     ],
     "dependsOn": [
-      "engine-brain-analytics"
+      "engine-brain-analytics",
+      "engine-replay",
+      "idea-regime-engine"
     ],
     "metrics": {},
     "history": [
@@ -1472,7 +1543,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T10:47:56.059Z"
+    "updatedAt": "2026-07-28T11:12:15.393Z"
   },
   {
     "id": "idea-monte-carlo-mode",
