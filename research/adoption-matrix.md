@@ -1,6 +1,6 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T19:05:44.792Z a partir de `registry/research-objects.json` (82 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T20:11:44.737Z a partir de `registry/research-objects.json` (82 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
 

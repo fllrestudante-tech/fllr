@@ -5,6 +5,8 @@ const { openDb } = require("../lib/infra/db");
 const { getAsset, upsertAsset } = require("../lib/knowledgeBase/assetStore");
 const { buildStructureContext, buildLiquidityContext, buildFvgContext, buildOrderBlockContext } = require("../lib/knowledgeBase/contextBuilder");
 const { REAL, FUTURE } = require("../lib/knowledgeBase/consumers");
+const { computeAssetStatistics, DEFAULT_WINDOW_DAYS_LIST } = require("../lib/knowledgeBase/statisticsComputer");
+const { getAssetStatistics, upsertAssetStatistics, METRICS } = require("../lib/knowledgeBase/assetStatisticsStore");
 
 function parseArgs(argv) {
   const flags = {};
@@ -62,6 +64,45 @@ function cmdShow(db, symbol) {
   for (const row of REAL) console.log(`  - ${row.field} -> ${row.consumer} (${row.via})`);
   console.log("Future (documentado, não conectado ainda):");
   for (const row of FUTURE) console.log(`  - ${row.field} -> ${row.consumer} [${row.status}]`);
+
+  console.log(`\n=== Asset Statistics ===`);
+  const availableWindows = db.prepare(`SELECT window_days FROM asset_statistics_window WHERE symbol = ? AND statistics_scope = 'global' ORDER BY window_days ASC`).all(symbol);
+  if (availableWindows.length === 0) {
+    console.log("(nenhuma estatística computada ainda -- use 'compute-statistics')");
+  } else {
+    for (const { window_days: windowDays } of availableWindows) {
+      const stats = getAssetStatistics(db, symbol, "global", windowDays);
+      console.log(`\n-- janela ${windowDays}d (coverage=${stats.window.coverage_pct}%, freshness=${stats.window.freshness_score}, confidence=${stats.window.confidence}) --`);
+      for (const metric of METRICS) {
+        const m = stats.metrics[metric];
+        if (!m) continue;
+        console.log(
+          `  ${metric}: avg=${m.avg} p50=${m.p50} p95=${m.p95} zscore=${m.zscore_current} percentile=${m.percentile_current} trend=${m.trend} drift=${m.drift_pct}% quality=${m.quality} (n=${m.sample_size})`
+        );
+      }
+    }
+  }
+}
+
+function cmdComputeStatistics(db, symbol, flags) {
+  if (!symbol) {
+    console.error("uso: npm run knowledge-base -- compute-statistics <symbol> [--windowDays=7,30,90,180,365,730] [--scope=global]");
+    process.exit(1);
+  }
+
+  const windowDaysList = flags.windowDays ? splitCsv(flags.windowDays).map(Number) : DEFAULT_WINDOW_DAYS_LIST;
+  const scope = flags.scope || "global";
+
+  const result = computeAssetStatistics(db, symbol, { scope, windowDaysList });
+  for (const windowDays of windowDaysList) {
+    upsertAssetStatistics(db, symbol, scope, windowDays, result[windowDays]);
+  }
+
+  console.log(`✅ ${symbol} -- estatísticas computadas e salvas pra ${windowDaysList.length} janela(s): ${windowDaysList.join(", ")} dias`);
+  for (const windowDays of windowDaysList) {
+    const w = result[windowDays].window;
+    console.log(`  janela ${windowDays}d: sample_size=${w.sampleSize} coverage=${w.coveragePct}% freshness=${w.freshnessScore} confidence=${w.confidence}`);
+  }
 }
 
 function cmdSet(db, symbol, flags) {
@@ -110,8 +151,10 @@ function main() {
         return cmdShow(db, symbol);
       case "set":
         return cmdSet(db, symbol, flags);
+      case "compute-statistics":
+        return cmdComputeStatistics(db, symbol, flags);
       default:
-        console.log("uso: npm run knowledge-base -- <show|set> <symbol> [flags]");
+        console.log("uso: npm run knowledge-base -- <show|set|compute-statistics> <symbol> [flags]");
         process.exit(command ? 1 : 0);
     }
   } finally {
