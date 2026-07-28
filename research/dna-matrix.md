@@ -1,6 +1,6 @@
 # DNA Matrix
 
-_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T20:11:45.370Z a partir de `registry/research-objects.json` (42 objetos com DNA Fit calculado, de 82 totais). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T20:32:43.242Z a partir de `registry/research-objects.json` (45 objetos com DNA Fit calculado, de 85 totais). Não editar este arquivo à mão._
 
 Pergunta que este documento responde: **essa ideia/padrão combina com os princípios do cripto10** (Replay antes de promoção, evidência antes de decisão, Brains desacoplados, contexto antes de entrada, estatística antes de automação)? DNA Fit é alinhamento filosófico -- não é a mesma pergunta que "vale a pena construir agora" (isso é a Classificação) nem "quanto custa manter" (Custo de Manutenção). Uma ideia pode ter DNA Fit alto e ainda assim ser `NÃO NECESSÁRIO` hoje, se não houver consumidor real -- ver `research/competitor-intelligence/openalice.md` e o artifact "Engineering Patterns" pro raciocínio por trás de cada score.
 
@@ -19,6 +19,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 | `idea-market-memory` | Market Memory | 93% | Médio | knowledge |
 | `idea-confidence-engine` | Confidence Engine (generalizado) | 92% | Baixo | knowledge |
 | `idea-causal-event-log` | Causal Event Log (Replay causal) | 90% | Alto | knowledge |
+| `idea-hypothesis-builder` | Hypothesis Builder | 90% | Médio | research |
 | `idea-knowledge-graph` | Knowledge Graph | 90% | Baixo | knowledge |
 | `idea-monte-carlo-mode` | Monte Carlo Mode (perturbação de candles) | 90% | Médio | research |
 | `idea-risk-guard-pipeline` | Guard Pipeline (risk veto plugável) | 90% | Médio | -- |
@@ -43,7 +44,9 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 |---|---|---|---|---|
 | `idea-regime-engine` | Regime Engine | 85% | Médio | analysis |
 | `idea-meta-analytics` | Meta Analytics | 82% | Baixo | research |
+| `idea-metric-models` | Metric Models (FundingModel/OIModel/SpreadModel/ATRModel/VolumeModel) | 82% | Médio | knowledge |
 | `pattern-no-formal-fsm` | Ausencia de FSM formal | 82% | Médio | -- |
+| `idea-statistical-narrative` | Statistical Narrative | 80% | Médio | knowledge |
 | `idea-evolution-engine` | Evolution Engine | 78% | Médio | research |
 | `idea-order-reconciliation-audit` | Auditoria da reconciliação de ordens (verificar antes de classificar) | 72% | Baixo | -- |
 | `idea-portfolio-intelligence` | Portfolio Intelligence | 70% | Alto | -- |
@@ -80,11 +83,11 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 
 ### Research Layer
 
-`capability-auto-tuning`, `capability-research-validation`, `engine-backtest`, `engine-brain-analytics`, `engine-learning-brain`, `engine-replay`, `idea-cost-engine`, `idea-evolution-engine`, `idea-hypothesis-ledger`, `idea-meta-analytics`, `idea-monte-carlo-mode`, `idea-optimizer-overfit-clustering`, `idea-replay-attribution`, `idea-significance-testing`, `idea-weight-engine`
+`capability-auto-tuning`, `capability-research-validation`, `engine-backtest`, `engine-brain-analytics`, `engine-learning-brain`, `engine-replay`, `idea-cost-engine`, `idea-evolution-engine`, `idea-hypothesis-builder`, `idea-hypothesis-ledger`, `idea-meta-analytics`, `idea-monte-carlo-mode`, `idea-optimizer-overfit-clustering`, `idea-replay-attribution`, `idea-significance-testing`, `idea-weight-engine`
 
 ### Knowledge Layer
 
-`idea-asset-profile`, `idea-causal-event-log`, `idea-confidence-engine`, `idea-knowledge-graph`, `idea-market-memory`
+`idea-asset-profile`, `idea-causal-event-log`, `idea-confidence-engine`, `idea-knowledge-graph`, `idea-market-memory`, `idea-metric-models`, `idea-statistical-narrative`
 
 ### Analysis Layer
 

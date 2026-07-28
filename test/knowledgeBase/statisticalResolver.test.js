@@ -52,16 +52,43 @@ test("resolveMetricSignal: sem nenhuma estatística computada devolve null", () 
   db.close();
 });
 
-test("resolveMetricSignal: janela explícita lê exatamente o que foi gravado", () => {
+test("resolveMetricSignal: janela explícita -- Observation/Interpretation/Confidence/Evidence, não campos soltos", () => {
   const db = freshDb();
   upsertAssetStatistics(db, "SOLUSDT", "global", 30, { window: WINDOW, metrics: { funding: METRIC } });
 
   const signal = resolveMetricSignal(db, "SOLUSDT", "funding", { windowDays: 30 });
-  assert.equal(signal.value, 1.3);
-  assert.equal(signal.zscore, 2.5);
-  assert.equal(signal.percentile, 96);
-  assert.equal(signal.trend, "rising");
-  assert.equal(signal.windowDaysUsed, 30);
+
+  assert.equal(signal.observation.value, 1.3);
+  assert.equal(signal.observation.zscore, 2.5);
+  assert.equal(signal.observation.percentile, 96);
+  assert.equal(signal.observation.trend, "rising");
+
+  assert.equal(signal.interpretation.level, "EXTREME", "percentil 96 >= 95 -> EXTREME");
+  assert.equal(signal.interpretation.direction, "above");
+
+  assert.equal(signal.confidence.value, 95);
+  assert.equal(signal.confidence.quality, "high");
+
+  assert.equal(signal.evidence.percentile, 96);
+  assert.equal(signal.evidence.sampleSize, 100);
+  assert.equal(signal.evidence.windowDaysUsed, 30);
+  db.close();
+});
+
+test("resolveMetricSignal: interpretLevel -- NORMAL/LOW/HIGH/EXTREME por percentil", () => {
+  const db = freshDb();
+  const cases = [
+    { percentile: 50, expectedLevel: "NORMAL", expectedDirection: "neutral" },
+    { percentile: 85, expectedLevel: "HIGH", expectedDirection: "above" },
+    { percentile: 15, expectedLevel: "LOW", expectedDirection: "below" },
+    { percentile: 3, expectedLevel: "EXTREME", expectedDirection: "below" },
+  ];
+  for (const [i, c] of cases.entries()) {
+    upsertAssetStatistics(db, "SOLUSDT", "global", 100 + i, { window: WINDOW, metrics: { funding: { ...METRIC, percentileCurrent: c.percentile } } });
+    const signal = resolveMetricSignal(db, "SOLUSDT", "funding", { windowDays: 100 + i });
+    assert.equal(signal.interpretation.level, c.expectedLevel, `percentil ${c.percentile}`);
+    assert.equal(signal.interpretation.direction, c.expectedDirection, `percentil ${c.percentile}`);
+  }
   db.close();
 });
 
@@ -71,8 +98,8 @@ test("resolveMetricSignal: sem windowDays explícito, aplica pickDefaultWindow (
   upsertAssetStatistics(db, "SOLUSDT", "global", 90, { window: WINDOW, metrics: { funding: { ...METRIC, currentValue: 2 } } });
 
   const signal = resolveMetricSignal(db, "SOLUSDT", "funding");
-  assert.equal(signal.windowDaysUsed, 90);
-  assert.equal(signal.value, 2);
+  assert.equal(signal.evidence.windowDaysUsed, 90);
+  assert.equal(signal.observation.value, 2);
   db.close();
 });
 

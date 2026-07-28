@@ -1,6 +1,6 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T20:11:44.737Z a partir de `registry/research-objects.json` (82 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T20:32:31.783Z a partir de `registry/research-objects.json` (85 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
 
@@ -56,14 +56,17 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 | `idea-dynamic-universe` | Dynamic Universe | idea | Alta | -- |
 | `idea-evolution-engine` | Evolution Engine | idea | Baixa | `engine-brain-analytics`, `engine-replay` |
 | `idea-feature-builder` | Feature Builder | idea | Alta | -- |
+| `idea-hypothesis-builder` | Hypothesis Builder | idea | Baixa | `idea-hypothesis-ledger`, `idea-asset-profile` |
 | `idea-knowledge-graph` | Knowledge Graph | idea | Média | -- |
 | `idea-market-memory` | Market Memory | idea | Média | `engine-replay` |
 | `idea-meta-analytics` | Meta Analytics | idea | Baixa | `engine-brain-analytics`, `engine-replay`, `idea-regime-engine` |
+| `idea-metric-models` | Metric Models (FundingModel/OIModel/SpreadModel/ATRModel/VolumeModel) | idea | Baixa | `idea-asset-profile` |
 | `idea-multi-timeframe-brain` | Multi-Timeframe Brain | idea | Média | `brain-structure`, `brain-liquidity`, `brain-fvg`, `brain-order-block` |
 | `idea-opportunity-alice` | Opportunity Engine (Opportunity Alice) | idea | Alta | `idea-dynamic-universe`, `idea-feature-builder` |
 | `idea-portfolio-intelligence` | Portfolio Intelligence | idea | Baixa | `idea-executor-state-machine` |
 | `idea-regime-engine` | Regime Engine | idea | Alta | `brain-market`, `brain-structure`, `brain-liquidity`, `synthesis-context-fusion` |
 | `idea-replay-attribution` | Feature Attribution no Replay | idea | Média | `engine-replay`, `engine-brain-analytics` |
+| `idea-statistical-narrative` | Statistical Narrative | idea | Baixa | `idea-asset-profile` |
 | `idea-weight-engine` | Weight Engine | idea | Média | `engine-brain-analytics`, `engine-replay`, `synthesis-context-fusion` |
 
 ## Descartado
