@@ -25,7 +25,8 @@
     "registry": "node scripts/registry.js",
     "adoption-matrix": "node scripts/adoptionMatrix.js",
     "dna-matrix": "node scripts/dnaMatrix.js",
-    "knowledge-base": "node scripts/knowledgeBase.js"
+    "knowledge-base": "node scripts/knowledgeBase.js",
+    "capability-map": "node scripts/capabilityMap.js"
   },
   "keywords": [],
   "author": "",

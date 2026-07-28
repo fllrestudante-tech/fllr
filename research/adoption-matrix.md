@@ -1,6 +1,6 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T20:32:31.783Z a partir de `registry/research-objects.json` (85 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T22:41:39.247Z a partir de `registry/research-objects.json` (86 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
 
@@ -67,6 +67,7 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 | `idea-regime-engine` | Regime Engine | idea | Alta | `brain-market`, `brain-structure`, `brain-liquidity`, `synthesis-context-fusion` |
 | `idea-replay-attribution` | Feature Attribution no Replay | idea | Média | `engine-replay`, `engine-brain-analytics` |
 | `idea-statistical-narrative` | Statistical Narrative | idea | Baixa | `idea-asset-profile` |
+| `idea-structured-evidence` | Structured Evidence (Evidence como objeto de 1ª classe) | idea | Baixa | `idea-weight-engine`, `idea-replay-attribution` |
 | `idea-weight-engine` | Weight Engine | idea | Média | `engine-brain-analytics`, `engine-replay`, `synthesis-context-fusion` |
 
 ## Descartado

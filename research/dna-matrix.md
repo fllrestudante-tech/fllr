@@ -1,6 +1,6 @@
 # DNA Matrix
 
-_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T20:32:43.242Z a partir de `registry/research-objects.json` (45 objetos com DNA Fit calculado, de 85 totais). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T22:41:39.905Z a partir de `registry/research-objects.json` (46 objetos com DNA Fit calculado, de 86 totais). Não editar este arquivo à mão._
 
 Pergunta que este documento responde: **essa ideia/padrão combina com os princípios do cripto10** (Replay antes de promoção, evidência antes de decisão, Brains desacoplados, contexto antes de entrada, estatística antes de automação)? DNA Fit é alinhamento filosófico -- não é a mesma pergunta que "vale a pena construir agora" (isso é a Classificação) nem "quanto custa manter" (Custo de Manutenção). Uma ideia pode ter DNA Fit alto e ainda assim ser `NÃO NECESSÁRIO` hoje, se não houver consumidor real -- ver `research/competitor-intelligence/openalice.md` e o artifact "Engineering Patterns" pro raciocínio por trás de cada score.
 
@@ -43,6 +43,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 | id | nome | DNA Fit | custo de manutenção | domínio |
 |---|---|---|---|---|
 | `idea-regime-engine` | Regime Engine | 85% | Médio | analysis |
+| `idea-structured-evidence` | Structured Evidence (Evidence como objeto de 1ª classe) | 85% | Baixo | analysis |
 | `idea-meta-analytics` | Meta Analytics | 82% | Baixo | research |
 | `idea-metric-models` | Metric Models (FundingModel/OIModel/SpreadModel/ATRModel/VolumeModel) | 82% | Médio | knowledge |
 | `pattern-no-formal-fsm` | Ausencia de FSM formal | 82% | Médio | -- |
@@ -91,7 +92,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 
 ### Analysis Layer
 
-`brain-fvg`, `brain-liquidity`, `brain-market`, `brain-order-block`, `brain-structure`, `capability-context-synthesis`, `capability-liquidity-smart-money`, `capability-market-classification`, `engine-decision-brain`, `engine-narrative`, `idea-capital-flow-engine`, `idea-correlation-brain`, `idea-feature-builder`, `idea-multi-timeframe-brain`, `idea-regime-engine`, `synthesis-context-fusion`, `synthesis-institutional-context`
+`brain-fvg`, `brain-liquidity`, `brain-market`, `brain-order-block`, `brain-structure`, `capability-context-synthesis`, `capability-liquidity-smart-money`, `capability-market-classification`, `engine-decision-brain`, `engine-narrative`, `idea-capital-flow-engine`, `idea-correlation-brain`, `idea-feature-builder`, `idea-multi-timeframe-brain`, `idea-regime-engine`, `idea-structured-evidence`, `synthesis-context-fusion`, `synthesis-institutional-context`
 
 ### Discovery Layer
 

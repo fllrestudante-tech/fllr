@@ -2306,6 +2306,41 @@
     "updatedAt": "2026-07-28T20:32:42.541Z"
   },
   {
+    "id": "idea-structured-evidence",
+    "type": "idea",
+    "name": "Structured Evidence (Evidence como objeto de 1ª classe)",
+    "description": "lib/brains/brainResult.js::evidence hoje é array flat de string, raramente populado de fato pelos Brains atuais. Evolução proposta: cada item vira { source, weight, confidence, reason } em vez de string solta -- ex: {source:'funding', weight:0.81, confidence:95, reason:'Funding percentile 98'}. Abre caminho pro Weight Engine (idea-weight-engine), Feature Attribution (idea-replay-attribution), Explainability e IA consultiva sem quebrar interface -- ninguém lê evidence de forma estruturada hoje, então a mudança é segura quando acontecer. Não implementado -- sem consumidor real ainda (nenhum Brain hoje pesa evidence individualmente).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:low",
+      "domain:analysis",
+      "dna-fit:85",
+      "classification:complementar",
+      "maintenance-cost:low"
+    ],
+    "dependsOn": [
+      "idea-weight-engine",
+      "idea-replay-attribution"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T22:41:37.825Z",
+        "action": "created",
+        "note": "5 níveis do conhecimento + Capability Map -- rodada puramente conceitual/documentação"
+      }
+    ],
+    "createdAt": "2026-07-28T22:41:37.825Z",
+    "updatedAt": "2026-07-28T22:41:37.825Z"
+  },
+  {
     "id": "idea-weight-engine",
     "type": "idea",
     "name": "Weight Engine",

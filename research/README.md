@@ -151,6 +151,57 @@ pilares/Engineering Patterns/DNA Matrix → esta), documentada por
 disciplina de projeto, não porque a decisão de travar/começar a codar já
 foi tomada.
 
+## Os 5 níveis do conhecimento (definição oficial)
+
+Formalizado depois da evolução do Statistical Resolver -- distingue o que
+até agora era tratado meio de forma solta:
+
+1. **Observation** -- uma medição, nada mais. `Funding = 0.0032` não é
+   conhecimento, é dado bruto. Vive na Storage (`lib/knowledgeBase/assetStore.js`/
+   `assetStatisticsStore.js`), nunca julga.
+2. **Knowledge** -- a Observation com contexto histórico agregado (Asset
+   Statistics: médias, percentis, distribuição) -- ainda não é julgamento,
+   é "o que normalmente acontece".
+3. **Interpretation** -- a resposta a "isso é raro/comum/mudou/persiste/
+   contradiz outro indicador" -- só o Statistical Resolver
+   (`lib/knowledgeBase/statisticalResolver.js`) produz isso, nunca a
+   Storage. Hoje: `{level, direction}` (LOW/NORMAL/HIGH/EXTREME).
+4. **Hypothesis** -- uma Interpretation promovida a afirmação testável
+   ("Funding extremo antecede expansão de volatilidade") -- ver
+   `idea-hypothesis-builder`/`idea-hypothesis-ledger`, ainda não
+   implementado.
+5. **Decision** -- o que um Brain/Decision Brain faz com a Hypothesis
+   validada -- fora do escopo da Knowledge Base inteiramente, é o Brain
+   quem decide.
+
+Dentro da própria Knowledge Base, dois tipos de fato coexistem e vale
+distinguir mentalmente (não é uma separação de schema, `idea-asset-profile`
+cobre os dois): **Institutional Facts** (identidade do ativo -- setor,
+narrativa, exchange, listagem -- praticamente nunca muda) vs.
+**Statistical Facts** (funding médio, ATR médio, OI médio -- muda
+constantemente, sempre computado, nunca digitado).
+
+**Evidence como objeto de primeira classe** -- documentado como evolução
+futura, não implementado: `lib/brains/brainResult.js::evidence` hoje é um
+array flat (raramente populado de fato pelos Brains atuais). A ideia é
+`{ source, weight, confidence, reason }` por item em vez de string solta
+-- abre caminho pro Weight Engine/Feature Attribution/Explainability sem
+quebrar a interface de quem já lê `evidence` hoje (ninguém lê de forma
+estruturada ainda). Registrado como `idea-structured-evidence`.
+
+## Capability Map
+
+`capability-map.md` -- **gerado**, `npm run capability-map` (mesma
+disciplina de `adoption-matrix.md`/`dna-matrix.md`). Pergunta diferente
+das outras duas: não "de onde veio" nem "combina com os princípios", mas
+**onde é que isso mora arquiteturalmente, e em que estágio está** --
+existe pra que o Registry (85+ Research Objects e crescendo) não vire um
+mapa escondido que só quem escreveu entende. Organiza os 4 domínios já
+existentes (`domain:knowledge|analysis|discovery|research`) em árvore,
+cada item agrupado por estágio derivado do `status` do Registry
+(Implemented/Research/Roadmap/Idea/Deprecated) -- nenhum campo novo,
+só leitura do que já existe.
+
 ## Por que não virou uma reorganização de pasta
 
 `registry/` e `experiments/` já têm código real apontando pros caminhos
