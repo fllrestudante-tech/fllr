@@ -1103,7 +1103,7 @@
     "id": "idea-asset-profile",
     "type": "idea",
     "name": "Market Knowledge Base (antigo Asset Profile)",
-    "description": "Elevado a pilar (rodada '3 pilares'): biografia permanente por ativo, consultada por todo Brain antes de decidir -- nao so os campos originais (liquidez/volatilidade/spread/slippage/horario ativo/correlacao/exchange preferida/latencia/funding historico/qualidade dos sinais/win rate historico), mas tambem: regimes conhecidos daquele ativo especifico, comportamento historico em FOMC/CPI (eventos macro nomeados, nao so 'evento generico'), drawdown medio, funding/OI tipicos (faixa normal vs. anomalia), melhores e piores horarios, melhores e piores regimes, setor/narrativa (AI/DeFi/L2/Meme/RWA/Gaming/Infra/Stablecoins/Perpetuals). Diferente do Market Memory (que responde 'essa situacao especifica ja aconteceu' via analogia sobre snapshots do Replay): Market Knowledge Base e uma ficha por ATIVO, semi-estatica, agregada ao longo do tempo -- os dois se alimentam mutuamente (Market Memory descobre o padrao, Market Knowledge Base guarda o resumo consolidado). Nao apareceu em nenhuma das 5 plataformas auditadas nesse nivel de detalhe por ativo.",
+    "description": "Elevado a pilar (rodada '3 pilares'): biografia permanente por ativo, consultada por todo Brain antes de decidir -- nao so os campos originais (liquidez/volatilidade/spread/slippage/horario ativo/correlacao/exchange preferida/latencia/funding historico/qualidade dos sinais/win rate historico), mas tambem: regimes conhecidos daquele ativo especifico, comportamento historico em FOMC/CPI (eventos macro nomeados, nao so 'evento generico'), drawdown medio, funding/OI tipicos (faixa normal vs. anomalia), melhores e piores horarios, melhores e piores regimes, setor/narrativa (AI/DeFi/L2/Meme/RWA/Gaming/Infra/Stablecoins/Perpetuals). Diferente do Market Memory (que responde 'essa situacao especifica ja aconteceu' via analogia sobre snapshots do Replay): Market Knowledge Base e uma ficha por ATIVO, semi-estatica, agregada ao longo do tempo -- os dois se alimentam mutuamente (Market Memory descobre o padrao, Market Knowledge Base guarda o resumo consolidado). Nao apareceu em nenhuma das 5 plataformas auditadas nesse nivel de detalhe por ativo. Campos adicionais pedidos pelo usuario pro 'DNA' do ativo: eventos de calendario (ETF? Token Unlock?), principais influenciadores, exchange dominante, volume por exchange, reacao historica especifica a CPI/FOMC/BTC/ETH/DXY/Nasdaq (nao so 'evento macro generico' -- cada relacao nomeada separadamente), FVG/OB comuns daquele ativo especifico.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -1132,7 +1132,41 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T11:56:15.315Z"
+    "updatedAt": "2026-07-28T14:31:55.159Z"
+  },
+  {
+    "id": "idea-capital-flow-engine",
+    "type": "idea",
+    "name": "Capital Flow Engine",
+    "description": "Responde 'pra onde o dinheiro esta indo' -- diferente de Funding (custo de manter posicao) e de OI (quantidade de contratos abertos): rotacao de capital entre segmentos do mercado (ex: BTC -> ETH -> L2 -> AI -> Memes -> Stablecoins). Nenhuma das 5 plataformas auditadas faz isso bem. Alimenta o Dynamic Universe como estagio pre-scanner (junto com Sector Rotation) e o proprio Market Brain como evidencia nova.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:high",
+      "domain:analysis",
+      "dna-fit:88",
+      "classification:superior",
+      "maintenance-cost:high"
+    ],
+    "dependsOn": [
+      "idea-dynamic-universe"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T14:31:55.158Z",
+        "action": "created",
+        "note": "mercado como ecossistema + reordenacao Fase 4"
+      }
+    ],
+    "createdAt": "2026-07-28T14:31:55.158Z",
+    "updatedAt": "2026-07-28T14:31:55.158Z"
   },
   {
     "id": "idea-causal-event-log",
@@ -1218,6 +1252,40 @@
     "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
+    "id": "idea-correlation-brain",
+    "type": "idea",
+    "name": "Correlation Brain",
+    "description": "Nao so 'BTC sobe, ETH sobe' -- um Brain dedicado que responde 'quem esta puxando quem' entre BTC/ETH/SOL/TOTAL3/BTC.D/USDT.D/DXY/Nasdaq/S&P500/Gold/Bonds. Cripto nao existe isolado do macro -- este Brain formaliza o mercado como ecossistema, nao como ativos independentes. Mesma forma de BrainResult (state/confidence/reasons/evidence) que todo Brain ja usa -- nao e um sistema a parte.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:high",
+      "domain:analysis",
+      "dna-fit:87",
+      "classification:superior",
+      "maintenance-cost:medium"
+    ],
+    "dependsOn": [
+      "brain-market"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T14:31:55.159Z",
+        "action": "created",
+        "note": "mercado como ecossistema + reordenacao Fase 4"
+      }
+    ],
+    "createdAt": "2026-07-28T14:31:55.159Z",
+    "updatedAt": "2026-07-28T14:31:55.159Z"
+  },
+  {
     "id": "idea-cost-engine",
     "type": "idea",
     "name": "Cost Engine",
@@ -1253,7 +1321,7 @@
     "id": "idea-dynamic-universe",
     "type": "idea",
     "name": "Dynamic Universe",
-    "description": "Watchlist que nunca fica fixa -- pipeline reordenado na rodada '3 pilares' pra filtrar macro ANTES de olhar moeda por moeda: Market Universe -> Narrative Filter -> Sector Rotation -> Capital Flow -> Liquidity Filter -> Regime Filter -> Scanner -> Ranking -> Radar -> Brains -> Replay -> Dynamic Universe -> Watchlist. O Scanner nao deveria varrer as 1000+ moedas do universo -- deveria varrer so as ~80 que fazem sentido NAQUELE momento (regime/narrativa/fluxo de capital primeiro, simbolo depois). Por que e diferente do que o OpenAlice tem: EntityStore do OpenAlice e curadoria manual (o agente decide o que rastrear) -- esse padrao nao serve pra varrer continuamente, precisa de scoring/filtro algoritmico desde o dia 1. Inspiracao conceitual (nao copiada): o board sector-rotation.ts do OpenAlice (equities/ETF, nao cripto) faz ranking cross-sectional de retorno relativo por setor via z-score -- a metodologia de ranking e o que vale adaptar pra narrativas cripto, nao o codigo.",
+    "description": "Watchlist que nunca fica fixa -- pipeline reordenado na rodada '3 pilares' pra filtrar macro ANTES de olhar moeda por moeda: Market Universe -> Narrative Filter -> Sector Rotation -> Capital Flow -> Liquidity Filter -> Regime Filter -> Scanner -> Ranking -> Radar -> Brains -> Replay -> Dynamic Universe -> Watchlist. O Scanner nao deveria varrer as 1000+ moedas do universo -- deveria varrer so as ~80 que fazem sentido NAQUELE momento (regime/narrativa/fluxo de capital primeiro, simbolo depois). Por que e diferente do que o OpenAlice tem: EntityStore do OpenAlice e curadoria manual (o agente decide o que rastrear) -- esse padrao nao serve pra varrer continuamente, precisa de scoring/filtro algoritmico desde o dia 1. Inspiracao conceitual (nao copiada): o board sector-rotation.ts do OpenAlice (equities/ETF, nao cripto) faz ranking cross-sectional de retorno relativo por setor via z-score -- a metodologia de ranking e o que vale adaptar pra narrativas cripto, nao o codigo. Reframe pedido pelo usuario: o Dynamic Universe nao deveria procurar so moedas, deveria procurar CONTEXTOS/narrativas primeiro (AI/Gaming/RWA/Memecoins/L2/DePIN/Privacy/AI Agents/Infra/DEX/Lending/Stablecoins) -- fluxo: qual narrativa esta recebendo fluxo de capital -> quais moedas lideram essa narrativa -> qual tem maior liquidez -> qual esta mais atrasada (oportunidade de catch-up) -> qual Brain ja gosta dela. Muito diferente de so olhar BTCUSDT isolado.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -1287,7 +1355,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T11:56:15.315Z"
+    "updatedAt": "2026-07-28T14:31:55.159Z"
   },
   {
     "id": "idea-evolution-engine",
@@ -1542,7 +1610,7 @@
     "id": "idea-market-memory",
     "type": "idea",
     "name": "Market Memory",
-    "description": "Diferente do Replay: Replay responde 'o que aconteceu' rodando o histórico; Market Memory responde 'isso já aconteceu antes' -- busca por analogia num contexto atual (ex: funding 0.09 + OI +14% + range + liquidez empilhada) contra os snapshots já julgados pelo Replay, devolvendo estatística real ('58 ocorrências, 74% romperam pra cima, 12% falso rompimento, 14% lateral'). Reaproveita os snapshots que o Replay Engine já gera -- é uma consulta nova sobre dado que já existe, não uma coleta nova.",
+    "description": "Diferente do Replay: Replay responde 'o que aconteceu' rodando o histórico; Market Memory responde 'isso já aconteceu antes' -- busca por analogia num contexto atual (ex: funding 0.09 + OI +14% + range + liquidez empilhada) contra os snapshots já julgados pelo Replay, devolvendo estatística real ('58 ocorrências, 74% romperam pra cima, 12% falso rompimento, 14% lateral'). Reaproveita os snapshots que o Replay Engine já gera -- é uma consulta nova sobre dado que já existe, não uma coleta nova. Exemplo concreto dado pelo usuario, que e a melhor ilustracao do conceito ate agora: 'BTC -> ja vi este padrao 427 vezes -> em 81% houve expansao -> quando Funding>0.08 e OI crescendo, com Liquidity Sweep -> o alvo medio foi 3.2 ATR'. Isso e diferente de um backtest (que testa 1 regra especifica) -- e memoria de padrao recorrente, parecido com o que um trader experiente carrega mentalmente. Nao apareceu em nenhuma das 5 plataformas auditadas -- maior diferencial que ainda nao nasceu em lugar nenhum.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -1553,10 +1621,10 @@
     "tags": [
       "fase-4",
       "priority:medium",
-      "dna-fit:90",
       "classification:superior",
       "maintenance-cost:medium",
-      "domain:knowledge"
+      "domain:knowledge",
+      "dna-fit:93"
     ],
     "dependsOn": [
       "engine-replay"
@@ -1570,7 +1638,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T14:31:55.159Z"
   },
   {
     "id": "idea-meta-analytics",
@@ -1714,10 +1782,47 @@
     "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
+    "id": "idea-multi-timeframe-brain",
+    "type": "idea",
+    "name": "Multi-Timeframe Brain",
+    "description": "Hoje praticamente tudo trabalha em 1 timeframe. Este Brain roda a mesma leitura em 1m/5m/15m/1h/4h/1d/1w e sintetiza: alignment score (quanto os timeframes concordam), conflict score, dominant timeframe (qual esta 'no comando' agora), deteccao de cascade/compression/expansion entre janelas. Consome os Brains existentes (Structure/Liquidity/FVG/Order Block) rodados em paralelo por timeframe, nao reimplementa deteccao.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:medium",
+      "domain:analysis",
+      "dna-fit:85",
+      "classification:superior",
+      "maintenance-cost:high"
+    ],
+    "dependsOn": [
+      "brain-structure",
+      "brain-liquidity",
+      "brain-fvg",
+      "brain-order-block"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T14:31:55.159Z",
+        "action": "created",
+        "note": "mercado como ecossistema + reordenacao Fase 4"
+      }
+    ],
+    "createdAt": "2026-07-28T14:31:55.159Z",
+    "updatedAt": "2026-07-28T14:31:55.159Z"
+  },
+  {
     "id": "idea-opportunity-alice",
     "type": "idea",
     "name": "Opportunity Engine (Opportunity Alice)",
-    "description": "O cérebro de descoberta do sistema, maior que um scanner: Exchange -> 1000+ ativos -> Coleta -> Normalização -> Feature Builder -> Ranking -> Radar -> Dynamic Universe -> Brains -> Replay -> Analytics -> Experiments -> Decision (futuro). Decide continuamente quais ativos merecem processamento profundo pelos Brains, e quando -- porta de entrada do pipeline analítico. Restrições de desenho confirmadas pela auditoria 'OpenAlice como laboratório' (nenhum atalho de cópia disponível): (1) paralelismo real com limite de concorrência explícito, não paralelismo anunciado mas sequencial de fato; (2) circuit breaker escopado por recurso real, nunca uma variável compartilhada entre exchanges/endpoints diferentes; (3) anti-churn/histerese desde o primeiro princípio -- nunca trocar de ativo a cada candle; (4) teto de universo configurável desde o início. Loop vivo pedido na rodada '3 pilares' -- o Radar deixa de ser so uma entrada do pipeline e vira sistema com retroalimentacao continua: Radar descobre -> Research entende -> Brains avaliam -> Replay julga -> Analytics mede -> Experiments aprendem -> Registry registra -> Opportunity realimenta o Radar. Cada oportunidade descoberta e processada vira dado que ajusta a proxima rodada de descoberta -- nenhuma das 5 plataformas auditadas tem esse fechamento (OpenAlice nem chega a ter descoberta continua, e um scanner pontual sob demanda do LLM).",
+    "description": "O cérebro de descoberta do sistema, maior que um scanner: Exchange -> 1000+ ativos -> Coleta -> Normalização -> Feature Builder -> Ranking -> Radar -> Dynamic Universe -> Brains -> Replay -> Analytics -> Experiments -> Decision (futuro). Decide continuamente quais ativos merecem processamento profundo pelos Brains, e quando -- porta de entrada do pipeline analítico. Restrições de desenho confirmadas pela auditoria 'OpenAlice como laboratório' (nenhum atalho de cópia disponível): (1) paralelismo real com limite de concorrência explícito, não paralelismo anunciado mas sequencial de fato; (2) circuit breaker escopado por recurso real, nunca uma variável compartilhada entre exchanges/endpoints diferentes; (3) anti-churn/histerese desde o primeiro princípio -- nunca trocar de ativo a cada candle; (4) teto de universo configurável desde o início. Loop vivo pedido na rodada '3 pilares' -- o Radar deixa de ser so uma entrada do pipeline e vira sistema com retroalimentacao continua: Radar descobre -> Research entende -> Brains avaliam -> Replay julga -> Analytics mede -> Experiments aprendem -> Registry registra -> Opportunity realimenta o Radar. Cada oportunidade descoberta e processada vira dado que ajusta a proxima rodada de descoberta -- nenhuma das 5 plataformas auditadas tem esse fechamento (OpenAlice nem chega a ter descoberta continua, e um scanner pontual sob demanda do LLM). Reframe da pergunta central pedido pelo usuario: o sistema hoje (e a maioria das plataformas institucionais) responde 'o que este ativo esta fazendo' -- a pergunta que realmente importa e 'qual ativo merece minha atencao AGORA'. Pipeline final, com o scanner praticamente desaparecendo como primeira etapa: Universe -> Filtering -> Grouping -> Narrative Detection -> Sector Detection -> Correlation -> Capital Rotation -> Market Regime -> Opportunity Engine -> Brains -> Replay -> Analytics -> Decision. O 'cerebro' comeca muito antes do scanner tradicional.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -1763,7 +1868,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T11:56:15.315Z"
+    "updatedAt": "2026-07-28T14:31:55.159Z"
   },
   {
     "id": "idea-optimizer-overfit-clustering",
@@ -1884,6 +1989,39 @@
     "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
+    "id": "idea-portfolio-intelligence",
+    "type": "idea",
+    "name": "Portfolio Intelligence",
+    "description": "Lacuna adicional apontada pelo usuario: pensar o sistema como gestor de MULTIPLAS posicoes simultaneas, nao so gerador de sinal por ativo isolado -- exposicao agregada, correlacao entre posicoes abertas, VaR de portfolio, sizing que considera o que ja esta aberto. Precondicao real: so faz sentido quando o sistema operar mais de 1 posicao ao mesmo tempo (hoje: 1 por vez) -- mesma precondicao de idea-asset-profile antes de virar Market Knowledge Base. Nao domain-tagueada de proposito (e concern de execucao/risco, nao um dos 4 dominios research/knowledge/analysis/discovery).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:low",
+      "dna-fit:70",
+      "classification:complementar",
+      "maintenance-cost:high"
+    ],
+    "dependsOn": [
+      "idea-executor-state-machine"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T14:31:55.159Z",
+        "action": "created",
+        "note": "mercado como ecossistema + reordenacao Fase 4"
+      }
+    ],
+    "createdAt": "2026-07-28T14:31:55.159Z",
+    "updatedAt": "2026-07-28T14:31:55.159Z"
+  },
+  {
     "id": "idea-regime-engine",
     "type": "idea",
     "name": "Regime Engine",
@@ -1919,6 +2057,41 @@
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
     "updatedAt": "2026-07-28T11:56:15.316Z"
+  },
+  {
+    "id": "idea-replay-attribution",
+    "type": "idea",
+    "name": "Feature Attribution no Replay",
+    "description": "Replay hoje pergunta 'acertou?'. Esta ideia evolui a pergunta pra 'por que acertou, por que errou': qual Brain ajudou vs. atrapalhou a decisao final, qual estava atrasado vs. antecipou o movimento, qual evidencia especifica foi decisiva vs. inutil. Aproxima o Replay de atribuicao de valor (credit assignment), nao so validacao binaria -- extensao de computeMarginalContribution/computeRedundancy (ja existentes) pra granularidade de evidencia individual, nao so Brain inteiro. Distinto de idea-causal-event-log (que encadeia eventos causalmente); este mede contribuicao, nao sequencia.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:medium",
+      "domain:research",
+      "dna-fit:88",
+      "classification:superior",
+      "maintenance-cost:medium"
+    ],
+    "dependsOn": [
+      "engine-replay",
+      "engine-brain-analytics"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T14:31:55.159Z",
+        "action": "created",
+        "note": "mercado como ecossistema + reordenacao Fase 4"
+      }
+    ],
+    "createdAt": "2026-07-28T14:31:55.159Z",
+    "updatedAt": "2026-07-28T14:31:55.159Z"
   },
   {
     "id": "idea-risk-guard-pipeline",
@@ -2018,6 +2191,42 @@
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
     "updatedAt": "2026-07-28T11:56:15.316Z"
+  },
+  {
+    "id": "idea-weight-engine",
+    "type": "idea",
+    "name": "Weight Engine",
+    "description": "Hoje todo Brain pesa parecido na sintese (Context Fusion). O Weight Engine aprenderia os pesos estatisticamente a partir de meses de Replay + Brain Analytics real (ex: Liquidity 25% / Market 31% / Institutional 18% / Structure 14% / Order Block 7% / FVG 5%) -- pesos deixam de ser fixos, passam a ser evidencia acumulada. So muda o PESO na agregacao, nunca decide sozinho (mesmo espirito do Evolution Engine -- sugere, humano/gate estatistico aprova). Precondicao real: precisa de meses de dado julgado pelo Replay, mesma barreira que trava o Decision Brain hoje (burn-in).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:medium",
+      "domain:research",
+      "dna-fit:90",
+      "classification:superior",
+      "maintenance-cost:medium"
+    ],
+    "dependsOn": [
+      "engine-brain-analytics",
+      "engine-replay",
+      "synthesis-context-fusion"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T14:31:55.159Z",
+        "action": "created",
+        "note": "mercado como ecossistema + reordenacao Fase 4"
+      }
+    ],
+    "createdAt": "2026-07-28T14:31:55.159Z",
+    "updatedAt": "2026-07-28T14:31:55.159Z"
   },
   {
     "id": "indicator-atr",

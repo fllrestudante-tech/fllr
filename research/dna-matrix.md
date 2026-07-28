@@ -1,6 +1,6 @@
 # DNA Matrix
 
-_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T11:57:17.613Z a partir de `registry/research-objects.json` (36 objetos com DNA Fit calculado, de 76 totais). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T14:32:02.460Z a partir de `registry/research-objects.json` (42 objetos com DNA Fit calculado, de 82 totais). Não editar este arquivo à mão._
 
 Pergunta que este documento responde: **essa ideia/padrão combina com os princípios do cripto10** (Replay antes de promoção, evidência antes de decisão, Brains desacoplados, contexto antes de entrada, estatística antes de automação)? DNA Fit é alinhamento filosófico -- não é a mesma pergunta que "vale a pena construir agora" (isso é a Classificação) nem "quanto custa manter" (Custo de Manutenção). Uma ideia pode ter DNA Fit alto e ainda assim ser `NÃO NECESSÁRIO` hoje, se não houver consumidor real -- ver `research/competitor-intelligence/openalice.md` e o artifact "Engineering Patterns" pro raciocínio por trás de cada score.
 
@@ -16,15 +16,20 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 | `idea-significance-testing` | Significance Testing (bootstrap p-value de regra de entrada) | 95% | Baixo | research |
 | `pattern-complexity-rejection` | Complexity Rejection | 95% | -- | -- |
 | `pattern-no-true-event-sourcing` | Ausencia de event sourcing verdadeiro | 95% | Alto | -- |
+| `idea-market-memory` | Market Memory | 93% | Médio | knowledge |
 | `idea-confidence-engine` | Confidence Engine (generalizado) | 92% | Baixo | knowledge |
 | `idea-causal-event-log` | Causal Event Log (Replay causal) | 90% | Alto | knowledge |
 | `idea-knowledge-graph` | Knowledge Graph | 90% | Baixo | knowledge |
-| `idea-market-memory` | Market Memory | 90% | Médio | knowledge |
 | `idea-monte-carlo-mode` | Monte Carlo Mode (perturbação de candles) | 90% | Médio | research |
 | `idea-risk-guard-pipeline` | Guard Pipeline (risk veto plugável) | 90% | Médio | -- |
+| `idea-weight-engine` | Weight Engine | 90% | Médio | research |
+| `idea-capital-flow-engine` | Capital Flow Engine | 88% | Alto | analysis |
 | `idea-output-truncation-transparency` | Transparência de truncamento em outputs ("omitted: N") | 88% | Baixo | -- |
+| `idea-replay-attribution` | Feature Attribution no Replay | 88% | Médio | research |
+| `idea-correlation-brain` | Correlation Brain | 87% | Médio | analysis |
 | `idea-optimizer-overfit-clustering` | Diagnóstico de overfitting via clustering do grid de parâmetros | 87% | Médio | research |
 | `idea-feature-builder` | Feature Builder | 85% | Baixo | analysis |
+| `idea-multi-timeframe-brain` | Multi-Timeframe Brain | 85% | Alto | analysis |
 
 ## INSPIRADOR
 
@@ -41,6 +46,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 | `pattern-no-formal-fsm` | Ausencia de FSM formal | 82% | Médio | -- |
 | `idea-evolution-engine` | Evolution Engine | 78% | Médio | research |
 | `idea-order-reconciliation-audit` | Auditoria da reconciliação de ordens (verificar antes de classificar) | 72% | Baixo | -- |
+| `idea-portfolio-intelligence` | Portfolio Intelligence | 70% | Alto | -- |
 | `idea-executor-state-machine` | Executor (state machine autônoma por posição) | 65% | Médio | -- |
 
 ## EQUIVALENTE
@@ -74,7 +80,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 
 ### Research Layer
 
-`capability-auto-tuning`, `capability-research-validation`, `engine-backtest`, `engine-brain-analytics`, `engine-learning-brain`, `engine-replay`, `idea-cost-engine`, `idea-evolution-engine`, `idea-hypothesis-ledger`, `idea-meta-analytics`, `idea-monte-carlo-mode`, `idea-optimizer-overfit-clustering`, `idea-significance-testing`
+`capability-auto-tuning`, `capability-research-validation`, `engine-backtest`, `engine-brain-analytics`, `engine-learning-brain`, `engine-replay`, `idea-cost-engine`, `idea-evolution-engine`, `idea-hypothesis-ledger`, `idea-meta-analytics`, `idea-monte-carlo-mode`, `idea-optimizer-overfit-clustering`, `idea-replay-attribution`, `idea-significance-testing`, `idea-weight-engine`
 
 ### Knowledge Layer
 
@@ -82,7 +88,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 
 ### Analysis Layer
 
-`brain-fvg`, `brain-liquidity`, `brain-market`, `brain-order-block`, `brain-structure`, `capability-context-synthesis`, `capability-liquidity-smart-money`, `capability-market-classification`, `engine-decision-brain`, `engine-narrative`, `idea-feature-builder`, `idea-regime-engine`, `synthesis-context-fusion`, `synthesis-institutional-context`
+`brain-fvg`, `brain-liquidity`, `brain-market`, `brain-order-block`, `brain-structure`, `capability-context-synthesis`, `capability-liquidity-smart-money`, `capability-market-classification`, `engine-decision-brain`, `engine-narrative`, `idea-capital-flow-engine`, `idea-correlation-brain`, `idea-feature-builder`, `idea-multi-timeframe-brain`, `idea-regime-engine`, `synthesis-context-fusion`, `synthesis-institutional-context`
 
 ### Discovery Layer
 

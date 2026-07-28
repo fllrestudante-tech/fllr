@@ -119,6 +119,38 @@ knowledge|analysis|discovery`, resposta à crítica "muitos motores
 horizontais": os mesmos componentes de sempre, agrupados em 4 domínios
 claros em vez de uma lista plana de "Engines".
 
+## A pergunta central mudou (rodada mais recente)
+
+Usuário reformulou a pergunta que todo o desenho acima ainda respondia:
+não "o que este ativo está fazendo" (pergunta de indicador), mas **"qual
+ativo merece minha atenção AGORA"** (pergunta institucional). Isso
+reordenou o Opportunity Engine -- o scanner deixa de ser a 1ª etapa,
+passa a vir depois de Narrative Detection/Sector Detection/Correlation/
+Capital Rotation/Market Regime -- e adicionou 6 Research Objects novos,
+todos `type: "idea"`, `tags: ["fase-4", ...]`, zero implementação:
+`idea-capital-flow-engine` (pra onde o dinheiro está indo, distinto de
+Funding/OI), `idea-correlation-brain` (quem puxa quem entre
+BTC/ETH/SOL/TOTAL3/DXY/Nasdaq/Gold/Bonds), `idea-multi-timeframe-brain`
+(alignment/conflict score entre 1m-1w), `idea-weight-engine` (pesos dos
+Brains aprendidos estatisticamente via Replay, não fixos),
+`idea-replay-attribution` (Replay evolui de "acertou?" pra "por que
+acertou, qual Brain ajudou/atrapalhou"), `idea-portfolio-intelligence`
+(gestão multi-posição, ainda sem precondição real -- 1 posição por vez
+hoje). `idea-market-memory`, `idea-dynamic-universe`, `idea-opportunity-alice`
+e `idea-asset-profile` (Market Knowledge Base) foram enriquecidas com
+mais detalhe, não substituídas.
+
+**Ordem de Fase 4 proposta pelo usuário** (substitui a lista plana
+anterior por uma sequência antes do Decision Brain): Market Knowledge
+Base → Dynamic Universe → Capital Flow Engine → Correlation Brain →
+Regime Engine → Multi-Timeframe Brain → Opportunity Engine → Market
+Memory → Weight Engine → Decision Brain → Learning Engine. **Ainda não
+confirmada como compromisso de implementação** -- é a 3ª+ rodada seguida
+de expansão de escopo dentro do mesmo ciclo (Blueprint de 7 motores → 3
+pilares/Engineering Patterns/DNA Matrix → esta), documentada por
+disciplina de projeto, não porque a decisão de travar/começar a codar já
+foi tomada.
+
 ## Por que não virou uma reorganização de pasta
 
 `registry/` e `experiments/` já têm código real apontando pros caminhos
