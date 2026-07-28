@@ -1,6 +1,6 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T22:41:39.247Z a partir de `registry/research-objects.json` (86 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T23:06:26.498Z a partir de `registry/research-objects.json` (106 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
 
@@ -10,12 +10,32 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 
 | capability | status | implementado por |
 |---|---|---|
+| **Adoption Matrix** | production | `capability-feature-registry` (production) |
 | **Auto-tuning** | production | `engine-backtest` (production) |
+| **Capability Map** | production | `capability-feature-registry` (production) |
+| **Competitor Intelligence** | production | -- |
+| **Configuration** | production | -- |
+| **Context Builder** | production | `capability-knowledge-resolver` (production) |
 | **Context Synthesis** | production | `synthesis-context-fusion` (production) |
+| **Data Collectors** | production | -- |
+| **DNA Matrix** | production | `capability-feature-registry` (production) |
+| **Engineering Patterns** | production | `capability-feature-registry` (production) |
+| **Event Log** | production | `capability-market-database` (production) |
+| **Experiments Engine** | production | `engine-replay` (production), `engine-brain-analytics` (production) |
+| **Feature Registry** | production | -- |
+| **Health Dashboard** | production | `capability-market-database` (production) |
+| **Knowledge Resolver** | production | `idea-asset-profile` (research) |
 | **Liquidity & Smart Money** | production | `brain-liquidity` (production), `brain-fvg` (production), `brain-order-block` (production), `synthesis-institutional-context` (production) |
 | **Market Classification** | production | `brain-market` (production), `brain-structure` (production), `brain-liquidity` (production) |
+| **Market Database** | production | -- |
+| **Monitoring (Data Confidence / Freshness / Incidents)** | production | `capability-market-database` (production) |
 | **Opportunity Discovery** | idea | `idea-opportunity-alice` (idea) |
+| **Order Execution** | production | `capability-risk-management` (production) |
 | **Research & Validation** | production | `engine-replay` (production), `engine-brain-analytics` (production), `experiment-fvg-accuracy` (validated), `experiment-fvg-redundancy` (research), `experiment-structure-liquidity-combo` (research), `experiment-structure-liquidity-fvg-combo` (research) |
+| **Risk Management** | production | -- |
+| **Scheduler** | production | -- |
+| **Signal Registry** | research | -- |
+| **Statistical Resolver** | research | `idea-asset-profile` (research) |
 
 ## Ideias extraídas de auditorias de concorrentes
 

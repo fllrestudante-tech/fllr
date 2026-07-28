@@ -189,18 +189,44 @@ array flat (raramente populado de fato pelos Brains atuais). A ideia é
 quebrar a interface de quem já lê `evidence` hoje (ninguém lê de forma
 estruturada ainda). Registrado como `idea-structured-evidence`.
 
-## Capability Map
+## Capability Map — documento central
 
 `capability-map.md` -- **gerado**, `npm run capability-map` (mesma
-disciplina de `adoption-matrix.md`/`dna-matrix.md`). Pergunta diferente
-das outras duas: não "de onde veio" nem "combina com os princípios", mas
-**onde é que isso mora arquiteturalmente, e em que estágio está** --
-existe pra que o Registry (85+ Research Objects e crescendo) não vire um
-mapa escondido que só quem escreveu entende. Organiza os 4 domínios já
-existentes (`domain:knowledge|analysis|discovery|research`) em árvore,
-cada item agrupado por estágio derivado do `status` do Registry
-(Implemented/Research/Roadmap/Idea/Deprecated) -- nenhum campo novo,
-só leitura do que já existe.
+disciplina de `adoption-matrix.md`/`dna-matrix.md`). Elevado a documento
+central do projeto, mesmo nível do Blueprint de Pesquisa Contínua, da DNA
+Matrix e do próprio Feature Registry -- publicado também como artifact
+visual: [Cripto10 — Capability Map](https://claude.ai/code/artifact/4bbf9d11-9365-48a0-b59a-26db37e9b9de).
+
+Pergunta diferente das outras duas: não "de onde veio" (Adoption Matrix)
+nem "combina com os princípios" (DNA Matrix), mas **"o que o sistema é
+capaz de fazer?"**. Organizado em **6 domínios** (Knowledge/Analysis/
+Discovery/Execution/Research/Infrastructure), cada um com sub-domínios
+(`capmap-domain:*`/`capmap-subdomain:*` -- taxonomia própria deste
+documento, deliberadamente separada da `domain:*` de 4 domínios que a
+DNA Matrix usa; documentos diferentes podem organizar o mesmo Registry de
+formas diferentes, sem forçar concordância entre eles). Cada capability
+vira um cartão com Research Object/Capability Stage/Status/Maturity/
+Depends On/Consumer (derivado via `listConsumers`, nunca armazenado)/
+Replay Validated/Production.
+
+**Capability Stage** -- ciclo de vida próprio, independente do `status`
+cru do Registry: 💡 Idea · 📚 Research · 🧪 Prototype · 🔁 Replay · ✅
+Validated · 🚀 Production · 🛠 Deprecated (derivado de `status`+`maturity`
+existentes, nenhum campo novo).
+
+Esta rodada também registrou 20 Research Objects novos `type: "capability"`
+pras capacidades REAIS de Execution/Infrastructure/Research-tooling que
+só existiam como código, nunca tinham virado Research Object (Risk
+Management, Order Execution, Experiments Engine, Feature Registry, Data
+Collectors, Market Database, Scheduler, Health Dashboard, Monitoring,
+Configuration, Knowledge Resolver/Statistical Resolver/Context Builder/
+Signal Registry, e as próprias Adoption/DNA Matrix/Engineering
+Patterns/Capability Map como capabilities de si mesmas) -- 106 Research
+Objects total. Achado honesto registrado: "Event Bus" foi rotulado
+`capability-event-log` de propósito -- cripto10 tem jornal de auditoria
+append-only (`events_log`), não um event bus/pub-sub de verdade (e nunca
+precisou, ver achado da auditoria OpenAlice: o próprio OpenAlice
+construiu e removeu o event bus que tinha).
 
 ## Por que não virou uma reorganização de pasta
 

@@ -13,7 +13,9 @@
     "maturity": 2,
     "tags": [
       "brain",
-      "domain:analysis"
+      "domain:analysis",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Market Analysis"
     ],
     "dependsOn": [
       "feature-fair-value-gap",
@@ -36,7 +38,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "brain-liquidity",
@@ -52,7 +54,9 @@
     "maturity": 2,
     "tags": [
       "brain",
-      "domain:analysis"
+      "domain:analysis",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Market Analysis"
     ],
     "dependsOn": [
       "feature-equal-highs-lows",
@@ -73,7 +77,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "brain-market",
@@ -96,7 +100,9 @@
     "tags": [
       "brain",
       "validated-by:openalice",
-      "domain:analysis"
+      "domain:analysis",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Market Analysis"
     ],
     "dependsOn": [],
     "metrics": {
@@ -114,7 +120,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "brain-order-block",
@@ -130,7 +136,9 @@
     "maturity": 2,
     "tags": [
       "brain",
-      "domain:analysis"
+      "domain:analysis",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Market Analysis"
     ],
     "dependsOn": [
       "feature-order-block-detection",
@@ -153,7 +161,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "brain-structure",
@@ -169,7 +177,9 @@
     "maturity": 2,
     "tags": [
       "brain",
-      "domain:analysis"
+      "domain:analysis",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Market Analysis"
     ],
     "dependsOn": [
       "feature-bos",
@@ -190,7 +200,38 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
+  },
+  {
+    "id": "capability-adoption-matrix",
+    "type": "capability",
+    "name": "Adoption Matrix",
+    "description": "scripts/adoptionMatrix.js -- gera research/adoption-matrix.md a partir do Registry: ideias de auditoria de concorrentes por prioridade, Blueprint de Fase 4, descartados, componentes validados. Gerado, nunca editado à mão.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:research",
+      "capmap-subdomain:Intelligence"
+    ],
+    "dependsOn": [
+      "capability-feature-registry"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "capability-auto-tuning",
@@ -223,6 +264,126 @@
     "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
+    "id": "capability-capability-map",
+    "type": "capability",
+    "name": "Capability Map",
+    "description": "scripts/capabilityMap.js -- gera research/capability-map.md, este próprio documento. Responde 'o que o sistema é capaz de fazer', organizado em 6 domínios (Knowledge/Analysis/Discovery/Execution/Research/Infrastructure) com sub-domínios, por Capability Stage (Idea/Research/Prototype/Replay/Validated/Production/Deprecated).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "capability",
+      "capmap-domain:research",
+      "capmap-subdomain:Intelligence"
+    ],
+    "dependsOn": [
+      "capability-feature-registry"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-competitor-intelligence",
+    "type": "capability",
+    "name": "Competitor Intelligence",
+    "description": "research/competitor-intelligence/*.md -- documentos vivos por plataforma auditada (OpenAlice, Freqtrade, Hummingbot, Lean/QuantConnect, Jesse), cada um linkando os artifacts completos e as ideias extraídas com id do Registry.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:research",
+      "capmap-subdomain:Intelligence"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-configuration",
+    "type": "capability",
+    "name": "Configuration",
+    "description": "config.js -- única fonte de configuração (env vars com fallback), inclui structure/replay/sla/tuningBounds. Nota real desta sessão: o coletor de produção hoje rastreia BTCUSDT de fato, embora config.symbol tenha default SOLUSDT -- checar SELECT DISTINCT symbol antes de assumir.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:infrastructure",
+      "capmap-subdomain:Runtime"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-context-builder",
+    "type": "capability",
+    "name": "Context Builder",
+    "description": "lib/knowledgeBase/contextBuilder.js -- única API que os *BrainData.js chamam pra obter parâmetro de execução; nunca a tabela/Resolver/Signals diretamente. Combina Knowledge Resolver + Signal Registry (hoje sempre no-op, sem sinal real cadastrado).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Knowledge Services"
+    ],
+    "dependsOn": [
+      "capability-knowledge-resolver"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.224Z"
+  },
+  {
     "id": "capability-context-synthesis",
     "type": "capability",
     "name": "Context Synthesis",
@@ -251,6 +412,251 @@
     ],
     "createdAt": "2026-07-28T10:08:47.044Z",
     "updatedAt": "2026-07-28T11:56:15.316Z"
+  },
+  {
+    "id": "capability-data-collectors",
+    "type": "capability",
+    "name": "Data Collectors",
+    "description": "lib/collectors/* + scripts/collector.js/fearGreedCollector.js/btcDominanceCollector.js/knowledgeCollector.js -- coleta contínua de candles/funding/OI/ticker/long-short-ratio (Bybit) + Fear&Greed/BTC Dominance/CoinMarketCal/FRED, persistidos em data/market.db.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "capability",
+      "capmap-domain:infrastructure",
+      "capmap-subdomain:Data"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-dna-matrix",
+    "type": "capability",
+    "name": "DNA Matrix",
+    "description": "scripts/dnaMatrix.js -- gera research/dna-matrix.md: DNA Fit (alinhamento filosófico 0-100%), classificação (SUPERIOR/INSPIRADOR/COMPLEMENTAR/EQUIVALENTE/NÃO NECESSÁRIO/CONTRÁRIO AOS PRINCÍPIOS), custo de manutenção, domínios (4 camadas research/knowledge/analysis/discovery).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:research",
+      "capmap-subdomain:Intelligence"
+    ],
+    "dependsOn": [
+      "capability-feature-registry"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-engineering-patterns",
+    "type": "capability",
+    "name": "Engineering Patterns",
+    "description": "14 Research Objects type:pattern extraídos do OpenAlice (Immutable Decision Ledger, Capability Isolation, Anti-Corruption Layer, Progressive Commitment, Trust Verification + 4 novos + 4 decisões que o OpenAlice NÃO tomou e por quê). Camada acima da auditoria de funcionalidades -- padrão de engenharia, não módulo.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "capability",
+      "capmap-domain:research",
+      "capmap-subdomain:Intelligence"
+    ],
+    "dependsOn": [
+      "capability-feature-registry"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-event-log",
+    "type": "capability",
+    "name": "Event Log",
+    "description": "events_log (lib/infra/db.js::insertEvent) -- jornal de auditoria append-only. IMPORTANTE: é trilha de auditoria, não um event bus/pub-sub de verdade (cripto10 nunca teve nem precisou de um -- ver achado da auditoria OpenAlice: o próprio OpenAlice removeu o event bus que tinha).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 2,
+    "tags": [
+      "capability",
+      "capmap-domain:infrastructure",
+      "capmap-subdomain:Data"
+    ],
+    "dependsOn": [
+      "capability-market-database"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-experiments-engine",
+    "type": "capability",
+    "name": "Experiments Engine",
+    "description": "lib/experiments/experimentRunner.js + scripts/experiments.js -- roda definições curadas (experiments/definitions.json) sobre snapshots do Replay, cada resultado vira Research Object type:experiment. Formaliza as 4 perguntas estatísticas centrais do projeto (combo acerta quanto/Brain sozinho acerta quanto/Brain a mais ajuda ou atrapalha/um Brain já explica o outro).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
+    ],
+    "dependsOn": [
+      "engine-replay",
+      "engine-brain-analytics"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-feature-registry",
+    "type": "capability",
+    "name": "Feature Registry",
+    "description": "lib/registry/* + scripts/registry.js -- catálogo central de Research Objects (Brains/Features/Ideas/Patterns/Capabilities/Experiments...), forma comum, dependsOn/listConsumers derivados sob consulta. A infraestrutura que sustenta este próprio Capability Map, a DNA Matrix e a Adoption Matrix.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-health-dashboard",
+    "type": "capability",
+    "name": "Health Dashboard",
+    "description": "scripts/health.js -- seções de Replay Engine, Research Dashboard (maturidade por Brain), Context Fusion, cobertura/frescor de dado, tudo derivado do que já existe (nenhuma leitura duplicada).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:infrastructure",
+      "capmap-subdomain:Runtime"
+    ],
+    "dependsOn": [
+      "capability-market-database"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-knowledge-resolver",
+    "type": "capability",
+    "name": "Knowledge Resolver",
+    "description": "lib/knowledgeBase/resolver.js -- interpreta a Asset Profile (fatos) e devolve contexto nomeado por Brain (StructureContext/LiquidityContext/FvgContext/OrderBlockContext). Consumido de verdade pela Context Builder, que os 4 *BrainData.js chamam.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Knowledge Services"
+    ],
+    "dependsOn": [
+      "idea-asset-profile"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.222Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.222Z",
+    "updatedAt": "2026-07-28T23:03:45.224Z"
   },
   {
     "id": "capability-liquidity-smart-money",
@@ -318,6 +724,66 @@
     "updatedAt": "2026-07-28T11:56:15.316Z"
   },
   {
+    "id": "capability-market-database",
+    "type": "capability",
+    "name": "Market Database",
+    "description": "data/market.db (SQLite via better-sqlite3) + lib/infra/db.js (runMigrations, schema_migrations) + lib/infra/migrations/*.sql (12 migrações até agora). Fonte de verdade única pro histórico real consumido por Replay/Backtest/Asset Statistics -- 'Market Database primeiro', não arquivo solto.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "capability",
+      "capmap-domain:infrastructure",
+      "capmap-subdomain:Data"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-monitoring",
+    "type": "capability",
+    "name": "Monitoring (Data Confidence / Freshness / Incidents)",
+    "description": "lib/dataConfidenceScore.js (coverage+gaps+sanity por domínio) + lib/freshnessScore.js (SLA de recência) + lib/systemIncidents.js (abre/fecha incidente com resync). Market Quality Engine -- responde 'o dado em que estamos confiando é bom o bastante'.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:infrastructure",
+      "capmap-subdomain:Runtime"
+    ],
+    "dependsOn": [
+      "capability-market-database"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
     "id": "capability-opportunity-discovery",
     "type": "capability",
     "name": "Opportunity Discovery",
@@ -331,7 +797,9 @@
     "maturity": 0,
     "tags": [
       "capability",
-      "domain:discovery"
+      "domain:discovery",
+      "capmap-domain:discovery",
+      "capmap-subdomain:Universe Management"
     ],
     "dependsOn": [
       "idea-opportunity-alice"
@@ -345,7 +813,38 @@
       }
     ],
     "createdAt": "2026-07-28T10:08:47.044Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-order-execution",
+    "type": "capability",
+    "name": "Order Execution",
+    "description": "lib/bybit.js + index.js::cycle -- coloca/gerencia ordens reais na Bybit Demo Trading (stage->commit real, TP escalonado, trailing stop ATR-adaptativo, break even). Único caminho do sistema que efetivamente move dinheiro (mesmo que em conta demo) -- todos os Brains são observacionais, não decidem trade hoje.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "capability",
+      "capmap-domain:execution",
+      "capmap-subdomain:Trading"
+    ],
+    "dependsOn": [
+      "capability-risk-management"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "capability-research-validation",
@@ -381,6 +880,124 @@
     ],
     "createdAt": "2026-07-28T10:08:47.044Z",
     "updatedAt": "2026-07-28T11:56:15.316Z"
+  },
+  {
+    "id": "capability-risk-management",
+    "type": "capability",
+    "name": "Risk Management",
+    "description": "lib/risk.js -- sizing por risco fixo (riskPerTradePct), stop loss/take profit calculados a partir de ATR ou %, arredondamento por tickSize/qtyStep real da Bybit (lib/bybit.js::getInstrumentInfo), circuit breaker (loss streak/drawdown diário/volatilidade extrema). Componente mais maduro da plataforma -- portão binário hoje, evolução planejada pra recomendação graduada de exposição depois do Market Brain.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 4,
+    "tags": [
+      "capability",
+      "capmap-domain:execution",
+      "capmap-subdomain:Trading"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-scheduler",
+    "type": "capability",
+    "name": "Scheduler",
+    "description": "scripts/supervisor.js -- loop principal com backoff (lib/backoff.js), roda coleta/health/replay/backtest em cadência, recuperação automática após queda (Boot Recovery, incidente real de 2026-07-23 documentado).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "production",
+    "maturity": 3,
+    "tags": [
+      "capability",
+      "capmap-domain:infrastructure",
+      "capmap-subdomain:Runtime"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.226Z"
+  },
+  {
+    "id": "capability-signal-registry",
+    "type": "capability",
+    "name": "Signal Registry",
+    "description": "lib/knowledgeBase/signals.js -- registry puro (registerSignal/getSignal/listSignals), nasce vazio de propósito. Existe como encaixe pro Capital Flow Engine/Regime Engine/Correlation Brain (todos idea) registrarem sinais reais no futuro, sem exigir mudança na Context Builder.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "research",
+    "maturity": 1,
+    "tags": [
+      "capability",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Knowledge Services"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.225Z"
+  },
+  {
+    "id": "capability-statistical-resolver",
+    "type": "capability",
+    "name": "Statistical Resolver",
+    "description": "lib/knowledgeBase/statisticalResolver.js -- transforma Statistical Fact em Interpretation (Observation->Interpretation->Confidence->Evidence). Implementado e testado, mas SEM consumidor real ainda (nenhum Brain chama isso) -- status research, não production, até haver plano de validação via Replay/Experiments.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "research",
+    "maturity": 1,
+    "tags": [
+      "capability",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Knowledge Services"
+    ],
+    "dependsOn": [
+      "idea-asset-profile"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-28T23:03:45.224Z",
+        "action": "created",
+        "note": "Capability Map vira documento central -- capacidades reais de Execution/Infrastructure/Research-tooling registradas"
+      }
+    ],
+    "createdAt": "2026-07-28T23:03:45.224Z",
+    "updatedAt": "2026-07-28T23:03:45.224Z"
   },
   {
     "id": "engine-backtest",
@@ -448,7 +1065,9 @@
     "maturity": 2,
     "tags": [
       "engine",
-      "domain:research"
+      "domain:research",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
     ],
     "dependsOn": [
       "engine-replay"
@@ -461,7 +1080,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "engine-decision-brain",
@@ -597,7 +1216,9 @@
       "validated-by:hummingbot",
       "validated-by:lean",
       "validated-by:jesse",
-      "domain:research"
+      "domain:research",
+      "capmap-domain:execution",
+      "capmap-subdomain:Validation"
     ],
     "dependsOn": [
       "brain-market",
@@ -616,7 +1237,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "engine-telegram-radar",
@@ -633,7 +1254,9 @@
     "tags": [
       "collector",
       "manual",
-      "domain:discovery"
+      "domain:discovery",
+      "capmap-domain:discovery",
+      "capmap-subdomain:Opportunity Discovery"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -644,7 +1267,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "experiment-fvg-accuracy",
@@ -1118,7 +1741,9 @@
       "maintenance-cost:medium",
       "domain:knowledge",
       "pilar-3-pilares",
-      "priority:high"
+      "priority:high",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Asset Knowledge"
     ],
     "dependsOn": [
       "idea-dynamic-universe"
@@ -1142,7 +1767,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T20:32:30.495Z"
+    "updatedAt": "2026-07-28T23:03:45.224Z"
   },
   {
     "id": "idea-capital-flow-engine",
@@ -1162,7 +1787,9 @@
       "domain:analysis",
       "dna-fit:88",
       "classification:superior",
-      "maintenance-cost:high"
+      "maintenance-cost:high",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Market Analysis"
     ],
     "dependsOn": [
       "idea-dynamic-universe"
@@ -1176,7 +1803,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.158Z",
-    "updatedAt": "2026-07-28T14:31:55.158Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "idea-causal-event-log",
@@ -1203,7 +1830,9 @@
       "dna-fit:90",
       "classification:superior",
       "maintenance-cost:high",
-      "domain:knowledge"
+      "domain:knowledge",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Asset Knowledge"
     ],
     "dependsOn": [
       "engine-replay",
@@ -1218,7 +1847,7 @@
       }
     ],
     "createdAt": "2026-07-28T11:12:15.394Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.224Z"
   },
   {
     "id": "idea-confidence-engine",
@@ -1245,7 +1874,9 @@
       "dna-fit:92",
       "classification:superior",
       "maintenance-cost:low",
-      "domain:knowledge"
+      "domain:knowledge",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Asset Knowledge"
     ],
     "dependsOn": [
       "synthesis-context-fusion"
@@ -1259,7 +1890,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.224Z"
   },
   {
     "id": "idea-correlation-brain",
@@ -1279,7 +1910,9 @@
       "domain:analysis",
       "dna-fit:87",
       "classification:superior",
-      "maintenance-cost:medium"
+      "maintenance-cost:medium",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Market Analysis"
     ],
     "dependsOn": [
       "brain-market"
@@ -1293,7 +1926,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T14:31:55.159Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "idea-cost-engine",
@@ -1353,7 +1986,9 @@
       "classification:superior",
       "maintenance-cost:high",
       "domain:discovery",
-      "pilar-3-pilares"
+      "pilar-3-pilares",
+      "capmap-domain:discovery",
+      "capmap-subdomain:Opportunity Discovery"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1365,7 +2000,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T14:31:55.159Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-evolution-engine",
@@ -1385,7 +2020,9 @@
       "dna-fit:78",
       "classification:complementar",
       "maintenance-cost:medium",
-      "domain:research"
+      "domain:research",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
     ],
     "dependsOn": [
       "engine-brain-analytics",
@@ -1400,7 +2037,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-executor-state-machine",
@@ -1458,7 +2095,9 @@
       "dna-fit:85",
       "classification:superior",
       "maintenance-cost:low",
-      "domain:analysis"
+      "domain:analysis",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Context"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1470,7 +2109,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "idea-hypothesis-builder",
@@ -1490,7 +2129,9 @@
       "domain:research",
       "dna-fit:90",
       "classification:superior",
-      "maintenance-cost:medium"
+      "maintenance-cost:medium",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
     ],
     "dependsOn": [
       "idea-hypothesis-ledger",
@@ -1505,7 +2146,7 @@
       }
     ],
     "createdAt": "2026-07-28T20:32:30.495Z",
-    "updatedAt": "2026-07-28T20:32:42.542Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-hypothesis-ledger",
@@ -1543,7 +2184,9 @@
       "dna-fit:98",
       "classification:superior",
       "maintenance-cost:medium",
-      "domain:research"
+      "domain:research",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
     ],
     "dependsOn": [
       "engine-replay",
@@ -1560,7 +2203,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.502Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-kelly-edge-sizing",
@@ -1637,7 +2280,9 @@
       "dna-fit:90",
       "classification:superior",
       "maintenance-cost:low",
-      "domain:knowledge"
+      "domain:knowledge",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Asset Knowledge"
     ],
     "dependsOn": [],
     "metrics": {},
@@ -1649,7 +2294,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.224Z"
   },
   {
     "id": "idea-market-memory",
@@ -1669,7 +2314,9 @@
       "classification:superior",
       "maintenance-cost:medium",
       "domain:knowledge",
-      "dna-fit:93"
+      "dna-fit:93",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Asset Knowledge"
     ],
     "dependsOn": [
       "engine-replay"
@@ -1683,7 +2330,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T14:31:55.159Z"
+    "updatedAt": "2026-07-28T23:03:45.224Z"
   },
   {
     "id": "idea-meta-analytics",
@@ -1710,7 +2357,9 @@
       "dna-fit:82",
       "classification:complementar",
       "maintenance-cost:low",
-      "domain:research"
+      "domain:research",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
     ],
     "dependsOn": [
       "engine-brain-analytics",
@@ -1726,7 +2375,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.059Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-metric-models",
@@ -1746,7 +2395,9 @@
       "domain:knowledge",
       "dna-fit:82",
       "classification:complementar",
-      "maintenance-cost:medium"
+      "maintenance-cost:medium",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Asset Knowledge"
     ],
     "dependsOn": [
       "idea-asset-profile"
@@ -1760,7 +2411,7 @@
       }
     ],
     "createdAt": "2026-07-28T20:32:30.495Z",
-    "updatedAt": "2026-07-28T20:32:42.542Z"
+    "updatedAt": "2026-07-28T23:03:45.224Z"
   },
   {
     "id": "idea-monte-carlo-mode",
@@ -1788,7 +2439,9 @@
       "dna-fit:90",
       "classification:superior",
       "maintenance-cost:medium",
-      "domain:research"
+      "domain:research",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
     ],
     "dependsOn": [
       "engine-replay"
@@ -1802,7 +2455,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-multi-exchange-plugin-pattern",
@@ -1878,7 +2531,9 @@
       "domain:analysis",
       "dna-fit:85",
       "classification:superior",
-      "maintenance-cost:high"
+      "maintenance-cost:high",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Market Analysis"
     ],
     "dependsOn": [
       "brain-structure",
@@ -1895,7 +2550,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T14:31:55.159Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "idea-opportunity-alice",
@@ -1932,7 +2587,9 @@
       "classification:superior",
       "maintenance-cost:high",
       "domain:discovery",
-      "pilar-3-pilares"
+      "pilar-3-pilares",
+      "capmap-domain:discovery",
+      "capmap-subdomain:Opportunity Discovery"
     ],
     "dependsOn": [
       "idea-dynamic-universe",
@@ -1947,7 +2604,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
-    "updatedAt": "2026-07-28T14:31:55.159Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-optimizer-overfit-clustering",
@@ -1975,7 +2632,9 @@
       "dna-fit:87",
       "classification:superior",
       "maintenance-cost:medium",
-      "domain:research"
+      "domain:research",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
     ],
     "dependsOn": [
       "engine-backtest"
@@ -1989,7 +2648,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-order-reconciliation-audit",
@@ -2084,7 +2743,9 @@
       "priority:low",
       "dna-fit:70",
       "classification:complementar",
-      "maintenance-cost:high"
+      "maintenance-cost:high",
+      "capmap-domain:execution",
+      "capmap-subdomain:Trading"
     ],
     "dependsOn": [
       "idea-executor-state-machine"
@@ -2098,7 +2759,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T14:31:55.159Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-regime-engine",
@@ -2118,7 +2779,9 @@
       "dna-fit:85",
       "classification:complementar",
       "maintenance-cost:medium",
-      "domain:analysis"
+      "domain:analysis",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Context"
     ],
     "dependsOn": [
       "brain-market",
@@ -2135,7 +2798,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "idea-replay-attribution",
@@ -2155,7 +2818,9 @@
       "domain:research",
       "dna-fit:88",
       "classification:superior",
-      "maintenance-cost:medium"
+      "maintenance-cost:medium",
+      "capmap-domain:execution",
+      "capmap-subdomain:Validation"
     ],
     "dependsOn": [
       "engine-replay",
@@ -2170,7 +2835,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T14:31:55.159Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-risk-guard-pipeline",
@@ -2255,7 +2920,9 @@
       "dna-fit:95",
       "classification:superior",
       "maintenance-cost:low",
-      "domain:research"
+      "domain:research",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method"
     ],
     "dependsOn": [
       "engine-replay"
@@ -2269,7 +2936,7 @@
       }
     ],
     "createdAt": "2026-07-28T02:26:33.503Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-statistical-narrative",
@@ -2289,7 +2956,9 @@
       "domain:knowledge",
       "dna-fit:80",
       "classification:complementar",
-      "maintenance-cost:medium"
+      "maintenance-cost:medium",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Asset Knowledge"
     ],
     "dependsOn": [
       "idea-asset-profile"
@@ -2303,7 +2972,7 @@
       }
     ],
     "createdAt": "2026-07-28T20:32:30.493Z",
-    "updatedAt": "2026-07-28T20:32:42.541Z"
+    "updatedAt": "2026-07-28T23:03:45.224Z"
   },
   {
     "id": "idea-structured-evidence",
@@ -2323,7 +2992,9 @@
       "domain:analysis",
       "dna-fit:85",
       "classification:complementar",
-      "maintenance-cost:low"
+      "maintenance-cost:low",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Context"
     ],
     "dependsOn": [
       "idea-weight-engine",
@@ -2338,7 +3009,7 @@
       }
     ],
     "createdAt": "2026-07-28T22:41:37.825Z",
-    "updatedAt": "2026-07-28T22:41:37.825Z"
+    "updatedAt": "2026-07-28T23:03:45.226Z"
   },
   {
     "id": "idea-weight-engine",
@@ -2358,7 +3029,9 @@
       "domain:research",
       "dna-fit:90",
       "classification:superior",
-      "maintenance-cost:medium"
+      "maintenance-cost:medium",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Context"
     ],
     "dependsOn": [
       "engine-brain-analytics",
@@ -2374,7 +3047,7 @@
       }
     ],
     "createdAt": "2026-07-28T14:31:55.159Z",
-    "updatedAt": "2026-07-28T14:31:55.159Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "indicator-atr",
@@ -3054,7 +3727,9 @@
     "tags": [
       "synthesis",
       "validated-by:openalice",
-      "domain:analysis"
+      "domain:analysis",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Context"
     ],
     "dependsOn": [
       "brain-market",
@@ -3076,7 +3751,7 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   },
   {
     "id": "synthesis-institutional-context",
@@ -3092,7 +3767,9 @@
     "maturity": 2,
     "tags": [
       "synthesis",
-      "domain:analysis"
+      "domain:analysis",
+      "capmap-domain:analysis",
+      "capmap-subdomain:Context"
     ],
     "dependsOn": [
       "brain-liquidity",
@@ -3114,6 +3791,6 @@
       }
     ],
     "createdAt": "2026-07-27T00:32:42.450Z",
-    "updatedAt": "2026-07-28T11:56:15.316Z"
+    "updatedAt": "2026-07-28T23:03:45.225Z"
   }
 ]
