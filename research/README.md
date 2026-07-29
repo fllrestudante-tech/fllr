@@ -179,6 +179,27 @@ Statistical Resolver → Signals → Brain (Feature Builder entra entre
 Statistics e Resolver -- ver comentário atualizado em
 `lib/knowledgeBase/statisticalResolver.js`).
 
+**Status real (2026-07-29): passos 1-3 entregues** (Market Knowledge Base,
+Asset Statistics, Feature Builder v1 -- 8 Features, 855 testes, ver
+`idea-feature-builder`). **Passos 4-6 (Resolver↔Replay, validação
+quantitativa, consumo por Brain) deliberadamente NÃO iniciados** --
+reafirmado explicitamente pelo usuário como princípio: "nenhuma Feature
+deve influenciar decisões de trading" até existir uma rodada dedicada e
+um plano completo de validação. Escopo dessa rodada futura já registrado
+como `idea-feature-replay-validation` (ainda `idea`, sem plano de código),
+com as 5 perguntas que o plano dedicado precisará responder quando vier:
+(1) como reconstruir o estado das Features ponto-a-ponto (point-in-time),
+não só o snapshot atual; (2) como evitar look-ahead bias na recomputação;
+(3) como registrar o resultado de cada Feature em cada replay pra análise
+posterior; (4) como medir contribuição individual (Feature Attribution,
+não só PnL final -- `idea-replay-attribution`); (5) critérios estatísticos
+mínimos pra promover uma Feature de `research` → `replay-validated` →
+consumo por Brain (vocabulário de Feature Lifecycle já documentado
+abaixo). Disciplina de 5 passos confirmada: **construir infraestrutura
+(feito) → produzir conhecimento (feito) → produzir Features (feito) →
+validar quantitativamente (não iniciado) → só então Brain consome (não
+iniciado)**.
+
 ## Knowledge Ecosystem (reframe -- Asset é só 1 de N domínios)
 
 `idea-knowledge-ecosystem`: o verdadeiro centro da Knowledge Base não é

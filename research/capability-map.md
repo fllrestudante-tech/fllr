@@ -1,6 +1,6 @@
 # Cripto10 — Capability Map
 
-_Gerado automaticamente por `npm run capability-map` em 2026-07-29T13:25:45.954Z a partir de `registry/research-objects.json` (107 Research Objects, 57 mapeados). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run capability-map` em 2026-07-29T14:13:33.146Z a partir de `registry/research-objects.json` (108 Research Objects, 58 mapeados). Não editar este arquivo à mão._
 
 ## Objetivo
 
@@ -104,7 +104,7 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `engine-replay`, `idea-market-memory` |
-| Consumer | `pattern-no-true-event-sourcing` |
+| Consumer | `idea-feature-replay-validation`, `pattern-no-true-event-sourcing` |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -350,7 +350,7 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Status | research |
 | Maturity | 1 |
 | Depends On | `idea-asset-profile`, `capability-statistical-resolver` |
-| Consumer | `idea-opportunity-alice` |
+| Consumer | `idea-feature-replay-validation`, `idea-opportunity-alice` |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -556,7 +556,7 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Status | production |
 | Maturity | 2 |
 | Depends On | `brain-market`, `brain-structure`, `brain-liquidity`, `synthesis-context-fusion`, `brain-fvg`, `brain-order-block`, `synthesis-institutional-context` |
-| Consumer | `capability-experiments-engine`, `capability-research-validation`, `engine-brain-analytics`, `engine-decision-brain`, `idea-causal-event-log`, `idea-evolution-engine`, `idea-hypothesis-ledger`, `idea-market-memory`, `idea-meta-analytics`, `idea-monte-carlo-mode`, `idea-replay-attribution`, `idea-significance-testing`, `idea-weight-engine`, `pattern-no-true-event-sourcing` |
+| Consumer | `capability-experiments-engine`, `capability-research-validation`, `engine-brain-analytics`, `engine-decision-brain`, `idea-causal-event-log`, `idea-evolution-engine`, `idea-feature-replay-validation`, `idea-hypothesis-ledger`, `idea-market-memory`, `idea-meta-analytics`, `idea-monte-carlo-mode`, `idea-replay-attribution`, `idea-significance-testing`, `idea-weight-engine`, `pattern-no-true-event-sourcing` |
 | Replay Validated | ❌ |
 | Production | ✅ |
 
@@ -572,7 +572,7 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Status | idea |
 | Maturity | 0 |
 | Depends On | `engine-replay`, `engine-brain-analytics` |
-| Consumer | `idea-structured-evidence` |
+| Consumer | `idea-feature-replay-validation`, `idea-structured-evidence` |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -710,6 +710,22 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Replay Validated | ❌ |
 | Production | ✅ |
 
+#### 💡 Feature Replay Validation (rodada dedicada, ainda não iniciada)
+
+| Campo | Valor |
+|---|---|
+| Research Object | `idea-feature-replay-validation` |
+| Capability Stage | 💡 Idea |
+| Nature | ⚙️ Operational (executa) |
+| Criticality | 🔵 Experimental |
+| Proof | Reasoning |
+| Status | idea |
+| Maturity | 0 |
+| Depends On | `idea-feature-builder`, `engine-replay`, `idea-causal-event-log`, `idea-replay-attribution`, `idea-hypothesis-ledger` |
+| Consumer | -- |
+| Replay Validated | ❌ |
+| Production | ❌ |
+
 #### 📚 Hypothesis Ledger (Trading-as-Git)
 
 | Campo | Valor |
@@ -722,7 +738,7 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Status | backlog |
 | Maturity | 0 |
 | Depends On | `engine-replay`, `engine-brain-analytics`, `idea-significance-testing`, `idea-monte-carlo-mode` |
-| Consumer | `idea-hypothesis-builder`, `pattern-immutable-decision-ledger` |
+| Consumer | `idea-feature-replay-validation`, `idea-hypothesis-builder`, `pattern-immutable-decision-ledger` |
 | Replay Validated | ❌ |
 | Production | ❌ |
 

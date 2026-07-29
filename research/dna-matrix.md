@@ -1,6 +1,6 @@
 # DNA Matrix
 
-_Gerado automaticamente por `npm run dna-matrix` em 2026-07-29T13:25:45.249Z a partir de `registry/research-objects.json` (47 objetos com DNA Fit calculado, de 107 totais). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run dna-matrix` em 2026-07-29T14:13:32.418Z a partir de `registry/research-objects.json` (48 objetos com DNA Fit calculado, de 108 totais). Não editar este arquivo à mão._
 
 Pergunta que este documento responde: **essa ideia/padrão combina com os princípios do cripto10** (Replay antes de promoção, evidência antes de decisão, Brains desacoplados, contexto antes de entrada, estatística antes de automação)? DNA Fit é alinhamento filosófico -- não é a mesma pergunta que "vale a pena construir agora" (isso é a Classificação) nem "quanto custa manter" (Custo de Manutenção). Uma ideia pode ter DNA Fit alto e ainda assim ser `NÃO NECESSÁRIO` hoje, se não houver consumidor real -- ver `research/competitor-intelligence/openalice.md` e o artifact "Engineering Patterns" pro raciocínio por trás de cada score.
 
@@ -18,6 +18,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 | `pattern-no-true-event-sourcing` | Ausencia de event sourcing verdadeiro | 95% | Alto | -- |
 | `idea-market-memory` | Market Memory | 93% | Médio | knowledge |
 | `idea-confidence-engine` | Confidence Engine (generalizado) | 92% | Baixo | knowledge |
+| `idea-feature-replay-validation` | Feature Replay Validation (rodada dedicada, ainda não iniciada) | 92% | Alto | research |
 | `idea-causal-event-log` | Causal Event Log (Replay causal) | 90% | Alto | knowledge |
 | `idea-hypothesis-builder` | Hypothesis Builder | 90% | Médio | research |
 | `idea-knowledge-graph` | Knowledge Graph | 90% | Baixo | knowledge |
@@ -85,7 +86,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 
 ### Research Layer
 
-`capability-auto-tuning`, `capability-research-validation`, `engine-backtest`, `engine-brain-analytics`, `engine-learning-brain`, `engine-replay`, `idea-cost-engine`, `idea-evolution-engine`, `idea-hypothesis-builder`, `idea-hypothesis-ledger`, `idea-meta-analytics`, `idea-monte-carlo-mode`, `idea-optimizer-overfit-clustering`, `idea-replay-attribution`, `idea-significance-testing`, `idea-weight-engine`
+`capability-auto-tuning`, `capability-research-validation`, `engine-backtest`, `engine-brain-analytics`, `engine-learning-brain`, `engine-replay`, `idea-cost-engine`, `idea-evolution-engine`, `idea-feature-replay-validation`, `idea-hypothesis-builder`, `idea-hypothesis-ledger`, `idea-meta-analytics`, `idea-monte-carlo-mode`, `idea-optimizer-overfit-clustering`, `idea-replay-attribution`, `idea-significance-testing`, `idea-weight-engine`
 
 ### Knowledge Layer
 

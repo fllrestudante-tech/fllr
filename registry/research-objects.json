@@ -2189,7 +2189,7 @@
     "id": "idea-feature-builder",
     "type": "idea",
     "name": "Feature Builder",
-    "description": "v1 ENTREGUE nesta rodada: `lib/featureBuilder/{funding,volatility,liquidity,openInterest,volume}/index.js`, cada arquivo consumindo só `lib/knowledgeBase/statisticalResolver.js::resolveMetricSignal` (nunca a Storage direto). 8 Features atômicas com IDs permanentes (`lib/featureBuilder/featureIds.js`): FEATURE_FUNDING_EXTREME, FEATURE_FUNDING_ACCELERATION, FEATURE_VOLATILITY_EXPANSION, FEATURE_VOLATILITY_COMPRESSION, FEATURE_VOLATILITY_PERSISTENCE, FEATURE_SPREAD_EXPANSION (renomeada de Liquidity Imbalance -- só spread real disponível, sem order book), FEATURE_OI_EXPANSION, FEATURE_VOLUME_ANOMALY. Contrato final (`lib/featureBuilder/featureShape.js`): `{ id, version, feature, featureType, observation, interpretation: {state, direction}, strength, confidence, metadata: {computedAt, source, resolverVersion, statisticsVersion, knowledgeVersion} }` -- `state` categórico (UNKNOWN/LOW/NORMAL/HIGH/EXTREME, nunca boolean), `featureType` classifica o tipo (EXTREME/ACCELERATION/EXPANSION/COMPRESSION/PERSISTENCE/ANOMALY), `strength` (força do sinal) separado de `confidence` (confiança no dado), `version` permite a hipótese de cada Feature evoluir sem quebrar o `id`. Decisão arquitetural real: o Feature Builder calcula seu PRÓPRIO nível a partir de `observation` (percentil via `lib/featureBuilder/levelFromPercentile.js`, thresholds independentes do Resolver) -- não copia `interpretation.level` do Statistical Resolver como fonte primária, só usa como referência auxiliar (`observation.resolverInterpretation`). Isso desacopla a hipótese de cada Feature da hipótese genérica do Resolver -- podem evoluir sem se afetar. Posição final confirmada no pipeline: Knowledge -> Statistics -> Statistical Resolver -> Feature Builder -> (Signals/Replay/Brain, ainda não conectado). NENHUM Brain consome Feature nesta rodada -- Feature Builder não conhece Brain nem decisão. Limitação honesta sobre 'Replay preparado': Asset Statistics é sempre a última rodada de `compute-statistics` (fotografia do presente, não histórico ponto-a-ponto) -- Feature Builder responde 'qual o estado da Feature AGORA', não 'qual era o estado em um candle de 3 meses atrás'. Validação histórica real via Replay exigiria Asset Statistics point-in-time, projeto maior, não resolvido aqui -- só a API tem assinatura `(db, symbol)` compatível com o resto da Knowledge Base. Verificado contra BTCUSDT real (`npm run knowledge-base -- show BTCUSDT`): as 8 Features calculadas com valores plausíveis. Testado: 5 arquivos de teste por domínio + featureShape + levelFromPercentile + index (buildAllFeatures/flattenFeatures) -- 32 testes novos.",
+    "description": "v1 ENTREGUE nesta rodada: `lib/featureBuilder/{funding,volatility,liquidity,openInterest,volume}/index.js`, cada arquivo consumindo só `lib/knowledgeBase/statisticalResolver.js::resolveMetricSignal` (nunca a Storage direto). 8 Features atômicas com IDs permanentes (`lib/featureBuilder/featureIds.js`): FEATURE_FUNDING_EXTREME, FEATURE_FUNDING_ACCELERATION, FEATURE_VOLATILITY_EXPANSION, FEATURE_VOLATILITY_COMPRESSION, FEATURE_VOLATILITY_PERSISTENCE, FEATURE_SPREAD_EXPANSION (renomeada de Liquidity Imbalance -- só spread real disponível, sem order book), FEATURE_OI_EXPANSION, FEATURE_VOLUME_ANOMALY. Contrato final (`lib/featureBuilder/featureShape.js`): `{ id, version, feature, featureType, observation, interpretation: {state, direction}, strength, confidence, metadata: {computedAt, source, resolverVersion, statisticsVersion, knowledgeVersion} }` -- `state` categórico (UNKNOWN/LOW/NORMAL/HIGH/EXTREME, nunca boolean), `featureType` classifica o tipo (EXTREME/ACCELERATION/EXPANSION/COMPRESSION/PERSISTENCE/ANOMALY), `strength` (força do sinal) separado de `confidence` (confiança no dado), `version` permite a hipótese de cada Feature evoluir sem quebrar o `id`. Decisão arquitetural real: o Feature Builder calcula seu PRÓPRIO nível a partir de `observation` (percentil via `lib/featureBuilder/levelFromPercentile.js`, thresholds independentes do Resolver) -- não copia `interpretation.level` do Statistical Resolver como fonte primária, só usa como referência auxiliar (`observation.resolverInterpretation`). Isso desacopla a hipótese de cada Feature da hipótese genérica do Resolver -- podem evoluir sem se afetar. Posição final confirmada no pipeline: Knowledge -> Statistics -> Statistical Resolver -> Feature Builder -> (Signals/Replay/Brain, ainda não conectado). NENHUM Brain consome Feature nesta rodada -- Feature Builder não conhece Brain nem decisão. Limitação honesta sobre 'Replay preparado': Asset Statistics é sempre a última rodada de `compute-statistics` (fotografia do presente, não histórico ponto-a-ponto) -- Feature Builder responde 'qual o estado da Feature AGORA', não 'qual era o estado em um candle de 3 meses atrás'. Validação histórica real via Replay exigiria Asset Statistics point-in-time, projeto maior, não resolvido aqui -- só a API tem assinatura `(db, symbol)` compatível com o resto da Knowledge Base. Verificado contra BTCUSDT real (`npm run knowledge-base -- show BTCUSDT`): as 8 Features calculadas com valores plausíveis. Testado: 5 arquivos de teste por domínio + featureShape + levelFromPercentile + index (buildAllFeatures/flattenFeatures) -- 32 testes novos. Integração com o Replay Engine deliberadamente adiada pra uma rodada dedicada (ver idea-feature-replay-validation) -- reafirmado explicitamente pelo usuário: nenhuma Feature influencia decisão de trading até essa rodada acontecer e um plano completo de validação existir.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -2233,7 +2233,50 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-29T13:25:43.161Z"
+    "updatedAt": "2026-07-29T14:13:30.368Z"
+  },
+  {
+    "id": "idea-feature-replay-validation",
+    "type": "idea",
+    "name": "Feature Replay Validation (rodada dedicada, ainda não iniciada)",
+    "description": "Escopo da FUTURA rodada dedicada de integração Feature Builder <-> Replay Engine -- registrada agora como reafirmação de princípio, nenhum código ou plano de implementação ainda. Vira uma rodada própria só quando a infraestrutura atual (Knowledge Base -> Asset Statistics -> Statistical Resolver -> Feature Builder) estiver estabilizada e houver um plano completo de validação. Até lá, nenhuma Feature influencia decisão de trading -- Brains permanecem 100% desacoplados dessas camadas (confirmado: zero import de lib/featureBuilder em lib/brains/, lib/replayEngine.js ou index.js). 5 perguntas que o plano dedicado (quando vier) precisa responder, nenhuma delas respondida ainda: (1) Como reconstruir o estado das Features em cada candle histórico (point-in-time), em vez de usar só o snapshot atual? -- hoje Asset Statistics é sempre a última rodada de compute-statistics, uma fotografia do presente, não histórico ponto-a-ponto (limitação já documentada em idea-feature-builder). (2) Como evitar look-ahead bias durante a recomputação das Features? -- qualquer estatística point-in-time recomputada por candle histórico precisa garantir que só usa dado disponível ATÉ aquele candle, nunca depois (mesmo cuidado que lib/candleHistory.js/lib/backtest.js já aplicam pra indicadores clássicos). (3) Como registrar o resultado de cada Feature em cada replay pra permitir análises posteriores? -- provavelmente uma tabela nova (Feature Snapshot por candle/replay-step), schema ainda não desenhado. (4) Como medir contribuição individual (Feature Attribution), não só PnL final? -- conecta direto com idea-replay-attribution (Feature Attribution no Replay), já registrada, ainda idea. (5) Como definir critérios estatísticos mínimos pra promover uma Feature de 'research' pra 'replay validated' e depois pra consumo por um Brain? -- usa o mesmo vocabulário de Feature Lifecycle já documentado em research/README.md (idea->backlog->research->experiment->replay-validated->paper-trading->live-shadow->limited-capital->production->monitoring->retired). Disciplina confirmada pelo usuário, em 5 passos: 1) construir a infraestrutura (feito -- Asset Profile/Statistics/Resolver/Feature Builder), 2) produzir conhecimento (feito), 3) produzir Features (feito, v1), 4) validar quantitativamente (esta ideia, não iniciada), 5) só então permitir consumo pelos Brains.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:medium",
+      "domain:research",
+      "capmap-domain:research",
+      "capmap-subdomain:Scientific Method",
+      "nature:operational",
+      "criticality:experimental",
+      "proof:reasoning",
+      "dna-fit:92",
+      "classification:superior",
+      "maintenance-cost:high"
+    ],
+    "dependsOn": [
+      "idea-feature-builder",
+      "engine-replay",
+      "idea-causal-event-log",
+      "idea-replay-attribution",
+      "idea-hypothesis-ledger"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-29T14:13:30.366Z",
+        "action": "created",
+        "note": "Reafirmação de princípio -- escopo da futura rodada de integração Replay, nada implementado"
+      }
+    ],
+    "createdAt": "2026-07-29T14:13:30.366Z",
+    "updatedAt": "2026-07-29T14:13:30.366Z"
   },
   {
     "id": "idea-hypothesis-builder",

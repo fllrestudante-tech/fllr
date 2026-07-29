@@ -1,6 +1,6 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-29T13:25:44.553Z a partir de `registry/research-objects.json` (107 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-29T14:13:31.730Z a partir de `registry/research-objects.json` (108 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
 
@@ -76,6 +76,7 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 | `idea-dynamic-universe` | Dynamic Universe | idea | Alta | -- |
 | `idea-evolution-engine` | Evolution Engine | idea | Baixa | `engine-brain-analytics`, `engine-replay` |
 | `idea-feature-builder` | Feature Builder | research | Alta | `idea-asset-profile`, `capability-statistical-resolver` |
+| `idea-feature-replay-validation` | Feature Replay Validation (rodada dedicada, ainda não iniciada) | idea | Média | `idea-feature-builder`, `engine-replay`, `idea-causal-event-log`, `idea-replay-attribution`, `idea-hypothesis-ledger` |
 | `idea-hypothesis-builder` | Hypothesis Builder | idea | Baixa | `idea-hypothesis-ledger`, `idea-asset-profile` |
 | `idea-knowledge-ecosystem` | Knowledge Ecosystem (Asset Knowledge é só um dos domínios) | idea | Baixa | `idea-asset-profile` |
 | `idea-knowledge-graph` | Knowledge Graph | idea | Média | -- |
