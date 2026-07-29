@@ -7,6 +7,7 @@ const { buildStructureContext, buildLiquidityContext, buildFvgContext, buildOrde
 const { REAL, FUTURE } = require("../lib/knowledgeBase/consumers");
 const { computeAssetStatistics, DEFAULT_WINDOW_DAYS_LIST } = require("../lib/knowledgeBase/statisticsComputer");
 const { getAssetStatistics, upsertAssetStatistics, METRICS } = require("../lib/knowledgeBase/assetStatisticsStore");
+const { buildAllFeatures } = require("../lib/featureBuilder");
 
 function parseArgs(argv) {
   const flags = {};
@@ -80,6 +81,15 @@ function cmdShow(db, symbol) {
           `  ${metric}: avg=${m.avg} p50=${m.p50} p95=${m.p95} zscore=${m.zscore_current} percentile=${m.percentile_current} trend=${m.trend} drift=${m.drift_pct}% quality=${m.quality} (n=${m.sample_size})`
         );
       }
+    }
+  }
+
+  console.log(`\n=== Features (Feature Builder -- não conectado a nenhum Brain) ===`);
+  const featuresByDomain = buildAllFeatures(db, symbol);
+  for (const [domain, features] of Object.entries(featuresByDomain)) {
+    console.log(`-- ${domain} --`);
+    for (const f of features) {
+      console.log(`  ${f.feature} [${f.id}] v${f.version}: ${f.interpretation.state} (${f.interpretation.direction}) -- strength=${f.strength} confidence=${f.confidence}`);
     }
   }
 }

@@ -2189,14 +2189,14 @@
     "id": "idea-feature-builder",
     "type": "idea",
     "name": "Feature Builder",
-    "description": "Raw Data -> Derived Features (ATR/VWAP/VWMA/Volume Profile/Session/ADR/Relative Volume/Funding Delta/OI Delta) -> cache -> Brains. Centraliza o cálculo de features derivadas uma única vez, em vez de cada Brain recalcular por conta própria -- reduz custo, duplicação e superfície de bug conforme mais Brains nascerem. Hoje cada detector (Structure/Liquidity/FVG/Order Block) deriva o que precisa direto do candle bruto sem uma camada comum -- ainda não é duplicação grave, mas também não há reuso. Posição revisada no pipeline (Fase imediata, ordem confirmada pelo usuário): Knowledge -> Statistics -> Feature Builder -> Resolver -> Signals -> Brain -- Feature Builder entra ANTES do Resolver/Replay, não depois. Motivo: o Replay deve validar aquilo que o Brain de fato consumiria (uma Feature nomeada), não um percentil/zscore isolado sem significado direto pra decisão. Exemplos concretos de Feature (não implementadas, ilustrativas): Funding Extreme, OI Expansion, Volatility Compression, Regime Transition, Liquidity Imbalance -- cada uma combina 1+ métricas da Asset Statistics (via Statistical Resolver) numa interpretação nomeada e consumível. Um Brain não quer 'funding percentile 96' solto, quer 'Funding Extreme: true/false' com a evidência por trás.",
+    "description": "v1 ENTREGUE nesta rodada: `lib/featureBuilder/{funding,volatility,liquidity,openInterest,volume}/index.js`, cada arquivo consumindo só `lib/knowledgeBase/statisticalResolver.js::resolveMetricSignal` (nunca a Storage direto). 8 Features atômicas com IDs permanentes (`lib/featureBuilder/featureIds.js`): FEATURE_FUNDING_EXTREME, FEATURE_FUNDING_ACCELERATION, FEATURE_VOLATILITY_EXPANSION, FEATURE_VOLATILITY_COMPRESSION, FEATURE_VOLATILITY_PERSISTENCE, FEATURE_SPREAD_EXPANSION (renomeada de Liquidity Imbalance -- só spread real disponível, sem order book), FEATURE_OI_EXPANSION, FEATURE_VOLUME_ANOMALY. Contrato final (`lib/featureBuilder/featureShape.js`): `{ id, version, feature, featureType, observation, interpretation: {state, direction}, strength, confidence, metadata: {computedAt, source, resolverVersion, statisticsVersion, knowledgeVersion} }` -- `state` categórico (UNKNOWN/LOW/NORMAL/HIGH/EXTREME, nunca boolean), `featureType` classifica o tipo (EXTREME/ACCELERATION/EXPANSION/COMPRESSION/PERSISTENCE/ANOMALY), `strength` (força do sinal) separado de `confidence` (confiança no dado), `version` permite a hipótese de cada Feature evoluir sem quebrar o `id`. Decisão arquitetural real: o Feature Builder calcula seu PRÓPRIO nível a partir de `observation` (percentil via `lib/featureBuilder/levelFromPercentile.js`, thresholds independentes do Resolver) -- não copia `interpretation.level` do Statistical Resolver como fonte primária, só usa como referência auxiliar (`observation.resolverInterpretation`). Isso desacopla a hipótese de cada Feature da hipótese genérica do Resolver -- podem evoluir sem se afetar. Posição final confirmada no pipeline: Knowledge -> Statistics -> Statistical Resolver -> Feature Builder -> (Signals/Replay/Brain, ainda não conectado). NENHUM Brain consome Feature nesta rodada -- Feature Builder não conhece Brain nem decisão. Limitação honesta sobre 'Replay preparado': Asset Statistics é sempre a última rodada de `compute-statistics` (fotografia do presente, não histórico ponto-a-ponto) -- Feature Builder responde 'qual o estado da Feature AGORA', não 'qual era o estado em um candle de 3 meses atrás'. Validação histórica real via Replay exigiria Asset Statistics point-in-time, projeto maior, não resolvido aqui -- só a API tem assinatura `(db, symbol)` compatível com o resto da Knowledge Base. Verificado contra BTCUSDT real (`npm run knowledge-base -- show BTCUSDT`): as 8 Features calculadas com valores plausíveis. Testado: 5 arquivos de teste por domínio + featureShape + levelFromPercentile + index (buildAllFeatures/flattenFeatures) -- 32 testes novos.",
     "owner": {
       "type": "internal",
       "name": "internal"
     },
     "references": [],
-    "status": "idea",
-    "maturity": 0,
+    "status": "research",
+    "maturity": 1,
     "tags": [
       "fase-4",
       "priority:high",
@@ -2220,10 +2220,20 @@
         "date": "2026-07-28T10:47:56.058Z",
         "action": "created",
         "note": "blueprint de pesquisa contínua (Fase 4)"
+      },
+      {
+        "date": "2026-07-29T13:25:43.161Z",
+        "action": "status: idea → research",
+        "note": "Feature Builder v1 implementado, testado, não conectado a Brain"
+      },
+      {
+        "date": "2026-07-29T13:25:43.161Z",
+        "action": "maturity: 0 → 1",
+        "note": "Feature Builder v1 implementado, testado, não conectado a Brain"
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-29T00:08:46.213Z"
+    "updatedAt": "2026-07-29T13:25:43.161Z"
   },
   {
     "id": "idea-hypothesis-builder",

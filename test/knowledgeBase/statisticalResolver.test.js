@@ -62,6 +62,7 @@ test("resolveMetricSignal: janela explícita -- Observation/Interpretation/Confi
   assert.equal(signal.observation.zscore, 2.5);
   assert.equal(signal.observation.percentile, 96);
   assert.equal(signal.observation.trend, "rising");
+  assert.equal(signal.observation.acceleration, 0);
 
   assert.equal(signal.interpretation.level, "EXTREME", "percentil 96 >= 95 -> EXTREME");
   assert.equal(signal.interpretation.direction, "above");
@@ -72,6 +73,9 @@ test("resolveMetricSignal: janela explícita -- Observation/Interpretation/Confi
   assert.equal(signal.evidence.percentile, 96);
   assert.equal(signal.evidence.sampleSize, 100);
   assert.equal(signal.evidence.windowDaysUsed, 30);
+  assert.equal(signal.evidence.persistence, 2);
+  assert.equal(signal.evidence.resolverVersion, 1);
+  assert.equal(signal.evidence.statisticsVersion, 1, "version=1 na 1ª gravação de asset_statistics_window");
   db.close();
 });
 

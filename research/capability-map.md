@@ -1,6 +1,6 @@
 # Cripto10 — Capability Map
 
-_Gerado automaticamente por `npm run capability-map` em 2026-07-29T00:08:57.955Z a partir de `registry/research-objects.json` (107 Research Objects, 57 mapeados). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run capability-map` em 2026-07-29T13:25:45.954Z a partir de `registry/research-objects.json` (107 Research Objects, 57 mapeados). Não editar este arquivo à mão._
 
 ## Objetivo
 
@@ -338,17 +338,17 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 
 ### Context
 
-#### 💡 Feature Builder
+#### 🧪 Feature Builder
 
 | Campo | Valor |
 |---|---|
 | Research Object | `idea-feature-builder` |
-| Capability Stage | 💡 Idea |
+| Capability Stage | 🧪 Prototype |
 | Nature | ⚙️ Operational (executa) |
 | Criticality | 🔵 Experimental |
 | Proof | Reasoning |
-| Status | idea |
-| Maturity | 0 |
+| Status | research |
+| Maturity | 1 |
 | Depends On | `idea-asset-profile`, `capability-statistical-resolver` |
 | Consumer | `idea-opportunity-alice` |
 | Replay Validated | ❌ |
