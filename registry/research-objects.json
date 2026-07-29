@@ -2189,7 +2189,7 @@
     "id": "idea-feature-builder",
     "type": "idea",
     "name": "Feature Builder",
-    "description": "Raw Data -> Derived Features (ATR/VWAP/VWMA/Volume Profile/Session/ADR/Relative Volume/Funding Delta/OI Delta) -> cache -> Brains. Centraliza o cálculo de features derivadas uma única vez, em vez de cada Brain recalcular por conta própria -- reduz custo, duplicação e superfície de bug conforme mais Brains nascerem. Hoje cada detector (Structure/Liquidity/FVG/Order Block) deriva o que precisa direto do candle bruto sem uma camada comum -- ainda não é duplicação grave, mas também não há reuso.",
+    "description": "Raw Data -> Derived Features (ATR/VWAP/VWMA/Volume Profile/Session/ADR/Relative Volume/Funding Delta/OI Delta) -> cache -> Brains. Centraliza o cálculo de features derivadas uma única vez, em vez de cada Brain recalcular por conta própria -- reduz custo, duplicação e superfície de bug conforme mais Brains nascerem. Hoje cada detector (Structure/Liquidity/FVG/Order Block) deriva o que precisa direto do candle bruto sem uma camada comum -- ainda não é duplicação grave, mas também não há reuso. Posição revisada no pipeline (Fase imediata, ordem confirmada pelo usuário): Knowledge -> Statistics -> Feature Builder -> Resolver -> Signals -> Brain -- Feature Builder entra ANTES do Resolver/Replay, não depois. Motivo: o Replay deve validar aquilo que o Brain de fato consumiria (uma Feature nomeada), não um percentil/zscore isolado sem significado direto pra decisão. Exemplos concretos de Feature (não implementadas, ilustrativas): Funding Extreme, OI Expansion, Volatility Compression, Regime Transition, Liquidity Imbalance -- cada uma combina 1+ métricas da Asset Statistics (via Statistical Resolver) numa interpretação nomeada e consumível. Um Brain não quer 'funding percentile 96' solto, quer 'Funding Extreme: true/false' com a evidência por trás.",
     "owner": {
       "type": "internal",
       "name": "internal"
@@ -2210,7 +2210,10 @@
       "criticality:experimental",
       "proof:reasoning"
     ],
-    "dependsOn": [],
+    "dependsOn": [
+      "idea-asset-profile",
+      "capability-statistical-resolver"
+    ],
     "metrics": {},
     "history": [
       {
@@ -2220,7 +2223,7 @@
       }
     ],
     "createdAt": "2026-07-28T10:47:56.058Z",
-    "updatedAt": "2026-07-28T23:35:00.508Z"
+    "updatedAt": "2026-07-29T00:08:46.213Z"
   },
   {
     "id": "idea-hypothesis-builder",
@@ -2371,6 +2374,45 @@
     ],
     "createdAt": "2026-07-28T02:26:33.504Z",
     "updatedAt": "2026-07-28T11:56:15.316Z"
+  },
+  {
+    "id": "idea-knowledge-ecosystem",
+    "type": "idea",
+    "name": "Knowledge Ecosystem (Asset Knowledge é só um dos domínios)",
+    "description": "Reframe pedido pelo usuário: o Knowledge Base hoje é centrado em Asset porque a Asset Profile/Statistics foi a 1ª camada implementada -- mas o verdadeiro centro não é o ativo, é o CONTEXTO (um ativo é só uma das peças: mercado em bull, setor L1, narrativa AI Infrastructure, dominância caindo, funding elevado, regime altseason -- tudo isso junto é o contexto). Domínios de conhecimento propostos, além de Asset Knowledge (já existe): Market Knowledge, Sector Knowledge, Narrative Knowledge, Event Knowledge, Macro Knowledge, Exchange Knowledge, Portfolio Knowledge, Strategy Knowledge. Nenhum implementado -- fica documentado como direção de longo prazo. Quando algum desses ganhar consumidor real (provavelmente via idea-regime-engine/idea-dynamic-universe), vira Research Object próprio, seguindo o mesmo padrão já usado pra Asset Knowledge (tabela dedicada, nunca um campo genérico 'knowledge' fantasma).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "fase-4",
+      "priority:low",
+      "domain:knowledge",
+      "capmap-domain:knowledge",
+      "capmap-subdomain:Asset Knowledge",
+      "nature:knowledge",
+      "criticality:optional",
+      "proof:reasoning",
+      "dna-fit:88",
+      "classification:complementar",
+      "maintenance-cost:medium"
+    ],
+    "dependsOn": [
+      "idea-asset-profile"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-29T00:08:46.214Z",
+        "action": "created",
+        "note": "Ajuste de prioridade do roadmap -- Feature Builder antes do Replay/Resolver"
+      }
+    ],
+    "createdAt": "2026-07-29T00:08:46.214Z",
+    "updatedAt": "2026-07-29T00:08:55.875Z"
   },
   {
     "id": "idea-knowledge-graph",

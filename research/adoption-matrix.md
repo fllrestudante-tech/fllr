@@ -1,6 +1,6 @@
 # Adoption Matrix
 
-_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-28T23:36:57.225Z a partir de `registry/research-objects.json` (106 Research Objects). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run adoption-matrix` em 2026-07-29T00:08:56.570Z a partir de `registry/research-objects.json` (107 Research Objects). Não editar este arquivo à mão._
 
 Ideias extraídas das auditorias de concorrentes (OpenAlice/Freqtrade/Hummingbot/Lean/Jesse), agrupadas por prioridade. Ver `research/competitor-intelligence/` para o contexto completo de cada origem, e `npm run registry -- show <id>` para o Research Object inteiro (referências, dependências, histórico).
 
@@ -75,8 +75,9 @@ O que o sistema sabe fazer, não só quais componentes existem. Cada capability 
 | `idea-cost-engine` | Cost Engine | idea | Baixa | -- |
 | `idea-dynamic-universe` | Dynamic Universe | idea | Alta | -- |
 | `idea-evolution-engine` | Evolution Engine | idea | Baixa | `engine-brain-analytics`, `engine-replay` |
-| `idea-feature-builder` | Feature Builder | idea | Alta | -- |
+| `idea-feature-builder` | Feature Builder | idea | Alta | `idea-asset-profile`, `capability-statistical-resolver` |
 | `idea-hypothesis-builder` | Hypothesis Builder | idea | Baixa | `idea-hypothesis-ledger`, `idea-asset-profile` |
+| `idea-knowledge-ecosystem` | Knowledge Ecosystem (Asset Knowledge é só um dos domínios) | idea | Baixa | `idea-asset-profile` |
 | `idea-knowledge-graph` | Knowledge Graph | idea | Média | -- |
 | `idea-market-memory` | Market Memory | idea | Média | `engine-replay` |
 | `idea-meta-analytics` | Meta Analytics | idea | Baixa | `engine-brain-analytics`, `engine-replay`, `idea-regime-engine` |

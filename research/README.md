@@ -151,6 +151,63 @@ pilares/Engineering Patterns/DNA Matrix → esta), documentada por
 disciplina de projeto, não porque a decisão de travar/começar a codar já
 foi tomada.
 
+## Fase imediata (ordem confirmada, diferente da Fase 4 macro acima)
+
+Enquanto a Fase 4 acima decide "qual motor grande vem depois", esta é a
+sequência mais granular pra terminar de amadurecer o que já está em
+construção (Market Knowledge Base). Ordem confirmada pelo usuário,
+mudança principal: **`idea-feature-builder` entra ANTES do
+Resolver/Replay, não depois**.
+
+1. Market Knowledge Base acumula conhecimento real (Asset Profile+Statistics
+   -- v1 entregue, `idea-asset-profile`).
+2. Asset Statistics alimentada continuamente com histórico real (entregue,
+   `npm run knowledge-base -- compute-statistics`).
+3. Feature Builder evolui estatística em evidência consumível
+   (`idea-feature-builder`, ainda `idea` -- exemplos ilustrativos: Funding
+   Extreme, OI Expansion, Volatility Compression, Regime Transition,
+   Liquidity Imbalance).
+4. Resolvers conectados ao Replay Engine.
+5. Validação via Replay/Experiments se cada Feature (não percentil/zscore
+   isolado) melhora decisão -- **o Replay deve validar o que o Brain vai
+   de fato consumir**, uma Feature nomeada, não um número solto sem
+   significado direto.
+6. Só depois disso um Brain passa a consumir essas Features de verdade.
+
+Pipeline revisado: Knowledge → Statistics → **Feature Builder** →
+Statistical Resolver → Signals → Brain (Feature Builder entra entre
+Statistics e Resolver -- ver comentário atualizado em
+`lib/knowledgeBase/statisticalResolver.js`).
+
+## Knowledge Ecosystem (reframe -- Asset é só 1 de N domínios)
+
+`idea-knowledge-ecosystem`: o verdadeiro centro da Knowledge Base não é
+o ativo, é o CONTEXTO -- um ativo é só uma peça (mercado em bull, setor
+L1, narrativa, dominância, funding, regime, tudo junto). Domínios de
+conhecimento propostos além de Asset Knowledge (já existe): Market/
+Sector/Narrative/Event/Macro/Exchange/Portfolio/Strategy Knowledge --
+nenhum implementado, documentado como direção de longo prazo. Quando um
+desses ganhar consumidor real, vira Research Object próprio com tabela
+dedicada, mesmo padrão já usado pra Asset Knowledge.
+
+**Família de Resolvers, não um Resolver gigante**: Knowledge Resolver
+(`lib/knowledgeBase/resolver.js`) e Statistics Resolver
+(`lib/knowledgeBase/statisticalResolver.js`) já são 2 membros de uma
+família de Resolvers especializados por design (comentário atualizado em
+ambos os arquivos) -- Context/Market/Portfolio Resolver nascem como
+módulo próprio quando existirem, nunca como método a mais dentro de um
+Resolver genérico.
+
+**Capability Map confirmado congelado** (usuário reforçou explicitamente
+nesta rodada) -- os 4 níveis Capability→Service→Component→Consumer,
+Ownership/Produced-By Graph, Dependency Graph completo e o Architecture
+Manifest continuam fora, sem prazo. **Proof também tem uma evolução
+documentada, mas não priorizada**: `Hypothesis → Evidence → Replay →
+Paper/Benchmark → Shadow Mode → Production → Live Profit → Long-term
+Validation` -- diferenciaria melhor "hipótese promissora" de "hipótese
+comprovada ao longo do tempo", mas é refinamento institucional, não
+prioridade desta fase.
+
 ## Os 5 níveis do conhecimento (definição oficial)
 
 Formalizado depois da evolução do Statistical Resolver -- distingue o que

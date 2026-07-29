@@ -1,6 +1,6 @@
 # Cripto10 — Capability Map
 
-_Gerado automaticamente por `npm run capability-map` em 2026-07-28T23:35:39.119Z a partir de `registry/research-objects.json` (106 Research Objects, 56 mapeados). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run capability-map` em 2026-07-29T00:08:57.955Z a partir de `registry/research-objects.json` (107 Research Objects, 57 mapeados). Não editar este arquivo à mão._
 
 ## Objetivo
 
@@ -70,7 +70,7 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Status | research |
 | Maturity | 1 |
 | Depends On | `idea-asset-profile` |
-| Consumer | -- |
+| Consumer | `idea-feature-builder` |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -88,7 +88,7 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Status | research |
 | Maturity | 1 |
 | Depends On | `idea-dynamic-universe` |
-| Consumer | `capability-knowledge-resolver`, `capability-statistical-resolver`, `idea-hypothesis-builder`, `idea-metric-models`, `idea-statistical-narrative` |
+| Consumer | `capability-knowledge-resolver`, `capability-statistical-resolver`, `idea-feature-builder`, `idea-hypothesis-builder`, `idea-knowledge-ecosystem`, `idea-metric-models`, `idea-statistical-narrative` |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -121,6 +121,22 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Maturity | 0 |
 | Depends On | `synthesis-context-fusion` |
 | Consumer | `pattern-trust-verification` |
+| Replay Validated | ❌ |
+| Production | ❌ |
+
+#### 💡 Knowledge Ecosystem (Asset Knowledge é só um dos domínios)
+
+| Campo | Valor |
+|---|---|
+| Research Object | `idea-knowledge-ecosystem` |
+| Capability Stage | 💡 Idea |
+| Nature | 📖 Knowledge (sabe) |
+| Criticality | ⚪ Optional |
+| Proof | Reasoning |
+| Status | idea |
+| Maturity | 0 |
+| Depends On | `idea-asset-profile` |
+| Consumer | -- |
 | Replay Validated | ❌ |
 | Production | ❌ |
 
@@ -333,7 +349,7 @@ Este documento é o mapa vivo de capacidades do cripto10. Não é um roadmap, n�
 | Proof | Reasoning |
 | Status | idea |
 | Maturity | 0 |
-| Depends On | -- |
+| Depends On | `idea-asset-profile`, `capability-statistical-resolver` |
 | Consumer | `idea-opportunity-alice` |
 | Replay Validated | ❌ |
 | Production | ❌ |

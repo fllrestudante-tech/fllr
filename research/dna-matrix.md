@@ -1,6 +1,6 @@
 # DNA Matrix
 
-_Gerado automaticamente por `npm run dna-matrix` em 2026-07-28T23:36:57.939Z a partir de `registry/research-objects.json` (46 objetos com DNA Fit calculado, de 106 totais). Não editar este arquivo à mão._
+_Gerado automaticamente por `npm run dna-matrix` em 2026-07-29T00:08:57.259Z a partir de `registry/research-objects.json` (47 objetos com DNA Fit calculado, de 107 totais). Não editar este arquivo à mão._
 
 Pergunta que este documento responde: **essa ideia/padrão combina com os princípios do cripto10** (Replay antes de promoção, evidência antes de decisão, Brains desacoplados, contexto antes de entrada, estatística antes de automação)? DNA Fit é alinhamento filosófico -- não é a mesma pergunta que "vale a pena construir agora" (isso é a Classificação) nem "quanto custa manter" (Custo de Manutenção). Uma ideia pode ter DNA Fit alto e ainda assim ser `NÃO NECESSÁRIO` hoje, se não houver consumidor real -- ver `research/competitor-intelligence/openalice.md` e o artifact "Engineering Patterns" pro raciocínio por trás de cada score.
 
@@ -42,6 +42,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 
 | id | nome | DNA Fit | custo de manutenção | domínio |
 |---|---|---|---|---|
+| `idea-knowledge-ecosystem` | Knowledge Ecosystem (Asset Knowledge é só um dos domínios) | 88% | Médio | knowledge |
 | `idea-regime-engine` | Regime Engine | 85% | Médio | analysis |
 | `idea-structured-evidence` | Structured Evidence (Evidence como objeto de 1ª classe) | 85% | Baixo | analysis |
 | `idea-meta-analytics` | Meta Analytics | 82% | Baixo | research |
@@ -88,7 +89,7 @@ Pergunta que este documento responde: **essa ideia/padrão combina com os princ�
 
 ### Knowledge Layer
 
-`idea-asset-profile`, `idea-causal-event-log`, `idea-confidence-engine`, `idea-knowledge-graph`, `idea-market-memory`, `idea-metric-models`, `idea-statistical-narrative`
+`idea-asset-profile`, `idea-causal-event-log`, `idea-confidence-engine`, `idea-knowledge-ecosystem`, `idea-knowledge-graph`, `idea-market-memory`, `idea-metric-models`, `idea-statistical-narrative`
 
 ### Analysis Layer
 
