@@ -9,6 +9,7 @@ const {
   findById,
   listByType,
   listByStatus,
+  countByStatus,
   listConsumers,
   groupConsumersByStatus,
   validateRegistryIntegrity,
@@ -90,6 +91,16 @@ test("findById/listByType/listByStatus filtram corretamente", () => {
     listByStatus(objects, "production").map((o) => o.id),
     ["brain-market"]
   );
+});
+
+test("countByStatus: agrega total e contagem por status, sem assumir estados fixos", () => {
+  const objects = [
+    obj({ id: "a", status: "production" }),
+    obj({ id: "b", status: "production" }),
+    obj({ id: "c", status: "idea" }),
+  ];
+  assert.deepEqual(countByStatus(objects), { total: 3, byStatus: { production: 2, idea: 1 } });
+  assert.deepEqual(countByStatus([]), { total: 0, byStatus: {} });
 });
 
 test("upsertResearchObject: insere novo objeto com history inicial 'created'", () => {

@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { computeBrainAccuracy, computeMarginalContribution, computeRedundancy, evaluateDecisionBrainReadiness, unanimousDirection } = require("../lib/brainAnalytics");
+const { computeBrainAccuracy, computeMarginalContribution, computeRedundancy, evaluateDecisionBrainReadiness, summarizeDecisionBrainReadiness, unanimousDirection } = require("../lib/brainAnalytics");
 
 // Fixtures fabricadas diretamente como snapshots (sem rodar runReplay/
 // candles reais -- mesma economia de teste de computeStats/
@@ -130,4 +130,23 @@ test("evaluateDecisionBrainReadiness: amostra + regime OK mas instável ao longo
   assert.equal(result.checks.stability.pass, false);
   assert.deepEqual(result.checks.stability.bucketRates, [100, 100, 100, 0]);
   assert.equal(result.ready, false);
+});
+
+test("summarizeDecisionBrainReadiness: extrai só os campos escalares, descarta bucketRates", () => {
+  const snapshots = Array.from({ length: 10 }, () => readinessSnap("SUCCESS", "FUSED_BULLISH"));
+  const full = evaluateDecisionBrainReadiness(snapshots, { minSnapshots: 20000 });
+  const summary = summarizeDecisionBrainReadiness(full);
+
+  assert.deepEqual(summary, {
+    ready: false,
+    sample: { pass: false, count: 10, required: 20000 },
+    regimeDiversity: { pass: false, counts: { FUSED_BULLISH: 10, FUSED_BEARISH: 0, FUSED_NEUTRAL: 0 } },
+    stability: { pass: full.checks.stability.pass, spreadPct: full.checks.stability.spreadPct },
+  });
+  assert.equal(summary.stability.bucketRates, undefined);
+});
+
+test("summarizeDecisionBrainReadiness: null quando ainda não há dado de replay (não inventa zero)", () => {
+  assert.equal(summarizeDecisionBrainReadiness(null), null);
+  assert.equal(summarizeDecisionBrainReadiness(undefined), null);
 });

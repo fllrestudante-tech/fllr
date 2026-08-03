@@ -34,6 +34,9 @@ const structureBrain = require("../lib/brains/structureBrain");
 const liquidityBrainData = require("../lib/brains/liquidityBrainData");
 const liquidityBrain = require("../lib/brains/liquidityBrain");
 const { fuseContext } = require("../lib/brains/contextFusion");
+const { loadRegistry, countByStatus } = require("../lib/registry/registryStore");
+const { buildAllFeatures, summarizeFeatures } = require("../lib/featureBuilder");
+const { summarizeDecisionBrainReadiness } = require("../lib/brainAnalytics");
 
 // Domínios de mercado que teriam um equivalente em outra exchange (Binance,
 // quando existir) -- só esses fazem sentido pra Cross-Source Validation.
@@ -52,6 +55,11 @@ const METRICS_DIR = path.join(__dirname, "..", "runtime", "metrics");
 const HISTORY_DIR = path.join(METRICS_DIR, "history");
 const SAMPLER_HEALTH_FILE = path.join(__dirname, "..", "runtime", "heartbeats", "metrics-sampler.json");
 const SAMPLE_INTERVAL_MS = 60000;
+// scripts/replayEngine.js roda sob demanda (npm run replay), não é filho do
+// supervisor -- lido aqui só como consumidor, nunca recomputado (evita
+// duplicar a leitura de snapshots.jsonl, que pode ter dezenas de milhares
+// de linhas, dentro do ritmo do sampler).
+const REPLAY_STATS_FILE = path.join(__dirname, "..", "data", "replay", "stats.json");
 
 const HEARTBEAT_FILES = {
   bybit_collector: healthChecks.DEFAULT_COLLECTOR_HEALTH_FILE,
@@ -388,6 +396,52 @@ function runContextSample() {
   eventBus.emit("runtime_metrics.context.updated", { sampledAt });
 }
 
+/**
+ * Nível 2 (Knowledge Growth) do Plano de Evolução -- Fase 1: só persistência
+ * do que registry/research-objects.json já tem hoje (status é vocabulário
+ * aberto, ver countByStatus). Nenhuma análise/tendência calculada aqui.
+ */
+function runKnowledgeSample() {
+  const objects = loadRegistry();
+  const summary = countByStatus(objects);
+  const sampledAt = new Date().toISOString();
+  writeJsonSnapshot(path.join(METRICS_DIR, "knowledge.json"), { ...summary, sampledAt });
+  appendHistory("knowledge", summary);
+  eventBus.emit("runtime_metrics.knowledge.updated", { sampledAt });
+}
+
+/**
+ * Nível 3 (Market Intelligence) -- Fase 1: persiste o que lib/featureBuilder
+ * já calcula pro símbolo único que a plataforma roda hoje (config.symbol).
+ * Quebra por ativo (BTC/ETH/SOL) fica fora até a plataforma virar
+ * multi-asset -- não fabricado aqui.
+ */
+function runFeatureSample() {
+  const featuresByDomain = buildAllFeatures(db, config.symbol);
+  const features = summarizeFeatures(featuresByDomain);
+  const sampledAt = new Date().toISOString();
+  writeJsonSnapshot(path.join(METRICS_DIR, "features.json"), { symbol: config.symbol, features, sampledAt });
+  appendHistory("features", { symbol: config.symbol, features });
+  eventBus.emit("runtime_metrics.features.updated", { sampledAt });
+}
+
+/**
+ * Nível 4 (Brain Evolution) -- Fase 1: lê data/replay/stats.json (gravado só
+ * quando alguém roda `npm run replay` manualmente) em vez de recomputar
+ * evaluateDecisionBrainReadiness aqui dentro. Se replay nunca rodou, não há
+ * nada pra persistir ainda -- sem valor inventado.
+ */
+function runBrainSample() {
+  const stats = readHeartbeat(REPLAY_STATS_FILE);
+  const summary = summarizeDecisionBrainReadiness(stats?.decisionBrainReadiness);
+  if (!summary) return;
+
+  const sampledAt = new Date().toISOString();
+  writeJsonSnapshot(path.join(METRICS_DIR, "brain.json"), { ...summary, sampledAt });
+  appendHistory("brain", summary);
+  eventBus.emit("runtime_metrics.brain.updated", { sampledAt });
+}
+
 function run() {
   const startedAt = Date.now();
   try {
@@ -445,6 +499,33 @@ function runSlow() {
   } catch (err) {
     samplerMetrics.recordFailure("context_sample", err, { latencyMs: Date.now() - contextStartedAt });
     console.error("⚠️  metricsSampler: falha ao amostrar context (Context Fusion):", err.message);
+  }
+
+  const knowledgeStartedAt = Date.now();
+  try {
+    runKnowledgeSample();
+    samplerMetrics.recordSuccess("knowledge_sample", { inserted: true, latencyMs: Date.now() - knowledgeStartedAt });
+  } catch (err) {
+    samplerMetrics.recordFailure("knowledge_sample", err, { latencyMs: Date.now() - knowledgeStartedAt });
+    console.error("⚠️  metricsSampler: falha ao amostrar knowledge (Research Objects):", err.message);
+  }
+
+  const featureStartedAt = Date.now();
+  try {
+    runFeatureSample();
+    samplerMetrics.recordSuccess("feature_sample", { inserted: true, latencyMs: Date.now() - featureStartedAt });
+  } catch (err) {
+    samplerMetrics.recordFailure("feature_sample", err, { latencyMs: Date.now() - featureStartedAt });
+    console.error("⚠️  metricsSampler: falha ao amostrar features (Feature Builder):", err.message);
+  }
+
+  const brainStartedAt = Date.now();
+  try {
+    runBrainSample();
+    samplerMetrics.recordSuccess("brain_sample", { inserted: true, latencyMs: Date.now() - brainStartedAt });
+  } catch (err) {
+    samplerMetrics.recordFailure("brain_sample", err, { latencyMs: Date.now() - brainStartedAt });
+    console.error("⚠️  metricsSampler: falha ao amostrar brain (Decision Brain Readiness):", err.message);
   }
 }
 

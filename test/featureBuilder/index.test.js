@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const Database = require("better-sqlite3");
 const { runMigrations } = require("../../lib/infra/db");
-const { buildAllFeatures, flattenFeatures } = require("../../lib/featureBuilder");
+const { buildAllFeatures, flattenFeatures, summarizeFeatures } = require("../../lib/featureBuilder");
 
 function freshDb() {
   const db = new Database(":memory:");
@@ -43,5 +43,14 @@ test("buildAllFeatures: sem nenhuma estatística computada, todas as 8 Features 
   const db = freshDb();
   const flat = flattenFeatures(buildAllFeatures(db, "SOLUSDT"));
   assert.ok(flat.every((f) => f.interpretation.state === "UNKNOWN"));
+  db.close();
+});
+
+test("summarizeFeatures: forma compacta {state, strength, confidence} por id, todas as 8 chaves presentes", () => {
+  const db = freshDb();
+  const summary = summarizeFeatures(buildAllFeatures(db, "SOLUSDT"));
+
+  assert.equal(Object.keys(summary).length, 8);
+  assert.deepEqual(summary.FEATURE_FUNDING_EXTREME, { state: "UNKNOWN", strength: 0, confidence: 0 });
   db.close();
 });
