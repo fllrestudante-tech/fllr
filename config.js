@@ -63,13 +63,21 @@ const config = {
   // splits diferentes (20/30/50, 40/30/30...) só mudando config, sem
   // recompilar nada. `r` é múltiplo de R (distância do stop original,
   // mesma unidade do break even/trailing); `qtyPct` é a fração da posição
-  // fechada nesse nível. O que sobrar (1 - soma dos qtyPct) corre no
-  // break even/trailing já construídos (D3/D4). Confirmado contra a API
-  // real da Bybit (Demo): TP1+TP2 parciais (tpslMode="Partial") coexistem
+  // fechada nesse nível. Com stopLossPct=2,5%, r=1.2/2.4/3.6 equivalem a
+  // ~3%/6%/9% de movimento de preço a partir da entrada (decisão do
+  // usuário, 2026-08-11). `closeRemainder: true` no último nível faz
+  // lib/risk.js::planOrder atribuir a ele o que sobrou do qty total (em vez
+  // de qtyPct×qty), garantindo que a posição feche 100% nesse nível sem
+  // deixar sobra por arredondamento de qtyStep -- antes só 60% tinha TP fixo
+  // e o resto corria indefinidamente em break even/trailing (D3/D4); agora
+  // o trailing ainda protege o que estiver aberto ANTES de bater cada nível,
+  // mas o fechamento final da operação é garantido em ~9%. Confirmado contra
+  // a API real da Bybit (Demo): TP parciais (tpslMode="Partial") coexistem
   // sem conflito com o trailingStop na mesma posição.
   tpLevels: [
-    { r: 1, qtyPct: 0.3 },
-    { r: 2, qtyPct: 0.3 },
+    { r: 1.2, qtyPct: 0.3 }, // TP1 ~3%
+    { r: 2.4, qtyPct: 0.3 }, // TP2 ~6% (acumulado 60%)
+    { r: 3.6, qtyPct: 0.4, closeRemainder: true }, // TP3 ~9% -- fecha a operação inteira
   ],
 
   // Item 1 do sequenciamento de Brains: lib/backtest.js passa a preferir
@@ -124,9 +132,42 @@ const config = {
     telegramChatId: process.env.TELEGRAM_ALERT_CHAT_ID || "",
   },
 
+  // Dashboard Operacional Web -- servidor HTTP nativo, só leitura, nunca
+  // chama a Bybit (ver scripts/dashboardServer.js).
+  dashboard: {
+    port: num(process.env.DASHBOARD_PORT, 4300),
+  },
+
   knowledge: {
     coinMarketCalApiKey: process.env.COINMARKETCAL_API_KEY || "",
     fredApiKey: process.env.FRED_API_KEY || "",
+  },
+
+  // AI Gateway (scaffold, Fase 1) -- enriquecimento de contexto via IA,
+  // ainda não conectado ao loop de trading nem ao Risk Engine (ver
+  // lib/aiGateway/aiGateway.js). primaryProvider/secondaryProvider definem
+  // a ordem de fallback sequencial (nunca fan-out simultâneo).
+  ai: {
+    openaiApiKey: process.env.OPENAI_API_KEY || "",
+    openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
+    anthropicModel: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-20241022",
+    // Anthropic é a base principal do Crypto10 (decisão do usuário,
+    // 2026-08-11): deve ficar disponível continuamente e é a referência do
+    // acompanhamento do sistema. OpenAI (gpt-4o-mini) é o laboratório
+    // econômico -- fallback quando a Anthropic falhar, e também usado pra
+    // testes/desenvolvimento de baixo custo enquanto o AgentRouter (GPT-5.6
+    // Sol) não libera acesso de terceiros.
+    primaryProvider: process.env.AI_PRIMARY_PROVIDER || "anthropic",
+    secondaryProvider: process.env.AI_SECONDARY_PROVIDER || "openai",
+    requestTimeoutMs: num(process.env.AI_REQUEST_TIMEOUT_MS, 20000),
+    maxOutputTokens: num(process.env.AI_MAX_OUTPUT_TOKENS, 500),
+
+    // Fase 2 (AI Shadow Evaluation) -- cadência do scripts/aiShadowEvaluator.js,
+    // standalone, não conectado ao loop de trading. Default = mesma janela
+    // "slow tier" que scripts/metricsSampler.js já usa pra computar os 3
+    // Brains + Context Fusion.
+    shadowIntervalMs: num(process.env.AI_SHADOW_INTERVAL_MS, 15 * 60 * 1000),
   },
 
   // SLA Registry (Runtime Metrics Engine, Fase B) -- expectedIntervalMs é de
@@ -164,7 +205,7 @@ const config = {
     rsiPeriod: { min: 10, max: 21 },
     stochOversold: { min: 10, max: 30 },
     stochOverbought: { min: 70, max: 90 },
-    stopLossPct: { min: 0.03, max: 0.03 }, // fixo em 3% do preço de entrada (min=max desativa a variação do auto-tuning)
+    stopLossPct: { min: 0.025, max: 0.025 }, // fixo em 2,5% do preço de entrada (min=max desativa a variação do auto-tuning)
   },
 
   loopIntervalMs: 10000,
@@ -177,12 +218,19 @@ const config = {
     tuningFile: __dirname + "/data/tuning.json",
     tradesLog: __dirname + "/data/trades.jsonl",
     alertsLog: __dirname + "/data/alerts.jsonl",
+    aiAssessmentsLog: __dirname + "/data/ai-assessments.jsonl",
   },
 };
 
 if (!config.bybit.apiKey || !config.bybit.apiSecret) {
   console.warn(
     "⚠️  BYBIT_API_KEY / BYBIT_API_SECRET não configurados no .env — o bot não vai conseguir autenticar na Bybit."
+  );
+}
+
+if (!config.ai.openaiApiKey && !config.ai.anthropicApiKey) {
+  console.warn(
+    "⚠️  Nenhuma chave de IA configurada (OPENAI_API_KEY / ANTHROPIC_API_KEY) — AI Gateway ficará indisponível (infra de enriquecimento ainda não conectada ao loop, não bloqueia o bot)."
   );
 }
 

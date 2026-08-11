@@ -140,10 +140,12 @@ async function openPosition(side, analysis, equity) {
     `${side === "buy" ? "🟢" : "🔴"} Sinal de ${side.toUpperCase()}. qty=${plan.qty} stop=${plan.stopLossPrice} TP escalonado=${tpLevelsDesc}`
   );
 
-  // Fase D5 -- takeProfit fixo não é mais anexado à ordem de entrada: TP1/TP2
+  // Fase D5 -- takeProfit fixo não é mais anexado à ordem de entrada: TP1/TP2/TP3
   // (registrados abaixo como pernas Partial) assumem o papel de realização de
-  // lucro; o que sobrar corre no break even/trailing (D3/D4). stopLossPrice
-  // continua vindo junto da ordem (rede de segurança desde o primeiro tick).
+  // lucro, com TP3 fechando 100% da posição (closeRemainder em config.tpLevels).
+  // Break even/trailing (D3/D4) continuam protegendo o que ainda estiver aberto
+  // ANTES de bater cada nível. stopLossPrice continua vindo junto da ordem
+  // (rede de segurança desde o primeiro tick).
   let res;
   try {
     res = await bybit.placeOrder({
