@@ -37,6 +37,7 @@ const { fuseContext } = require("../lib/brains/contextFusion");
 const { loadRegistry, countByStatus } = require("../lib/registry/registryStore");
 const { buildAllFeatures, summarizeFeatures } = require("../lib/featureBuilder");
 const { summarizeDecisionBrainReadiness } = require("../lib/brainAnalytics");
+const { computeAiCostMetrics } = require("../lib/aiGateway/costMetrics");
 
 // Domínios de mercado que teriam um equivalente em outra exchange (Binance,
 // quando existir) -- só esses fazem sentido pra Cross-Source Validation.
@@ -442,6 +443,35 @@ function runBrainSample() {
   eventBus.emit("runtime_metrics.brain.updated", { sampledAt });
 }
 
+/**
+ * AI Gateway Cost (2026-08-11) -- lê data/ai-assessments.jsonl (o próprio
+ * lib/aiGateway/aiGateway.js já grava lá, uma linha por assessment) e
+ * calcula AI_ASSESSMENTS_24H/AI_PROVIDER_ATTEMPTS_24H/
+ * AI_INPUT_TOKENS_24H/AI_OUTPUT_TOKENS_24H/AI_COST_ESTIMATE_24H/
+ * AI_COST_ESTIMATE_30D (ver lib/aiGateway/costMetrics.js pra a distinção
+ * assessment-vs-tentativa e a regra de quando o custo é parcial). Cadência
+ * lenta (15min, junto de quality/context) é mais que suficiente -- o AI
+ * Decision Cycle nunca chama a IA mais de 1x a cada
+ * config.ai.minCallIntervalMs (5min por padrão), então recalcular isso no
+ * ritmo rápido (60s) não traria dado mais novo.
+ */
+function runAiCostSample() {
+  const metrics = computeAiCostMetrics();
+  const sampledAt = new Date().toISOString();
+  writeJsonSnapshot(path.join(METRICS_DIR, "ai-cost.json"), { ...metrics, sampledAt });
+  appendHistory("ai-cost", {
+    AI_ASSESSMENTS_24H: metrics.AI_ASSESSMENTS_24H,
+    AI_PROVIDER_ATTEMPTS_24H: metrics.AI_PROVIDER_ATTEMPTS_24H,
+    AI_INPUT_TOKENS_24H: metrics.AI_INPUT_TOKENS_24H,
+    AI_OUTPUT_TOKENS_24H: metrics.AI_OUTPUT_TOKENS_24H,
+    AI_COST_ESTIMATE_24H: metrics.AI_COST_ESTIMATE_24H,
+    AI_COST_ESTIMATE_30D: metrics.AI_COST_ESTIMATE_30D,
+    AI_COST_ESTIMATE_INCOMPLETE: metrics.AI_COST_ESTIMATE_INCOMPLETE,
+    AI_ATTEMPTS_WITH_UNKNOWN_USAGE_24H: metrics.AI_ATTEMPTS_WITH_UNKNOWN_USAGE_24H,
+  });
+  eventBus.emit("runtime_metrics.ai_cost.updated", { sampledAt });
+}
+
 function run() {
   const startedAt = Date.now();
   try {
@@ -526,6 +556,15 @@ function runSlow() {
   } catch (err) {
     samplerMetrics.recordFailure("brain_sample", err, { latencyMs: Date.now() - brainStartedAt });
     console.error("⚠️  metricsSampler: falha ao amostrar brain (Decision Brain Readiness):", err.message);
+  }
+
+  const aiCostStartedAt = Date.now();
+  try {
+    runAiCostSample();
+    samplerMetrics.recordSuccess("ai_cost_sample", { inserted: true, latencyMs: Date.now() - aiCostStartedAt });
+  } catch (err) {
+    samplerMetrics.recordFailure("ai_cost_sample", err, { latencyMs: Date.now() - aiCostStartedAt });
+    console.error("⚠️  metricsSampler: falha ao amostrar ai-cost (AI Gateway):", err.message);
   }
 }
 

@@ -168,6 +168,23 @@ const config = {
     // "slow tier" que scripts/metricsSampler.js já usa pra computar os 3
     // Brains + Context Fusion.
     shadowIntervalMs: num(process.env.AI_SHADOW_INTERVAL_MS, 15 * 60 * 1000),
+
+    // Custo real (lib/aiGateway/costMetrics.js, AI_COST_ESTIMATE_24H/30D) --
+    // preço por 1 milhão de tokens, verificado em 2026-08-11 (fontes:
+    // OpenAI pricing page para gpt-4o-mini; Anthropic pricing para
+    // claude-3-5-haiku-20241022 especificamente, não a Haiku 4.5 mais nova,
+    // que é mais cara). Hipótese documentada, não travada pra sempre --
+    // se o provider mudar o preço, atualizar aqui (não há API pra consultar
+    // preço em tempo real). Chave = prefixo do nome do modelo (casa contra
+    // o model versionado que o provider devolve, ex: "gpt-4o-mini-2024-07-18").
+    pricing: {
+      openai: {
+        "gpt-4o-mini": { inputPer1M: 0.15, outputPer1M: 0.6 },
+      },
+      anthropic: {
+        "claude-3-5-haiku": { inputPer1M: 0.8, outputPer1M: 4.0 },
+      },
+    },
   },
 
   // SLA Registry (Runtime Metrics Engine, Fase B) -- expectedIntervalMs é de
