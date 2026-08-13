@@ -149,19 +149,41 @@ const config = {
   // a ordem de fallback sequencial (nunca fan-out simultâneo).
   ai: {
     openaiApiKey: process.env.OPENAI_API_KEY || "",
-    openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    // Migração pra gpt-5.6-luna (decisão do usuário, 2026-08-13, após teste
+    // real comparativo contra gpt-4o-mini -- ver commit deste arquivo):
+    // análise qualitativamente mais rica e mais aderente às regras
+    // explícitas do prompt, aceita como custo absoluto (~$0,0017/chamada
+    // observado, ainda muito barato em termos absolutos). gpt-4o-mini
+    // continua na tabela de pricing abaixo só pra resolver custo de
+    // chamadas históricas já gravadas no log antes desta migração --
+    // nenhuma chamada nova usa esse model a menos que OPENAI_MODEL
+    // sobrescreva isso no .env.
+    openaiModel: process.env.OPENAI_MODEL || "gpt-5.6-luna",
+    // gpt-5.x (família reasoning, sucessora do o-series) não aceita
+    // temperature customizada -- só reasoning_effort. Confirmado por teste
+    // real: gpt-5.6-luna respondeu 400 "Unsupported value" pra
+    // temperature:0.2. "none" reproduz a config do teste manual aprovado
+    // (evita gastar tokens de raciocínio ocultos numa tarefa que já é
+    // estruturada por schema). Ver lib/openaiClient.js::isReasoningFamily.
+    openaiReasoningEffort: process.env.OPENAI_REASONING_EFFORT || "none",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
     anthropicModel: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-20241022",
     // Anthropic é a base principal do Crypto10 (decisão do usuário,
     // 2026-08-11): deve ficar disponível continuamente e é a referência do
-    // acompanhamento do sistema. OpenAI (gpt-4o-mini) é o laboratório
+    // acompanhamento do sistema. OpenAI (gpt-5.6-luna) é o laboratório
     // econômico -- fallback quando a Anthropic falhar, e também usado pra
-    // testes/desenvolvimento de baixo custo enquanto o AgentRouter (GPT-5.6
-    // Sol) não libera acesso de terceiros.
+    // testes/desenvolvimento enquanto o AgentRouter (GPT-5.6 Sol) não libera
+    // acesso de terceiros (nota: gpt-5.6-luna/sol/terra são diretamente
+    // acessíveis via API própria da OpenAI, independente do AgentRouter).
     primaryProvider: process.env.AI_PRIMARY_PROVIDER || "anthropic",
     secondaryProvider: process.env.AI_SECONDARY_PROVIDER || "openai",
     requestTimeoutMs: num(process.env.AI_REQUEST_TIMEOUT_MS, 20000),
-    maxOutputTokens: num(process.env.AI_MAX_OUTPUT_TOKENS, 500),
+    // 500 -> 2000 (2026-08-13): gpt-5.6-luna produz respostas bem mais
+    // analíticas (986 tokens observados no teste real, vs ~300-350 do
+    // gpt-4o-mini) -- 500 arriscava truncar o JSON no meio (parseError
+    // silencioso). 2000 é ~2x o maior valor observado, ainda um teto real
+    // contra resposta anormalmente longa, não "sem limite".
+    maxOutputTokens: num(process.env.AI_MAX_OUTPUT_TOKENS, 2000),
 
     // Fase 2 (AI Shadow Evaluation) -- cadência do scripts/aiShadowEvaluator.js,
     // standalone, não conectado ao loop de trading. Default = mesma janela
@@ -170,16 +192,27 @@ const config = {
     shadowIntervalMs: num(process.env.AI_SHADOW_INTERVAL_MS, 15 * 60 * 1000),
 
     // Custo real (lib/aiGateway/costMetrics.js, AI_COST_ESTIMATE_24H/30D) --
-    // preço por 1 milhão de tokens, verificado em 2026-08-11 (fontes:
-    // OpenAI pricing page para gpt-4o-mini; Anthropic pricing para
+    // preço por 1 milhão de tokens. gpt-4o-mini verificado em 2026-08-11;
+    // gpt-5.6-luna verificado em 2026-08-13 (fonte: OpenAI pricing page,
+    // corte de 80% em 30/07/2026 -- preço padrão novo, não promoção
+    // temporária); Anthropic verificado em 2026-08-11 pra
     // claude-3-5-haiku-20241022 especificamente, não a Haiku 4.5 mais nova,
-    // que é mais cara). Hipótese documentada, não travada pra sempre --
-    // se o provider mudar o preço, atualizar aqui (não há API pra consultar
+    // que é mais cara. Hipótese documentada, não travada pra sempre -- se o
+    // provider mudar o preço, atualizar aqui (não há API pra consultar
     // preço em tempo real). Chave = prefixo do nome do modelo (casa contra
     // o model versionado que o provider devolve, ex: "gpt-4o-mini-2024-07-18").
+    // gpt-4o-mini permanece aqui só pra resolver o custo de chamadas
+    // históricas já gravadas no log antes da migração pro Luna -- não é
+    // mais o model usado por padrão (ver openaiModel acima).
+    // cachedInputPer1M = preço de tokens de entrada servidos do cache do
+    // provider (bem mais barato que entrada nova) -- omitido quando o
+    // provider não documenta desconto de cache pro model (ex: Anthropic
+    // aqui), caso em que lib/aiGateway/costMetrics.js cobra cache como
+    // entrada normal (nunca inventa desconto sem fonte).
     pricing: {
       openai: {
-        "gpt-4o-mini": { inputPer1M: 0.15, outputPer1M: 0.6 },
+        "gpt-4o-mini": { inputPer1M: 0.15, cachedInputPer1M: 0.075, outputPer1M: 0.6 },
+        "gpt-5.6-luna": { inputPer1M: 0.2, cachedInputPer1M: 0.02, outputPer1M: 1.2 },
       },
       anthropic: {
         "claude-3-5-haiku": { inputPer1M: 0.8, outputPer1M: 4.0 },

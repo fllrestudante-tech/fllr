@@ -43,6 +43,26 @@ function providerErrorEntry(overrides = {}) {
   return { time: iso(1), provider: null, model: null, attempted: ["anthropic", "openai"], status: "provider_error", usage: null, ...overrides };
 }
 
+// --- Cached/reasoning tokens (migração gpt-5.6-luna, 2026-08-13) ---
+
+test("computeAiCostMetrics: agrega AI_CACHED_INPUT_TOKENS_24H/AI_REASONING_TOKENS_24H como subconjuntos, total e por provider", () => {
+  const entry = fallbackSuccessEntry({ usage: { promptTokens: 2615, completionTokens: 986, cachedTokens: 500, reasoningTokens: 20 } });
+  const m = computeAiCostMetrics({ now: NOW, entries: [entry] });
+  assert.equal(m.AI_INPUT_TOKENS_24H, 2615);
+  assert.equal(m.AI_CACHED_INPUT_TOKENS_24H, 500);
+  assert.equal(m.AI_OUTPUT_TOKENS_24H, 986);
+  assert.equal(m.AI_REASONING_TOKENS_24H, 20);
+  assert.equal(m.byProvider.openai.cachedInputTokens, 500);
+  assert.equal(m.byProvider.openai.reasoningTokens, 20);
+});
+
+test("computeAiCostMetrics: usage sem cachedTokens/reasoningTokens (log antigo, pré-migração) não quebra e conta como 0", () => {
+  const entry = fallbackSuccessEntry({ usage: { promptTokens: 100, completionTokens: 50 } }); // sem os campos novos
+  const m = computeAiCostMetrics({ now: NOW, entries: [entry] });
+  assert.equal(m.AI_CACHED_INPUT_TOKENS_24H, 0);
+  assert.equal(m.AI_REASONING_TOKENS_24H, 0);
+});
+
 // --- Bloqueador 1: assessment x tentativa de provider ---
 
 test("computeAiCostMetrics: fallback (anthropic falha -> openai sucesso) = 1 assessment + 2 tentativas (1 falha + 1 sucesso)", () => {
@@ -151,7 +171,14 @@ test("computeAiCostMetrics: provider_error (todas as tentativas falham, nenhuma 
 
 test("extractUsableUsage: só depende de usage numérico + provider presentes, não olha status", () => {
   const withUsage = { status: "provider_error", provider: "openai", model: "gpt-4o-mini", usage: { promptTokens: 10, completionTokens: 5 } };
-  assert.deepEqual(extractUsableUsage(withUsage), { provider: "openai", model: "gpt-4o-mini", promptTokens: 10, completionTokens: 5 });
+  assert.deepEqual(extractUsableUsage(withUsage), {
+    provider: "openai",
+    model: "gpt-4o-mini",
+    promptTokens: 10,
+    completionTokens: 5,
+    cachedTokens: 0,
+    reasoningTokens: 0,
+  });
 
   assert.equal(extractUsableUsage({ status: "success", provider: "openai", usage: null }), null);
   assert.equal(extractUsableUsage({ status: "success", provider: null, usage: { promptTokens: 1, completionTokens: 1 } }), null);
@@ -174,15 +201,48 @@ test("computeAiCostMetrics: se uma entrada tiver usage válido mesmo com status 
 // --- Preço / matemática de custo ---
 
 test("resolvePricing: casa por prefixo do model versionado", () => {
-  assert.deepEqual(resolvePricing("openai", "gpt-4o-mini-2024-07-18"), { inputPer1M: 0.15, outputPer1M: 0.6 });
+  assert.deepEqual(resolvePricing("openai", "gpt-4o-mini-2024-07-18"), { inputPer1M: 0.15, cachedInputPer1M: 0.075, outputPer1M: 0.6 });
+  assert.deepEqual(resolvePricing("openai", "gpt-5.6-luna"), { inputPer1M: 0.2, cachedInputPer1M: 0.02, outputPer1M: 1.2 });
   assert.deepEqual(resolvePricing("anthropic", "claude-3-5-haiku-20241022"), { inputPer1M: 0.8, outputPer1M: 4.0 });
   assert.equal(resolvePricing("openai", "gpt-5-desconhecido"), null);
   assert.equal(resolvePricing("provider-inexistente", "qualquer"), null);
 });
 
-test("estimateCostUsd: matemática exata pro par gpt-4o-mini (735 in / 117 out)", () => {
+test("estimateCostUsd: matemática exata pro par gpt-4o-mini (735 in / 117 out), sem cache", () => {
   const cost = estimateCostUsd({ provider: "openai", model: "gpt-4o-mini-2024-07-18", promptTokens: 735, completionTokens: 117 });
   const expected = (735 / 1e6) * 0.15 + (117 / 1e6) * 0.6;
+  assert.ok(Math.abs(cost - expected) < 1e-12);
+});
+
+test("estimateCostUsd: matemática exata pro par gpt-5.6-luna (2615 in / 986 out), sem cache -- mesmos números do teste real comparativo", () => {
+  const cost = estimateCostUsd({ provider: "openai", model: "gpt-5.6-luna", promptTokens: 2615, completionTokens: 986 });
+  const expected = (2615 / 1e6) * 0.2 + (986 / 1e6) * 1.2;
+  assert.ok(Math.abs(cost - expected) < 1e-12);
+  assert.ok(Math.abs(cost - 0.001706) < 1e-6); // valor observado no teste real, registrado como baseline
+});
+
+test("estimateCostUsd: cachedTokens usa cachedInputPer1M (mais barato), só pro subconjunto em cache", () => {
+  // 2560 dos 2616 tokens de entrada vieram do cache -- mesmo cenário real
+  // observado com gpt-4o-mini durante o teste comparativo.
+  const cost = estimateCostUsd({ provider: "openai", model: "gpt-4o-mini-2024-07-18", promptTokens: 2616, completionTokens: 315, cachedTokens: 2560 });
+  const nonCached = 2616 - 2560;
+  const expected = (nonCached / 1e6) * 0.15 + (2560 / 1e6) * 0.075 + (315 / 1e6) * 0.6;
+  assert.ok(Math.abs(cost - expected) < 1e-12);
+  // cache mais barato que entrada normal -- custo com cache deve ser menor
+  // que o mesmo cálculo tratando tudo como entrada normal (sem desconto)
+  const costWithoutCacheDiscount = (2616 / 1e6) * 0.15 + (315 / 1e6) * 0.6;
+  assert.ok(cost < costWithoutCacheDiscount);
+});
+
+test("estimateCostUsd: cachedTokens além do preço de cache configurado (ex: anthropic) cobra como entrada normal, nunca inventa desconto", () => {
+  const cost = estimateCostUsd({ provider: "anthropic", model: "claude-3-5-haiku-20241022", promptTokens: 100, completionTokens: 10, cachedTokens: 50 });
+  const expected = (100 / 1e6) * 0.8 + (10 / 1e6) * 4.0; // sem desconto -- cachedInputPer1M não existe pra esse par
+  assert.ok(Math.abs(cost - expected) < 1e-12);
+});
+
+test("estimateCostUsd: cachedTokens maior que promptTokens é clampado (nunca gera custo negativo/absurdo)", () => {
+  const cost = estimateCostUsd({ provider: "openai", model: "gpt-4o-mini-2024-07-18", promptTokens: 100, completionTokens: 10, cachedTokens: 99999 });
+  const expected = (100 / 1e6) * 0.075 + (10 / 1e6) * 0.6; // tudo tratado como cache, nunca "entrada negativa"
   assert.ok(Math.abs(cost - expected) < 1e-12);
 });
 

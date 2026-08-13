@@ -27,8 +27,23 @@ test("openaiProvider.normalize: extrai bias/strength/usage/model de choices[0].m
   assert.equal(n.marketRegime, "TRENDING_BULL");
   assert.equal(n.recommendation, "FAVOR_ENTRY");
   assert.equal(n.model, "gpt-4o-mini");
-  assert.deepEqual(n.usage, { promptTokens: 120, completionTokens: 30 });
+  assert.deepEqual(n.usage, { promptTokens: 120, completionTokens: 30, cachedTokens: null, reasoningTokens: null });
   assert.equal(n.parseError, null);
+});
+
+test("openaiProvider.normalize: extrai cachedTokens/reasoningTokens de prompt_tokens_details/completion_tokens_details (formato real gpt-5.6-luna/gpt-4o-mini)", () => {
+  const raw = {
+    model: "gpt-5.6-luna",
+    choices: [{ message: { content: JSON.stringify(FULL_SCHEMA_PAYLOAD) } }],
+    usage: {
+      prompt_tokens: 2615,
+      completion_tokens: 986,
+      prompt_tokens_details: { cached_tokens: 500, audio_tokens: 0 },
+      completion_tokens_details: { reasoning_tokens: 0, audio_tokens: 0 },
+    },
+  };
+  const n = openaiProvider.normalize(raw);
+  assert.deepEqual(n.usage, { promptTokens: 2615, completionTokens: 986, cachedTokens: 500, reasoningTokens: 0 });
 });
 
 test("openaiProvider.normalize: resposta malformada não lança, degrada pra neutral", () => {
