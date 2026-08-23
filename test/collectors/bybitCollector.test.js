@@ -5,7 +5,7 @@ const os = require("os");
 const path = require("path");
 const { openDb } = require("../../lib/infra/db");
 const { createEventBus } = require("../../lib/infra/eventBus");
-const { collectCandles, collectFunding, collectOpenInterest, collectTicker, collectLongShortRatio } = require("../../lib/collectors/bybitCollector");
+const { collectCandles, collectFunding, collectOpenInterest, collectTicker, collectLongShortRatio, runCollector } = require("../../lib/collectors/bybitCollector");
 
 function tmpDbPath() {
   return path.join(os.tmpdir(), `bot-cripto10-collector-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
@@ -242,4 +242,148 @@ test("collectLongShortRatio: mesmo snapshot_time não duplica", async () => {
 
   assert.equal(second.inserted, false);
   assert.equal(rows.length, 1);
+});
+
+// Fase A (expansão multi-asset) -- runCollector agora cobre uma lista de
+// símbolos (intervals.symbols override, sem depender de env var no teste),
+// espalhados pelo requestScheduler em vez de rodar 1 símbolo só.
+
+function fakeMultiSymbolClient() {
+  let candleTime = 1000;
+  return {
+    getKlines: async () => {
+      candleTime += 60000;
+      return [
+        [candleTime - 60000, "10", "12", "9", "11", "5"],
+        [candleTime, "11", "13", "10", "12", "7"], // último "em formação", ignorado
+      ];
+    },
+    getFundingHistory: async () => [{ fundingRate: "0.0001", fundingRateTimestamp: String(Date.now()) }],
+    getOpenInterest: async () => [{ openInterest: "1000", timestamp: String(Date.now()) }],
+    getTickers: async () => [
+      { lastPrice: "100", markPrice: "100", indexPrice: "100", bid1Price: "99", ask1Price: "101", volume24h: "10", turnover24h: "1000", price24hPcnt: "0.01", fundingRate: "0.0001", openInterest: "1000" },
+    ],
+    getLongShortRatio: async () => [{ buyRatio: "0.5", sellRatio: "0.5", timestamp: String(Date.now()) }],
+  };
+}
+
+test("runCollector: cobre todos os símbolos de intervals.symbols, não só 1", (t, done) => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const eventBus = createEventBus();
+  const fakeClient = fakeMultiSymbolClient();
+  const config = { symbol: "BTCUSDT", interval: "1" };
+
+  const collector = runCollector(db, eventBus, fakeClient, config, {
+    symbols: ["BTCUSDT", "ETHUSDT"],
+    candlesMs: 100,
+    fundingMs: 100,
+    oiMs: 100,
+    tickerMs: 100,
+    longShortMs: 100,
+    maxConcurrent: 4,
+  });
+
+  // janela de 100ms, 2 símbolos -> offsets [0, 50] -- 90ms dá margem pros
+  // dois já terem disparado ao menos uma vez.
+  setTimeout(() => {
+    collector.stop();
+    const candleSymbols = db.prepare("SELECT DISTINCT symbol FROM candles ORDER BY symbol").all().map((r) => r.symbol);
+    db.close();
+    cleanup(dbPath);
+
+    assert.deepEqual(candleSymbols, ["BTCUSDT", "ETHUSDT"]);
+    done();
+  }, 90);
+});
+
+test("runCollector: auto-registra os dois símbolos em `asset` com base/quote corretos", (t, done) => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const eventBus = createEventBus();
+  const fakeClient = fakeMultiSymbolClient();
+  const config = { symbol: "BTCUSDT", interval: "1" };
+
+  const collector = runCollector(db, eventBus, fakeClient, config, {
+    symbols: ["BTCUSDT", "ETHUSDT"],
+    candlesMs: 100,
+    fundingMs: 100,
+    oiMs: 100,
+    tickerMs: 100,
+    longShortMs: 100,
+    maxConcurrent: 4,
+  });
+
+  setTimeout(() => {
+    collector.stop();
+    const assets = db.prepare("SELECT symbol, base_asset, quote_asset, category, origin FROM asset ORDER BY symbol").all();
+    db.close();
+    cleanup(dbPath);
+
+    assert.deepEqual(assets, [
+      { symbol: "BTCUSDT", base_asset: "BTC", quote_asset: "USDT", category: "crypto", origin: "auto-collector" },
+      { symbol: "ETHUSDT", base_asset: "ETH", quote_asset: "USDT", category: "crypto", origin: "auto-collector" },
+    ]);
+    done();
+  }, 90);
+});
+
+test("runCollector: getMetrics() reporta granularidade por símbolo (bySymbol)", (t, done) => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const eventBus = createEventBus();
+  const fakeClient = fakeMultiSymbolClient();
+  const config = { symbol: "BTCUSDT", interval: "1" };
+
+  const collector = runCollector(db, eventBus, fakeClient, config, {
+    symbols: ["BTCUSDT", "ETHUSDT"],
+    candlesMs: 100,
+    fundingMs: 100,
+    oiMs: 100,
+    tickerMs: 100,
+    longShortMs: 100,
+    maxConcurrent: 4,
+  });
+
+  setTimeout(() => {
+    collector.stop();
+    const metrics = collector.getMetrics();
+    db.close();
+    cleanup(dbPath);
+
+    assert.ok(metrics.candles.bySymbol.BTCUSDT.totalRuns >= 1);
+    assert.ok(metrics.candles.bySymbol.ETHUSDT.totalRuns >= 1);
+    assert.ok(metrics.candles.totalRuns >= metrics.candles.bySymbol.BTCUSDT.totalRuns);
+    done();
+  }, 90);
+});
+
+test("runCollector: stop() cancela todos os schedulers -- nenhum tick novo depois disso", (t, done) => {
+  const dbPath = tmpDbPath();
+  const db = openDb(dbPath);
+  const eventBus = createEventBus();
+  const fakeClient = fakeMultiSymbolClient();
+  const config = { symbol: "BTCUSDT", interval: "1" };
+
+  const collector = runCollector(db, eventBus, fakeClient, config, {
+    symbols: ["BTCUSDT"],
+    candlesMs: 20,
+    fundingMs: 20,
+    oiMs: 20,
+    tickerMs: 20,
+    longShortMs: 20,
+    maxConcurrent: 4,
+  });
+
+  setTimeout(() => {
+    collector.stop();
+    const countAfterStop = db.prepare("SELECT COUNT(*) as c FROM candles").get().c;
+    setTimeout(() => {
+      const countLater = db.prepare("SELECT COUNT(*) as c FROM candles").get().c;
+      db.close();
+      cleanup(dbPath);
+      assert.equal(countLater, countAfterStop, "não deveria haver inserts novos depois do stop()");
+      done();
+    }, 60);
+  }, 30);
 });

@@ -1,6 +1,18 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { formatDomainsTable, formatProcessesTable, formatDatabaseSection, formatTradingSection, formatBackupSection, fmtUptime, fmtMb, fmtRatePerHour } = require("../lib/dashboard");
+const {
+  formatDomainsTable,
+  formatUniverseCoverageSection,
+  formatSchedulerSection,
+  formatRateLimitSection,
+  formatProcessesTable,
+  formatDatabaseSection,
+  formatTradingSection,
+  formatBackupSection,
+  fmtUptime,
+  fmtMb,
+  fmtRatePerHour,
+} = require("../lib/dashboard");
 
 test("fmtUptime: formata horas+minutos ou só minutos", () => {
   const now = new Date("2026-07-16T12:00:00.000Z").getTime();
@@ -38,6 +50,65 @@ test("formatDomainsTable: uma linha por domínio, cabeçalho + separador + dados
   assert.equal(result.length, 3); // header + separador + 1 linha
   assert.ok(result[0].includes("Domínio"));
   assert.ok(result[2].includes("candles"));
+});
+
+test("formatUniverseCoverageSection: sem símbolos, mensagem honesta (não quebra)", () => {
+  const result = formatUniverseCoverageSection([]);
+  assert.ok(result[0].includes("Universe vazio"));
+});
+
+test("formatUniverseCoverageSection: classifica healthy/degraded/offline e soma no resumo do topo", () => {
+  const rows = [
+    { symbol: "BTCUSDT", coveragePct: 100, freshnessState: "fresh", consecutiveFailures: 0, sanityPassRate: 100, lastSuccessAt: "2026-07-30T10:00:00.000Z" },
+    { symbol: "ETHUSDT", coveragePct: 40, freshnessState: "late", consecutiveFailures: 2, sanityPassRate: 67, lastSuccessAt: "2026-07-30T09:00:00.000Z" },
+    { symbol: "DOGEUSDT", coveragePct: 0, freshnessState: "stale", consecutiveFailures: 10, sanityPassRate: null, lastSuccessAt: null },
+  ];
+  const result = formatUniverseCoverageSection(rows, { assetsDiscovered: 3 });
+  assert.ok(result[0].includes("Tracked: 3"));
+  assert.ok(result[0].includes("Healthy: 1"));
+  assert.ok(result[0].includes("Degraded: 1"));
+  assert.ok(result[0].includes("Offline: 1"));
+  assert.ok(result[0].includes("Assets descobertos: 3"));
+  assert.ok(result.some((l) => l.includes("BTCUSDT") && l.includes("healthy")));
+  assert.ok(result.some((l) => l.includes("ETHUSDT") && l.includes("degraded")));
+  assert.ok(result.some((l) => l.includes("DOGEUSDT") && l.includes("offline") && l.includes("nunca")));
+});
+
+test("formatSchedulerSection: sem dados, mensagem honesta", () => {
+  const result = formatSchedulerSection(null);
+  assert.ok(result[0].includes("sem dados"));
+});
+
+test("formatSchedulerSection: soma fila total e avisa quando há backlog", () => {
+  const stats = { candles: { activeCount: 3, queuedCount: 2 }, funding: { activeCount: 1, queuedCount: 0 } };
+  const result = formatSchedulerSection(stats);
+  assert.ok(result[0].includes("Fila total: 2"));
+  assert.ok(result[0].includes("backlog"));
+  assert.ok(result.some((l) => l.includes("candles")));
+});
+
+test("formatSchedulerSection: fila zerada não mostra aviso de backlog", () => {
+  const stats = { candles: { activeCount: 1, queuedCount: 0 } };
+  const result = formatSchedulerSection(stats);
+  assert.ok(result[0].includes("Fila total: 0"));
+  assert.ok(!result[0].includes("backlog"));
+});
+
+test("formatRateLimitSection: sem dados, mensagem honesta", () => {
+  const result = formatRateLimitSection(null);
+  assert.ok(result[0].includes("sem dados"));
+});
+
+test("formatRateLimitSection: mostra 429/retries/backoff e throttle% quando totalRuns é passado", () => {
+  const result = formatRateLimitSection({ totalRetries: 5, total429: 2, totalBackoffMs: 3000 }, { totalRuns: 200 });
+  assert.ok(result[0].includes("429 (rate limit): 2"));
+  assert.ok(result[0].includes("Retries totais: 5"));
+  assert.ok(result[0].includes("Throttle: 1%"));
+});
+
+test("formatRateLimitSection: sem totalRuns, omite throttle% em vez de inventar", () => {
+  const result = formatRateLimitSection({ totalRetries: 0, total429: 0, totalBackoffMs: 0 });
+  assert.ok(!result[0].includes("Throttle"));
 });
 
 test("formatProcessesTable: uma linha por processo, mostra estado degraded quando aplicável", () => {

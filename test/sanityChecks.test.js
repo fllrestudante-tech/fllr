@@ -81,6 +81,29 @@ test("sampleSanityChecks: contra um banco real de candles com OHLC ruim injetado
   assert.equal(result.passRate, 67); // 2 de 3 checks passaram (monotonic+duplicates ok, ohlc falhou) -- 66.67% arredondado
 });
 
+test("sampleSanityChecks: com symbol, escopa o check a 1 símbolo -- OHLC ruim de outro símbolo não contamina (Fase A)", () => {
+  const dbPath = tmpDbPath("sanity-symbol.db");
+  const db = openDb(dbPath);
+  const now = Date.now();
+  const insert = db.prepare(
+    "INSERT INTO candles (uuid, exchange, symbol, interval, open_time, open, high, low, close, volume, recorded_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+  );
+  insert.run("btc1", "bybit", "BTCUSDT", "1", now - 60000, 100, 105, 98, 102, 10, new Date().toISOString());
+  insert.run("btc2", "bybit", "BTCUSDT", "1", now, 100, 105, 98, 102, 10, new Date().toISOString());
+  insert.run("eth1", "bybit", "ETHUSDT", "1", now, 100, 95, 98, 96, 10, new Date().toISOString()); // high < low, só no ETHUSDT
+
+  const btcResult = sampleSanityChecks("candles", db, { windowMs: 120000, now, symbol: "BTCUSDT" });
+  const ethResult = sampleSanityChecks("candles", db, { windowMs: 120000, now, symbol: "ETHUSDT" });
+  const aggregateResult = sampleSanityChecks("candles", db, { windowMs: 120000, now });
+
+  db.close();
+  cleanup(dbPath);
+
+  assert.equal(btcResult.checks.ohlc.pass, true, "BTCUSDT sozinho não deveria ver a violação do ETHUSDT");
+  assert.equal(ethResult.checks.ohlc.pass, false);
+  assert.equal(aggregateResult.checks.ohlc.violations, 1, "agregado (sem symbol) continua vendo a violação -- comportamento atual preservado");
+});
+
 test("sampleSanityChecks: domínio orientado a evento reporta null com motivo honesto", () => {
   const dbPath = tmpDbPath("sanity-evento.db");
   const db = openDb(dbPath);

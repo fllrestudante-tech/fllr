@@ -12,6 +12,8 @@
     "collect:fear-greed": "node scripts/fearGreedCollector.js",
     "collect:btc-dominance": "node scripts/btcDominanceCollector.js",
     "collect:knowledge": "node scripts/knowledgeCollector.js",
+    "backfill": "node scripts/backfillSymbol.js",
+    "dashboard": "node scripts/dashboardServer.js",
     "backtest": "node scripts/backtest.js",
     "replay": "node scripts/replayEngine.js",
     "experiments": "node scripts/experiments.js",

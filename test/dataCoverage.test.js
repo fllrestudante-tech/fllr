@@ -58,6 +58,41 @@ test("countRowsInWindow + sampleCoverage: contra um banco real (candles)", () =>
   assert.equal(coverage.coveragePct, 50);
 });
 
+test("countRowsInWindow + sampleCoverage: com symbol, escopa a contagem a 1 símbolo (Fase A)", () => {
+  const dbPath = tmpDbPath("coverage-symbol.db");
+  const db = openDb(dbPath);
+  const now = Date.now();
+
+  const insert = db.prepare(
+    "INSERT INTO candles (uuid, exchange, symbol, interval, open_time, open, high, low, close, volume, recorded_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+  );
+  // 60 candles de BTCUSDT (cobertura completa) + 30 de ETHUSDT (cobertura parcial) na mesma janela
+  for (let i = 0; i < 60; i++) {
+    const openTime = now - i * 60000;
+    insert.run(`btc-${i}`, "bybit", "BTCUSDT", "1", openTime, 100, 101, 99, 100.5, 10, new Date(openTime).toISOString());
+  }
+  for (let i = 0; i < 30; i++) {
+    const openTime = now - i * 60000;
+    insert.run(`eth-${i}`, "bybit", "ETHUSDT", "1", openTime, 100, 101, 99, 100.5, 10, new Date(openTime).toISOString());
+  }
+
+  const btcCount = countRowsInWindow(db, "candles", "open_time", 60 * 60 * 1000, now, "BTCUSDT");
+  const ethCount = countRowsInWindow(db, "candles", "open_time", 60 * 60 * 1000, now, "ETHUSDT");
+  const totalCount = countRowsInWindow(db, "candles", "open_time", 60 * 60 * 1000, now);
+
+  const btcCoverage = sampleCoverage("candles", db, { now, symbol: "BTCUSDT" });
+  const ethCoverage = sampleCoverage("candles", db, { now, symbol: "ETHUSDT" });
+
+  db.close();
+  cleanup(dbPath);
+
+  assert.equal(btcCount, 60);
+  assert.equal(ethCount, 30);
+  assert.equal(totalCount, 90, "sem symbol, agrega os dois -- comportamento atual preservado");
+  assert.equal(btcCoverage.coveragePct, 100);
+  assert.equal(ethCoverage.coveragePct, 50);
+});
+
 test("sampleCoverage: domínio orientado a evento (fora do DOMAIN_TABLES) reporta null com motivo honesto", () => {
   const dbPath = tmpDbPath("coverage-evento.db");
   const db = openDb(dbPath);

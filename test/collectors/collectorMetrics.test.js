@@ -114,3 +114,44 @@ test("clock injetado (now) default é Date.now -- comportamento em produção n�
   const lastRunAt = new Date(m.getMetrics().candles.lastRunAt).getTime();
   assert.ok(lastRunAt >= before);
 });
+
+// Fase A (expansão multi-asset) -- dimensão por símbolo, aditiva ao agregado por domínio.
+
+test("recordSuccess sem symbol continua funcionando exatamente como antes (compatibilidade)", () => {
+  const m = createCollectorMetrics();
+  m.recordSuccess("candles", { inserted: true });
+  const metrics = m.getMetrics();
+  assert.equal(metrics.candles.totalRuns, 1);
+  assert.deepEqual(metrics.candles.bySymbol, {});
+});
+
+test("recordSuccess com symbol atualiza o agregado do domínio E o registro do símbolo", () => {
+  const m = createCollectorMetrics();
+  m.recordSuccess("candles", { inserted: true, symbol: "BTCUSDT" });
+  m.recordSuccess("candles", { inserted: true, symbol: "ETHUSDT" });
+  const metrics = m.getMetrics();
+  assert.equal(metrics.candles.totalRuns, 2, "agregado do domínio soma os dois símbolos");
+  assert.equal(metrics.candles.bySymbol.BTCUSDT.totalRuns, 1);
+  assert.equal(metrics.candles.bySymbol.ETHUSDT.totalRuns, 1);
+});
+
+test("recordFailure com symbol: consecutiveFailures é rastreado por símbolo, não misturado", () => {
+  const m = createCollectorMetrics();
+  m.recordFailure("candles", new Error("timeout"), { symbol: "BTCUSDT" });
+  m.recordFailure("candles", new Error("timeout"), { symbol: "BTCUSDT" });
+  m.recordSuccess("candles", { inserted: true, symbol: "ETHUSDT" });
+  const metrics = m.getMetrics();
+  assert.equal(metrics.candles.bySymbol.BTCUSDT.consecutiveFailures, 2);
+  assert.equal(metrics.candles.bySymbol.ETHUSDT.consecutiveFailures, 0);
+  // agregado do domínio reflete a soma de tudo (2 falhas + 1 sucesso)
+  assert.equal(metrics.candles.totalRuns, 3);
+  assert.equal(metrics.candles.totalErrors, 2);
+});
+
+test("recordPaused com symbol propaga totalPaused pro registro do símbolo", () => {
+  const m = createCollectorMetrics();
+  m.recordPaused("candles", { symbol: "SOLUSDT" });
+  const metrics = m.getMetrics();
+  assert.equal(metrics.candles.bySymbol.SOLUSDT.totalPaused, 1);
+  assert.equal(metrics.candles.totalPaused, 1);
+});

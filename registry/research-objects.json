@@ -2783,6 +2783,34 @@
     "updatedAt": "2026-07-28T23:35:00.508Z"
   },
   {
+    "id": "idea-multiasset-freshness-window",
+    "type": "idea",
+    "name": "Freshness Window por-simbolo (considerar stagger do scheduler)",
+    "description": "Freshness Score (lib/freshnessScore.js) hoje usa so expectedIntervalMs/toleranceMultiplier do dominio, sem levar em conta o offset de stagger entre simbolos (lib/collectors/requestScheduler.js, Fase A). Com 2+ simbolos, isso produz oscilacao fresh/late normal na borda da janela (medido ao vivo: BTCUSDT oscilando 118s/121s contra tolerancia de 120s, sem nenhuma falha real por tras -- 0 falhas consecutivas, 0 backlog, coverage ~95%). Melhoria futura: janela por simbolo poderia considerar o offset do proprio simbolo no scheduler, nao so o intervalo esperado do dominio.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "domain:infrastructure",
+      "capmap-domain:infrastructure"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-08-01T09:27:55.654Z",
+        "action": "created",
+        "note": "Registrado apos observacao real da Etapa 1 do rollout multi-asset (BTCUSDT+ETHUSDT) -- nao e bug, e melhoria de precisao do calculo de freshness"
+      }
+    ],
+    "createdAt": "2026-08-01T09:27:55.654Z",
+    "updatedAt": "2026-08-01T09:27:55.654Z"
+  },
+  {
     "id": "idea-opportunity-alice",
     "type": "idea",
     "name": "Opportunity Engine (Opportunity Alice)",
@@ -3264,6 +3292,120 @@
     ],
     "createdAt": "2026-07-28T22:41:37.825Z",
     "updatedAt": "2026-07-28T23:35:00.508Z"
+  },
+  {
+    "id": "idea-trade-index",
+    "type": "idea",
+    "name": "Fase B.1 -- Leitura incremental de trades (Trade Index)",
+    "description": "Nao precisar percorrer o trades.jsonl inteiro (122k+ linhas, medido crescendo ~1,2s->3,0s em 31h) pra responder perguntas simples de PF/equity/capital. Ex: indice/cursor incremental, ou tabela SQLite derivada atualizada a cada trade fechado em vez de recomputada do zero a cada leitura do dashboard.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "domain:infrastructure",
+      "capmap-domain:infrastructure"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-07-31T00:04:23.337Z",
+        "action": "created",
+        "note": "Registrado apos medicao real no smoke test do Dashboard Operacional (Fase A+1) -- 1.2s por leitura de trades.jsonl/tradingHealth/exitAnalytics"
+      }
+    ],
+    "createdAt": "2026-07-31T00:04:23.337Z",
+    "updatedAt": "2026-08-01T14:38:26.180Z"
+  },
+  {
+    "id": "idea-trades-io-vs-compute-profiling",
+    "type": "idea",
+    "name": "Instrumentar trades.jsonl: tempo de I/O vs tempo de computeTradingHealth",
+    "description": "Antes de escolher entre B.1/B.2/B.3, medir separadamente quanto do custo de ~3s em /api/v1/trading e /overview e leitura+parse do arquivo (readTradeEvents) vs calculo das metricas (computeTradingHealth/computeMetrics/portfolioAnalytics). Os dois cenarios (90% I/O vs 90% computo) apontam pra solucoes bem diferentes -- medir antes de implementar qualquer item da Fase B.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "domain:infrastructure",
+      "capmap-domain:infrastructure"
+    ],
+    "dependsOn": [
+      "idea-trade-index"
+    ],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-08-01T14:38:26.465Z",
+        "action": "created",
+        "note": "Sugerido apos medicao real de 31h -- 5min de instrumentacao antes de decidir qual item da Fase B priorizar"
+      }
+    ],
+    "createdAt": "2026-08-01T14:38:26.465Z",
+    "updatedAt": "2026-08-01T14:38:44.268Z"
+  },
+  {
+    "id": "idea-trades-rolling-archive",
+    "type": "idea",
+    "name": "Fase B.2 -- Rolling archive de trades.jsonl",
+    "description": "Girar trades.jsonl por periodo (ex: trades-2026-07.jsonl, trades-2026-08.jsonl) com um ponteiro pro arquivo atual, em vez de um unico arquivo crescendo pra sempre (hoje 122k+ linhas, a maioria wait/health_check do loop de 10s do bot, nao trade de verdade). Ataca o tamanho do arquivo na origem, complementar ao B.1 (leitura incremental) e B.3 (snapshots agregados).",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "domain:infrastructure",
+      "capmap-domain:infrastructure"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-08-01T14:38:26.274Z",
+        "action": "created",
+        "note": "Parte do refinamento do backlog de performance do Dashboard Operacional, pos-medicao real de 31h"
+      }
+    ],
+    "createdAt": "2026-08-01T14:38:26.274Z",
+    "updatedAt": "2026-08-01T14:38:26.274Z"
+  },
+  {
+    "id": "idea-trading-metrics-snapshot",
+    "type": "idea",
+    "name": "Fase B.3 -- Snapshot agregado de metricas de trading",
+    "description": "Persistir PF/Sharpe/Drawdown/Equity/Expectancy ja consolidados (ex: metrics_snapshot.json ou tabela daily_metrics), atualizado incrementalmente a cada trade fechado, em vez de recalcular tudo a partir de trades.jsonl inteiro a cada leitura do dashboard. Complementar ao B.1/B.2 -- ataca o custo de RECOMPUTAR, nao so de LER.",
+    "owner": {
+      "type": "internal",
+      "name": "internal"
+    },
+    "references": [],
+    "status": "idea",
+    "maturity": 0,
+    "tags": [
+      "domain:infrastructure",
+      "capmap-domain:infrastructure"
+    ],
+    "dependsOn": [],
+    "metrics": {},
+    "history": [
+      {
+        "date": "2026-08-01T14:38:26.373Z",
+        "action": "created",
+        "note": "Parte do refinamento do backlog de performance do Dashboard Operacional, pos-medicao real de 31h"
+      }
+    ],
+    "createdAt": "2026-08-01T14:38:26.373Z",
+    "updatedAt": "2026-08-01T14:38:26.373Z"
   },
   {
     "id": "idea-weight-engine",
