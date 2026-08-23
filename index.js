@@ -12,6 +12,9 @@ const { createHealthRegistry } = require("./lib/health");
 const healthChecks = require("./lib/healthChecks");
 const alerts = require("./lib/alerts");
 const connectivityStatus = require("./lib/connectivityStatus");
+const { buildContextSnapshot } = require("./lib/aiGateway/contextSnapshot");
+const { shouldCallAi } = require("./lib/aiGateway/decisionCyclePolicy");
+const aiGateway = require("./lib/aiGateway/aiGateway");
 
 let botState;
 let instrumentInfo;
@@ -309,6 +312,68 @@ async function closePosition(reason, equity) {
   }
 }
 
+// AI Gateway -- SHADOW MODE (integração com o loop de análise, 2026-08-11).
+// Gera e audita um AI Assessment como informação ADICIONAL, correlacionada
+// ao Quant Signal/posição/risco deste ciclo. NUNCA lê `risk_.ok`, NUNCA é
+// chamada por canExecute/planOrder/openPosition/closePosition, e o
+// resultado nunca alimenta nenhuma dessas funções -- a IA só participa da
+// ANÁLISE (log), a decisão e qualquer execução continuam 100% de
+// Quant/Risk/Execution (lib/signal.js + lib/risk.js + index.js), como antes
+// desta integração. Chamada sem `await` em cycle() (fire-and-forget) de
+// propósito: um provider lento (até config.ai.requestTimeoutMs=20s) nunca
+// pode atrasar a checagem de SL/TP/trailing do próximo tick.
+async function maybeRunAiAssessment(analysis, regime) {
+  const context = buildContextSnapshot({ analysis, regime, botState });
+  const contextHash = aiGateway.hashContext(context);
+  const decision = shouldCallAi({ analysis, botState, contextHash, config, now: Date.now() });
+  if (!decision.call) return;
+
+  // Marca a chamada como "em andamento" ANTES do await de rede -- se não
+  // fizesse isso aqui (síncrono), vários ciclos de 10s rodando enquanto uma
+  // chamada anterior ainda está no ar decidiriam "sim, chama" ao mesmo
+  // tempo (lastAiCallAt só mudaria depois que a resposta chegasse),
+  // multiplicando custo pago à toa.
+  botState.lastAiCallAt = Date.now();
+  botState.lastAiContextHash = contextHash;
+  state.save(botState);
+
+  try {
+    const result = await aiGateway.getAssessment(context);
+    botState.lastAiAssessment = {
+      at: new Date().toISOString(),
+      requestId: result.ai.requestId,
+      contextHash: result.ai.contextHash,
+      provider: result.ai.provider,
+      model: result.ai.model,
+      state: result.state,
+      score: result.score,
+      contextCompleteness: result.confidence,
+      aiConfidence: result.ai.aiConfidence,
+      marketRegime: result.ai.marketRegime,
+      signalQuality: result.ai.signalQuality,
+      riskLevel: result.ai.riskLevel,
+      recommendation: result.ai.recommendation,
+      riskFlags: result.ai.riskFlags,
+      triggerReason: decision.reason,
+    };
+    state.save(botState);
+    logger.log({
+      event: "ai_assessment",
+      triggerReason: decision.reason,
+      quantSignal: analysis.signal,
+      positionOpen: botState.isOpened,
+      ai: botState.lastAiAssessment,
+    });
+    console.log(
+      `🤖 AI Assessment (${decision.reason}): ${result.state} regime=${result.ai.marketRegime} risco=${result.ai.riskLevel} recomendação=${result.ai.recommendation} (provider ${result.ai.provider || "nenhum"})`
+    );
+  } catch (err) {
+    // Nunca deixa uma falha de IA virar erro de ciclo -- é sempre a última
+    // coisa que roda no tick, depois de qualquer execução real já decidida.
+    console.error("⚠️  AI Assessment falhou (shadow mode, sem impacto na operação):", err.message);
+  }
+}
+
 async function cycle() {
   try {
     // Pausa controlada em vez de descobrir a queda via exceção a cada ciclo:
@@ -390,6 +455,13 @@ async function cycle() {
     } else {
       logger.log({ event: "wait", signal: analysis.signal, price: analysis.price, reasons: analysis.reasons, riskBlockReason: risk_.reason });
     }
+
+    // Fire-and-forget de propósito (ver comentário de maybeRunAiAssessment) --
+    // roda por último, depois de toda execução real deste tick já ter
+    // acontecido (ou não). .catch() aqui é só rede de segurança extra; a
+    // função já nunca lança por dentro.
+    maybeRunAiAssessment(analysis, regime).catch((err) => console.error("⚠️  AI Assessment (fire-and-forget) falhou:", err.message));
+
     return true;
   } catch (err) {
     console.error("⚠️  Erro no ciclo principal:", err.message || err);

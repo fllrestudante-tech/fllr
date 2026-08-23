@@ -22,18 +22,25 @@ const dashboard = require("../lib/dashboard");
 
 const ROOT = path.join(__dirname, "..");
 
-// Baseline capturado no exato momento do restart controlado (não
-// recalculado a cada execução -- é literalmente "o que era verdade antes de
-// começar a contar as 24h"). metricsSamplerPid/TotalRestarts e
-// botPid/TotalRestarts vêm de runtime/processes/state.json logo depois do
-// `taskkill /F /PID 1184` que derrubou o metrics_sampler antigo.
-const BASELINE = {
-  restartedAt: "2026-08-11T23:33:39.374Z",
-  metricsSamplerPid: 52888,
-  metricsSamplerTotalRestarts: 1,
-  botPid: 54988,
-  botTotalRestarts: 2,
-};
+// Baseline capturado no exato momento de um restart controlado -- é
+// literalmente "o que era verdade antes de começar a contar as 24h" daquela
+// ativação específica. É dado de UMA execução pontual, não configuração
+// permanente do projeto, por isso mora em runtime/ (ignorado pelo Git, ver
+// .gitignore) em vez de hardcoded aqui -- cada nova janela de 24h que
+// alguém queira medir grava seu próprio baseline nesse arquivo antes de
+// agendar este script, sem precisar editar/commitar código.
+const BASELINE_FILE = path.join(ROOT, "runtime", "aiCostCheckpointBaseline.json");
+
+function readBaseline() {
+  const baseline = readJsonSafe(BASELINE_FILE);
+  if (!baseline || !baseline.restartedAt) {
+    console.error(
+      `Baseline não encontrado em ${BASELINE_FILE}. Antes de agendar este checkpoint, capture o estado do restart controlado (restartedAt, metricsSamplerPid, metricsSamplerTotalRestarts, botPid, botTotalRestarts) nesse arquivo -- ver runtime/processes/state.json no momento do restart.`
+    );
+    process.exit(1);
+  }
+  return baseline;
+}
 
 function readJsonSafe(filePath) {
   if (!fs.existsSync(filePath)) return null;
@@ -80,6 +87,7 @@ function showWindowsNotification(title, message) {
 }
 
 function main() {
+  const BASELINE = readBaseline();
   const now = new Date();
   const restartedAt = new Date(BASELINE.restartedAt);
   const elapsedMs = now - restartedAt;
@@ -90,6 +98,7 @@ function main() {
   lines.push(`Checkpoint de 24h -- AI Gateway (bot-cripto10)`);
   lines.push(`Gerado em: ${now.toISOString()}`);
   lines.push("=".repeat(70));
+  lines.push(`Baseline usado: ${BASELINE_FILE}`);
   lines.push(`Restart do metrics_sampler (baseline): ${BASELINE.restartedAt}`);
   lines.push(`Tempo decorrido desde o baseline: ${elapsedHours.toFixed(2)}h`);
   lines.push(`24h completadas? ${completed24h ? "SIM" : "⚠️  NÃO -- este relatório rodou antes da hora prevista"}`);

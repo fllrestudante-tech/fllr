@@ -26,7 +26,9 @@
     "adoption-matrix": "node scripts/adoptionMatrix.js",
     "dna-matrix": "node scripts/dnaMatrix.js",
     "knowledge-base": "node scripts/knowledgeBase.js",
-    "capability-map": "node scripts/capabilityMap.js"
+    "capability-map": "node scripts/capabilityMap.js",
+    "ai:demo": "node scripts/aiGatewayDemo.js",
+    "ai:shadow": "node scripts/aiShadowEvaluator.js"
   },
   "keywords": [],
   "author": "",

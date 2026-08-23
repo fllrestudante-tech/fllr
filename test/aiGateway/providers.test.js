@@ -76,14 +76,14 @@ test("openaiProvider.callProvider: usa client injetado, não bate em axios/rede"
 
 test("anthropicProvider.normalize: extrai bias/strength/usage/model de content[0].text", () => {
   const raw = {
-    model: "claude-3-5-haiku-20241022",
+    model: "claude-haiku-4-5-20251001",
     content: [{ type: "text", text: JSON.stringify({ bias: "bearish", strength: 65, rationale: "queda", riskFlags: ["baixa liquidez"] }) }],
     usage: { input_tokens: 200, output_tokens: 40 },
   };
   const n = anthropicProvider.normalize(raw);
   assert.equal(n.bias, "bearish");
   assert.equal(n.strength, 65);
-  assert.equal(n.model, "claude-3-5-haiku-20241022");
+  assert.equal(n.model, "claude-haiku-4-5-20251001");
   assert.deepEqual(n.usage, { promptTokens: 200, completionTokens: 40 });
   assert.deepEqual(n.riskFlags, ["baixa liquidez"]);
 });

@@ -20,6 +20,10 @@ const orderBlockBrainData = require("../lib/brains/orderBlockBrainData");
 const orderBlockBrain = require("../lib/brains/orderBlockBrain");
 const { synthesizeInstitutionalContext } = require("../lib/brains/institutionalContext");
 const config = require("../config");
+const { getUniverse } = require("../lib/universe");
+const { sampleCoverage } = require("../lib/dataCoverage");
+const { sampleSanityChecks } = require("../lib/sanityChecks");
+const { computeFreshnessScore } = require("../lib/freshnessScore");
 const { DEFAULT_MARKET_DB_PATH } = checks;
 
 const METRICS_DIR = path.join(__dirname, "..", "runtime", "metrics");
@@ -151,6 +155,54 @@ function readOrderBlockBrainSnapshot() {
   }
 }
 
+// Fase A (expansão multi-asset) -- 1 linha de coverage/sanity/freshness por
+// símbolo do Universe, on-demand (mesmo padrão de readAvailability/
+// readMarketBrainSnapshot -- leitura barata, não precisa de sampler
+// contínuo pra v1). Freshness/falhas consecutivas/schedulerStats/
+// rateLimitStats vêm do heartbeat que o próprio coletor já escreve
+// (lib/collectors/collectorMetrics.js::bySymbol, runCollector::
+// getSchedulerStats, lib/httpRetry.js::getRetryStats) -- coverage/sanity são
+// recomputados aqui contra o candles real por símbolo. Um único read do
+// heartbeat + um único read do banco alimentam as 3 seções novas (Universe,
+// Scheduler, Rate Limit), nada duplicado.
+function readUniverseHealth() {
+  const heartbeat = readJsonIfExists(checks.DEFAULT_COLLECTOR_HEALTH_FILE);
+  const bySymbol = heartbeat?.metrics?.candles?.bySymbol || {};
+  const totalRuns = Object.values(heartbeat?.metrics || {}).reduce((sum, d) => sum + (d.totalRuns || 0), 0);
+  const schedulerStats = heartbeat?.schedulerStats ?? null;
+  const rateLimitStats = heartbeat?.rateLimitStats ?? null;
+
+  if (!fs.existsSync(DEFAULT_MARKET_DB_PATH)) {
+    return { rows: null, schedulerStats, rateLimitStats, totalRuns, assetsDiscovered: null };
+  }
+
+  const { symbols } = getUniverse({ fallbackSymbol: config.symbol });
+  let db;
+  try {
+    db = new Database(DEFAULT_MARKET_DB_PATH, { readonly: true, fileMustExist: true });
+    const rows = symbols.map((symbol) => {
+      const coverage = sampleCoverage("candles", db, { symbol });
+      const sanity = sampleSanityChecks("candles", db, { windowMs: coverage.windowMs, symbol });
+      const symbolMetrics = bySymbol[symbol];
+      const freshness = symbolMetrics?.lastSuccessAt ? computeFreshnessScore("candles", symbolMetrics.lastSuccessAt) : null;
+      return {
+        symbol,
+        coveragePct: coverage.coveragePct,
+        freshnessState: freshness?.state ?? "sem_dado",
+        consecutiveFailures: symbolMetrics?.consecutiveFailures ?? null,
+        sanityPassRate: sanity.passRate,
+        lastSuccessAt: symbolMetrics?.lastSuccessAt ?? null,
+      };
+    });
+    const assetsDiscovered = db.prepare("SELECT COUNT(*) as c FROM asset WHERE origin = 'auto-collector'").get().c;
+    return { rows, schedulerStats, rateLimitStats, totalRuns, assetsDiscovered };
+  } catch {
+    return { rows: null, schedulerStats, rateLimitStats, totalRuns, assetsDiscovered: null };
+  } finally {
+    if (db) db.close();
+  }
+}
+
 async function main() {
   const registry = createHealthRegistry();
   registry.registerCheck("bybit", checks.checkBybit);
@@ -191,6 +243,17 @@ async function main() {
 
   console.log("\nDomínios (freshness / SLA / throughput / API health):\n");
   dashboard.formatDomainsTable(collectorsSnapshot).forEach((l) => console.log(l));
+
+  const universeHealth = readUniverseHealth();
+
+  console.log("\nUniverse / Coverage (Fase A -- expansão multi-asset):\n");
+  dashboard.formatUniverseCoverageSection(universeHealth.rows, { assetsDiscovered: universeHealth.assetsDiscovered }).forEach((l) => console.log(l));
+
+  console.log("\nScheduler (Fase A -- saturação por domínio):\n");
+  dashboard.formatSchedulerSection(universeHealth.schedulerStats).forEach((l) => console.log(l));
+
+  console.log("\nRate Limit (Fase A -- throttling real da Bybit):\n");
+  dashboard.formatRateLimitSection(universeHealth.rateLimitStats, { totalRuns: universeHealth.totalRuns }).forEach((l) => console.log(l));
 
   console.log("\nProcessos supervisionados (uptime / restarts / CPU / RAM / estado):\n");
   dashboard.formatProcessesTable(processesSnapshot).forEach((l) => console.log(l));

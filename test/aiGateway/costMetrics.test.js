@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { computeAiCostMetrics, estimateCostUsd, resolvePricing, extractUsableUsage } = require("../../lib/aiGateway/costMetrics");
+const { computeAiCostMetrics, estimateCostUsd, resolvePricing, extractUsableUsage, extractUsableUsageFromAttempt } = require("../../lib/aiGateway/costMetrics");
 
 const NOW = Date.parse("2026-08-11T22:00:00.000Z");
 
@@ -204,6 +204,7 @@ test("resolvePricing: casa por prefixo do model versionado", () => {
   assert.deepEqual(resolvePricing("openai", "gpt-4o-mini-2024-07-18"), { inputPer1M: 0.15, cachedInputPer1M: 0.075, outputPer1M: 0.6 });
   assert.deepEqual(resolvePricing("openai", "gpt-5.6-luna"), { inputPer1M: 0.2, cachedInputPer1M: 0.02, outputPer1M: 1.2 });
   assert.deepEqual(resolvePricing("anthropic", "claude-3-5-haiku-20241022"), { inputPer1M: 0.8, outputPer1M: 4.0 });
+  assert.deepEqual(resolvePricing("anthropic", "claude-haiku-4-5-20251001"), { inputPer1M: 1.0, outputPer1M: 5.0 });
   assert.equal(resolvePricing("openai", "gpt-5-desconhecido"), null);
   assert.equal(resolvePricing("provider-inexistente", "qualquer"), null);
 });
@@ -293,4 +294,130 @@ test("computeAiCostMetrics: linhas JSON corrompidas no arquivo real não derruba
   } finally {
     fs.unlinkSync(tmpFile);
   }
+});
+
+// --- providerAttempts (formato novo) -- parse_error, cache-write, anti-dupla-contagem, regressão legada ---
+
+test("computeAiCostMetrics: parse_error COM usage conhecido não aumenta AI_ATTEMPTS_WITH_UNKNOWN_USAGE_24H", () => {
+  const entry = {
+    time: new Date(NOW).toISOString(),
+    status: "success",
+    provider: "anthropic",
+    providerAttempts: [
+      { provider: "agentrouter", status: "parse_error", model: "gpt-5.6-sol", usage: { promptTokens: 100, completionTokens: 0, cachedTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0 } },
+      { provider: "anthropic", status: "success", model: "claude-haiku-4-5", usage: { promptTokens: 50, completionTokens: 10, cachedTokens: 0, reasoningTokens: 0 } },
+    ],
+  };
+  const m = computeAiCostMetrics({ now: NOW, entries: [entry] });
+  assert.equal(m.AI_ATTEMPTS_WITH_UNKNOWN_USAGE_24H, 0);
+});
+
+test("computeAiCostMetrics: parse_error SEM usage aumenta AI_ATTEMPTS_WITH_UNKNOWN_USAGE_24H", () => {
+  const entry = {
+    time: new Date(NOW).toISOString(),
+    status: "provider_error",
+    providerAttempts: [{ provider: "agentrouter", status: "parse_error", model: null, usage: null }],
+  };
+  const m = computeAiCostMetrics({ now: NOW, entries: [entry] });
+  assert.equal(m.AI_ATTEMPTS_WITH_UNKNOWN_USAGE_24H, 1);
+  assert.equal(m.AI_COST_ESTIMATE_INCOMPLETE, true);
+});
+
+test("computeAiCostMetrics: formato novo NÃO conta duas vezes um provider (attempted legado ignorado quando providerAttempts existe)", () => {
+  const entry = {
+    time: new Date(NOW).toISOString(),
+    status: "success",
+    provider: "anthropic",
+    attempted: ["agentrouter", "anthropic"], // campo legado presente, mas providerAttempts tem prioridade
+    providerAttempts: [
+      { provider: "agentrouter", status: "parse_error", usage: null },
+      { provider: "anthropic", status: "success", model: "claude-haiku-4-5", usage: { promptTokens: 50, completionTokens: 10, cachedTokens: 0, reasoningTokens: 0 } },
+    ],
+  };
+  const m = computeAiCostMetrics({ now: NOW, entries: [entry] });
+  assert.equal(m.byProvider.anthropic.attempts, 1);
+  assert.equal(m.AI_PROVIDER_ATTEMPTS_24H, 2);
+});
+
+test("computeAiCostMetrics: cacheWriteTokens somado no acumulador global e por provider", () => {
+  const entry = {
+    time: new Date(NOW).toISOString(),
+    status: "success",
+    provider: "agentrouter",
+    providerAttempts: [
+      { provider: "agentrouter", status: "success", model: "gpt-5.6-sol", usage: { promptTokens: 100, completionTokens: 20, cachedTokens: 0, cacheWriteTokens: 30, reasoningTokens: 0 } },
+    ],
+  };
+  const m = computeAiCostMetrics({ now: NOW, entries: [entry] });
+  assert.equal(m.AI_CACHE_WRITE_INPUT_TOKENS_24H, 30);
+  assert.equal(m.byProvider.agentrouter.cacheWriteInputTokens, 30);
+});
+
+test("computeAiCostMetrics: unpricedModels usa modelRequested só quando model efetivo está ausente, nunca resolve pricing com ele", () => {
+  const entry = {
+    time: new Date(NOW).toISOString(),
+    status: "provider_error",
+    providerAttempts: [
+      { provider: "agentrouter", status: "parse_error", modelRequested: "gpt-5.6-sol", model: null, usage: { promptTokens: 10, completionTokens: 0, cachedTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0 } },
+    ],
+  };
+  const m = computeAiCostMetrics({ now: NOW, entries: [entry] });
+  assert.ok(m.unpricedModels.includes("agentrouter:gpt-5.6-sol (requested_unverified)"));
+});
+
+test("extractUsableUsageFromAttempt: rejeita negativo/NaN/Infinity em promptTokens/completionTokens", () => {
+  assert.equal(extractUsableUsageFromAttempt({ provider: "agentrouter", usage: { promptTokens: -1, completionTokens: 5 } }), null);
+  assert.equal(extractUsableUsageFromAttempt({ provider: "agentrouter", usage: { promptTokens: NaN, completionTokens: 5 } }), null);
+  assert.equal(extractUsableUsageFromAttempt({ provider: "agentrouter", usage: { promptTokens: Infinity, completionTokens: 5 } }), null);
+  assert.equal(extractUsableUsageFromAttempt({ provider: "agentrouter", usage: { promptTokens: 10, completionTokens: -5 } }), null);
+});
+
+test("extractUsableUsageFromAttempt: aceita usage válido com os 5 campos, inclusive cacheWriteTokens", () => {
+  const valid = extractUsableUsageFromAttempt({
+    provider: "agentrouter",
+    model: "gpt-5.6-sol",
+    usage: { promptTokens: 10, completionTokens: 5, cachedTokens: 2, cacheWriteTokens: 3, reasoningTokens: 0 },
+  });
+  assert.deepEqual(valid, { provider: "agentrouter", model: "gpt-5.6-sol", promptTokens: 10, completionTokens: 5, cachedTokens: 2, cacheWriteTokens: 3, reasoningTokens: 0 });
+});
+
+test("extractUsableUsageFromAttempt: campos opcionais ausentes/negativos/NaN caem pro default 0, nunca propagam valor inválido", () => {
+  const semOpcionais = extractUsableUsageFromAttempt({ provider: "agentrouter", usage: { promptTokens: 10, completionTokens: 5 } });
+  assert.equal(semOpcionais.cachedTokens, 0);
+  assert.equal(semOpcionais.cacheWriteTokens, 0);
+  assert.equal(semOpcionais.reasoningTokens, 0);
+
+  const invalidos = extractUsableUsageFromAttempt({ provider: "agentrouter", usage: { promptTokens: 10, completionTokens: 5, cachedTokens: -1, cacheWriteTokens: NaN, reasoningTokens: Infinity } });
+  assert.equal(invalidos.cachedTokens, 0);
+  assert.equal(invalidos.cacheWriteTokens, 0);
+  assert.equal(invalidos.reasoningTokens, 0);
+});
+
+test("REGRESSÃO: entrada 100% legada produz exatamente os mesmos números de antes, incluindo AI_CACHE_WRITE_INPUT_TOKENS_24H=0", () => {
+  const entry = {
+    time: new Date(NOW).toISOString(),
+    status: "success",
+    provider: "openai",
+    model: "gpt-4o-mini-2024-07-18",
+    attempted: ["openai"],
+    usage: { promptTokens: 735, completionTokens: 117 },
+  };
+  const m = computeAiCostMetrics({ now: NOW, entries: [entry] });
+  assert.equal(m.AI_INPUT_TOKENS_24H, 735);
+  assert.equal(m.AI_OUTPUT_TOKENS_24H, 117);
+  assert.equal(m.AI_CACHE_WRITE_INPUT_TOKENS_24H, 0);
+  assert.ok(m.AI_COST_ESTIMATE_24H > 0);
+  assert.equal(m.byProvider.openai.attempts, 1);
+});
+
+test("REGRESSÃO: extractUsableUsage (legada) mantém o shape EXATO de antes -- sem cacheWriteTokens", () => {
+  const withUsage = { status: "provider_error", provider: "openai", model: "gpt-4o-mini", usage: { promptTokens: 10, completionTokens: 5 } };
+  assert.deepEqual(extractUsableUsage(withUsage), {
+    provider: "openai",
+    model: "gpt-4o-mini",
+    promptTokens: 10,
+    completionTokens: 5,
+    cachedTokens: 0,
+    reasoningTokens: 0,
+  });
 });

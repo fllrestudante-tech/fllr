@@ -11,6 +11,47 @@ function num(value, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+const KNOWN_AI_PROVIDERS = new Set(["agentrouter", "anthropic", "openai"]);
+
+/**
+ * Puro -- decide a ordem de fallback dos providers de IA a partir do env.
+ * AI_PROVIDER_ORDER (explícito) tem precedência; ausente/vazio cai pro par
+ * legado AI_PRIMARY_PROVIDER/AI_SECONDARY_PROVIDER (preservado, nunca
+ * removido). Dedupe preserva a primeira ocorrência. Provider fora de
+ * {agentrouter, anthropic, openai} lança erro claro. AI_PROVIDER_ORDER
+ * setada mas sem nenhuma entrada válida (ex: ",,,") lança em vez de
+ * desligar a IA inteira sem avisar ninguém.
+ */
+function parseProviderOrder(env = {}) {
+  const explicitRaw = typeof env.AI_PROVIDER_ORDER === "string" ? env.AI_PROVIDER_ORDER.trim() : "";
+
+  const source = explicitRaw
+    ? explicitRaw.split(",")
+    : [env.AI_PRIMARY_PROVIDER || "anthropic", env.AI_SECONDARY_PROVIDER || "openai"];
+
+  const candidates = source.map((value) => String(value).trim()).filter(Boolean);
+
+  if (explicitRaw && candidates.length === 0) {
+    throw new Error("AI_PROVIDER_ORDER: nenhuma entrada válida informada");
+  }
+
+  const order = [];
+  for (const name of candidates) {
+    if (!KNOWN_AI_PROVIDERS.has(name)) {
+      throw new Error(`AI_PROVIDER_ORDER: provider desconhecido "${name}" -- válidos: ${[...KNOWN_AI_PROVIDERS].join(", ")}`);
+    }
+    if (!order.includes(name)) order.push(name);
+  }
+
+  if (order.length === 0) {
+    throw new Error("AI_PROVIDER_ORDER: nenhuma entrada válida informada");
+  }
+
+  return order;
+}
+
+const AI_PROVIDER_ORDER = parseProviderOrder(process.env);
+
 const config = {
   bybit: {
     apiKey: process.env.BYBIT_API_KEY || "",
@@ -143,10 +184,13 @@ const config = {
     fredApiKey: process.env.FRED_API_KEY || "",
   },
 
-  // AI Gateway (scaffold, Fase 1) -- enriquecimento de contexto via IA,
-  // ainda não conectado ao loop de trading nem ao Risk Engine (ver
-  // lib/aiGateway/aiGateway.js). primaryProvider/secondaryProvider definem
-  // a ordem de fallback sequencial (nunca fan-out simultâneo).
+  // AI Gateway (Fase 1 + integração com o loop de trading, 2026-08-11) --
+  // enriquecimento de contexto via IA. Participa da análise a cada ciclo
+  // (index.js::cycle(), via lib/aiGateway/decisionCyclePolicy.js), mas em
+  // SHADOW MODE: só gera e audita um AI Assessment, nunca chama
+  // lib/risk.js/openPosition/closePosition (ver README de segurança no
+  // topo de index.js::maybeRunAiAssessment). primaryProvider/secondaryProvider
+  // definem a ordem de fallback sequencial (nunca fan-out simultâneo).
   ai: {
     openaiApiKey: process.env.OPENAI_API_KEY || "",
     // Migração pra gpt-5.6-luna (decisão do usuário, 2026-08-13, após teste
@@ -167,16 +211,34 @@ const config = {
     // estruturada por schema). Ver lib/openaiClient.js::isReasoningFamily.
     openaiReasoningEffort: process.env.OPENAI_REASONING_EFFORT || "none",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
-    anthropicModel: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-20241022",
-    // Anthropic é a base principal do Crypto10 (decisão do usuário,
-    // 2026-08-11): deve ficar disponível continuamente e é a referência do
-    // acompanhamento do sistema. OpenAI (gpt-5.6-luna) é o laboratório
-    // econômico -- fallback quando a Anthropic falhar, e também usado pra
-    // testes/desenvolvimento enquanto o AgentRouter (GPT-5.6 Sol) não libera
-    // acesso de terceiros (nota: gpt-5.6-luna/sol/terra são diretamente
-    // acessíveis via API própria da OpenAI, independente do AgentRouter).
-    primaryProvider: process.env.AI_PRIMARY_PROVIDER || "anthropic",
-    secondaryProvider: process.env.AI_SECONDARY_PROVIDER || "openai",
+    // Haiku 3.5 foi retirado da Claude API de primeira parte.
+    // Default atualizado para um modelo disponível no catálogo da conta.
+    anthropicModel: process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001",
+    // Sem AI_PROVIDER_ORDER, preserva o comportamento legado:
+    // anthropic -> openai.
+    // Na ativação operacional aprovada em 2026-08-15:
+    // agentrouter -> anthropic -> openai.
+    //
+    // providerOrder substitui os 2 slots fixos por uma lista. AI_PROVIDER_ORDER
+    // (explícito) tem precedência sobre AI_PRIMARY_PROVIDER/AI_SECONDARY_PROVIDER
+    // (legado, preservado). Ver parseProviderOrder() no topo deste arquivo.
+    providerOrder: AI_PROVIDER_ORDER,
+    primaryProvider: AI_PROVIDER_ORDER[0] || null,
+    secondaryProvider: AI_PROVIDER_ORDER[1] || null,
+
+    // AgentRouter -- transporte via subprocesso Codex CLI
+    // (lib/agentrouterClient.js), não HTTP direto (comprovado nesta
+    // integração: só o cliente Codex oficial autentica). Só o que o
+    // subprocesso de fato usa -- a API key NUNCA é lida aqui nem em nenhum
+    // outro lugar do processo do bot; autenticação mora exclusivamente em
+    // ~/.codex/config.toml, que o próprio Codex CLI acha sozinho
+    // (USERPROFILE/HOME). Modelo validado nos testes desta integração
+    // (2026-08-14/15): gpt-5.6-sol.
+    agentRouterModel: process.env.AGENTROUTER_MODEL || "gpt-5.6-sol",
+    agentRouterCodexCommand: process.env.AGENTROUTER_CODEX_COMMAND || "codex",
+    agentRouterTimeoutMs: num(process.env.AGENTROUTER_TIMEOUT_MS, 60000),
+    agentRouterGracefulShutdownMs: num(process.env.AGENTROUTER_GRACEFUL_SHUTDOWN_MS, 5000),
+
     requestTimeoutMs: num(process.env.AI_REQUEST_TIMEOUT_MS, 20000),
     // 500 -> 2000 (2026-08-13): gpt-5.6-luna produz respostas bem mais
     // analíticas (986 tokens observados no teste real, vs ~300-350 do
@@ -188,27 +250,40 @@ const config = {
     // Fase 2 (AI Shadow Evaluation) -- cadência do scripts/aiShadowEvaluator.js,
     // standalone, não conectado ao loop de trading. Default = mesma janela
     // "slow tier" que scripts/metricsSampler.js já usa pra computar os 3
-    // Brains + Context Fusion.
+    // Brains + Context Fusion. Reaproveitado também como teto (heartbeat) do
+    // AI Decision Cycle abaixo, pra manter uma única noção de cadência lenta
+    // no projeto em vez de duas configs quase-iguais.
     shadowIntervalMs: num(process.env.AI_SHADOW_INTERVAL_MS, 15 * 60 * 1000),
+
+    // AI Decision Cycle (lib/aiGateway/decisionCyclePolicy.js) -- piso de
+    // tempo entre chamadas de IA disparadas pelo loop de trading (10s),
+    // mesmo com sinal quantitativo (buy/sell) se repetindo tick a tick.
+    // Existe só pra controlar custo -- sem isso, um sinal "buy" bloqueado
+    // por cooldown/circuit breaker pagaria uma chamada nova a cada 10s.
+    minCallIntervalMs: num(process.env.AI_MIN_CALL_INTERVAL_MS, 5 * 60 * 1000),
 
     // Custo real (lib/aiGateway/costMetrics.js, AI_COST_ESTIMATE_24H/30D) --
     // preço por 1 milhão de tokens. gpt-4o-mini verificado em 2026-08-11;
     // gpt-5.6-luna verificado em 2026-08-13 (fonte: OpenAI pricing page,
     // corte de 80% em 30/07/2026 -- preço padrão novo, não promoção
-    // temporária); Anthropic verificado em 2026-08-11 pra
-    // claude-3-5-haiku-20241022 especificamente, não a Haiku 4.5 mais nova,
-    // que é mais cara. Hipótese documentada, não travada pra sempre -- se o
+    // temporária); Anthropic claude-3-5-haiku verificado em 2026-08-11
+    // (retirada da Claude API confirmada em 2026-08-14 -- ver comentário de
+    // anthropicModel acima -- preço preservado só pra custo de chamadas
+    // históricas); Anthropic claude-haiku-4-5 verificado em 2026-08-14
+    // (fonte: platform.claude.com/docs/en/about-claude/pricing, tabela
+    // "Model pricing"). Hipótese documentada, não travada pra sempre -- se o
     // provider mudar o preço, atualizar aqui (não há API pra consultar
     // preço em tempo real). Chave = prefixo do nome do modelo (casa contra
     // o model versionado que o provider devolve, ex: "gpt-4o-mini-2024-07-18").
-    // gpt-4o-mini permanece aqui só pra resolver o custo de chamadas
-    // históricas já gravadas no log antes da migração pro Luna -- não é
-    // mais o model usado por padrão (ver openaiModel acima).
-    // cachedInputPer1M = preço de tokens de entrada servidos do cache do
-    // provider (bem mais barato que entrada nova) -- omitido quando o
-    // provider não documenta desconto de cache pro model (ex: Anthropic
-    // aqui), caso em que lib/aiGateway/costMetrics.js cobra cache como
-    // entrada normal (nunca inventa desconto sem fonte).
+    // gpt-4o-mini e claude-3-5-haiku permanecem aqui só pra resolver o custo
+    // de chamadas históricas já gravadas no log antes de cada migração --
+    // nenhum dos dois é o model usado por padrão hoje (ver openaiModel/
+    // anthropicModel acima).
+    // cachedInputPer1M só é usado quando o provider extrai separadamente os
+    // tokens servidos do cache. O provider Anthropic atual ainda não expõe
+    // cachedTokens ao costMetrics; por isso as entradas Anthropic omitem esse
+    // campo e todo input observado é estimado conservadoramente como entrada
+    // normal. O suporte a cache será tratado em mudança separada.
     pricing: {
       openai: {
         "gpt-4o-mini": { inputPer1M: 0.15, cachedInputPer1M: 0.075, outputPer1M: 0.6 },
@@ -216,6 +291,7 @@ const config = {
       },
       anthropic: {
         "claude-3-5-haiku": { inputPer1M: 0.8, outputPer1M: 4.0 },
+        "claude-haiku-4-5": { inputPer1M: 1.0, outputPer1M: 5.0 },
       },
     },
   },
@@ -283,5 +359,10 @@ if (!config.ai.openaiApiKey && !config.ai.anthropicApiKey) {
     "⚠️  Nenhuma chave de IA configurada (OPENAI_API_KEY / ANTHROPIC_API_KEY) — AI Gateway ficará indisponível (infra de enriquecimento ainda não conectada ao loop, não bloqueia o bot)."
   );
 }
+
+Object.defineProperty(config, "parseProviderOrder", {
+  value: parseProviderOrder,
+  enumerable: false,
+});
 
 module.exports = config;

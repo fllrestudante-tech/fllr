@@ -49,6 +49,13 @@ const CHILDREN = [
   { name: "knowledge_collector", script: path.join(__dirname, "knowledgeCollector.js") },
   { name: "metrics_sampler", script: path.join(__dirname, "metricsSampler.js") },
   { name: "backup_daemon", script: path.join(__dirname, "backupDaemon.js") },
+  // Dashboard Operacional Web (config.dashboard.port, 4300 por padrão) --
+  // servidor HTTP nativo, só leitura, nunca chama a Bybit (ver
+  // scripts/dashboardServer.js). Adicionado 2026-08-13 pra sobreviver a
+  // restart/sleep da máquina como qualquer outro processo de longa duração
+  // -- antes rodava solto via `node scripts/dashboardServer.js`, sem
+  // restart automático se caísse.
+  { name: "dashboard_server", script: path.join(__dirname, "dashboardServer.js") },
 ];
 
 function ensureDirs() {
