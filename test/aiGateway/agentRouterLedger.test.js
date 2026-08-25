@@ -14,6 +14,7 @@ const {
   resolvePolicyIdempotentReservation,
   EFFECTIVE_MICROS_USD_CASE_SQL,
   markSendIntent,
+  claimForSending,
   confirmBudget,
   releaseBudget,
   markWorstCaseCharged,
@@ -32,6 +33,9 @@ const {
   NegativeAmountError,
   AmountExceedsCeilingError,
   InvalidFieldError,
+  AlreadyClaimedError,
+  CorruptSendIntentStateError,
+  ClaimAfterExpiryError,
 } = ledger;
 
 const BETTER_SQLITE3_PATH = require.resolve("better-sqlite3");
@@ -376,11 +380,61 @@ test("resolvePolicyIdempotentReservation: cada campo canonico (dos que ela de fa
       { priceSource: "other-source" },
       { priceSourceStatus: "confirmed" },
       { pricingTableVersion: "v2" },
-      { expiresAtMs: NOW + 999_999 },
+      // expiresAtMs NAO esta mais nesta lista -- ver secao dedicada abaixo
+      // (correcao Fase 10 / Commit 4b: expiresAtMs saiu da comparacao
+      // canonica reduzida, mesmo motivo/mesma semantica da janela).
     ];
     for (const variant of variants) {
       assertThrowsCode(() => resolvePolicyIdempotentReservation(db, basePolicyLookupOpts(variant)), IdempotencyConflictError);
     }
+  });
+});
+
+// =====================================================================
+// 2d) expiresAtMs e' metadado atribuido pelo SERVIDOR, nao pelo chamador --
+// correcao pos-implementacao do Commit 4b. resolvePolicyIdempotentReservation
+// NUNCA compara expiresAtMs; reserveBudget() direto continua comparando
+// (contrato do ledger inalterado desde o Commit 2).
+// =====================================================================
+
+test("resolvePolicyIdempotentReservation: reconhece o MESMO payload logico mesmo com expiresAtMs diferente do da criacao original -- nao lanca IdempotencyConflictError", () => {
+  withTestDb("policy-idem-expires-differs-recognized", (db) => {
+    const created = reserveBudget(db, baseReserveOpts({ expiresAtMs: NOW + 5 * 60 * 1000 }));
+    const result = resolvePolicyIdempotentReservation(db, basePolicyLookupOpts({ expiresAtMs: NOW + 999_999_999 }));
+    assert.notEqual(result, null);
+    assert.equal(result.id, created.id);
+  });
+});
+
+test("resolvePolicyIdempotentReservation: devolve EXATAMENTE o expires_at_ms originalmente persistido, nunca recalcula/substitui (retry nao estende o lease)", () => {
+  withTestDb("policy-idem-expires-original-preserved", (db) => {
+    const originalExpiresAtMs = NOW + 5 * 60 * 1000;
+    reserveBudget(db, baseReserveOpts({ expiresAtMs: originalExpiresAtMs }));
+    const result = resolvePolicyIdempotentReservation(db, basePolicyLookupOpts({ expiresAtMs: NOW + 999_999_999 }));
+    assert.equal(result.expires_at_ms, originalExpiresAtMs);
+    assert.notEqual(result.expires_at_ms, NOW + 999_999_999);
+  });
+});
+
+test("resolvePolicyIdempotentReservation: retry com expiresAtMs diferente NAO atualiza a linha nem cria evento", () => {
+  withTestDb("policy-idem-expires-no-update-no-event", (db) => {
+    reserveBudget(db, baseReserveOpts({ expiresAtMs: NOW + 5 * 60 * 1000 }));
+    const beforeRow = getLedgerEntry(db, { idempotencyKey: "test-key-001" });
+    const beforeEvents = getLedgerEvents(db, { idempotencyKey: "test-key-001" });
+
+    resolvePolicyIdempotentReservation(db, basePolicyLookupOpts({ expiresAtMs: NOW + 999_999_999 }));
+
+    const afterRow = getLedgerEntry(db, { idempotencyKey: "test-key-001" });
+    const afterEvents = getLedgerEvents(db, { idempotencyKey: "test-key-001" });
+    assert.deepEqual(afterRow, beforeRow); // linha byte-a-byte identica -- nenhuma UPDATE ocorreu
+    assert.equal(afterEvents.length, beforeEvents.length); // nenhum evento novo
+  });
+});
+
+test("reserveBudget() DIRETO com expiresAtMs divergente continua lancando IdempotencyConflictError -- contrato do ledger inalterado (referencia cruzada explicita desta correcao)", () => {
+  withTestDb("reserveBudget-direct-expires-still-conflicts", (db) => {
+    reserveBudget(db, baseReserveOpts({ expiresAtMs: NOW + 5 * 60 * 1000 }));
+    assertThrowsCode(() => reserveBudget(db, baseReserveOpts({ expiresAtMs: NOW + 999_999 })), IdempotencyConflictError);
   });
 });
 
@@ -447,6 +501,186 @@ test("markSendIntent: send_intent_at_ms sempre >= created_at_ms", () => {
   withTestDb("sendintent-coherence", (db) => {
     reserveBudget(db, baseReserveOpts());
     assert.throws(() => markSendIntent(db, { idempotencyKey: "test-key-001", requestId: null, nowMs: NOW - 1 }), InvalidFieldError);
+  });
+});
+
+// =====================================================================
+// 3b) claimForSending -- operacao atomica de CLAIM (Fase 10 / Commit 4b),
+// separada de markSendIntent() (que permanece 100% inalterado -- toda a
+// secao 3 acima passa sem edicao). So reivindica quando send_intent_at,
+// send_intent_at_ms e request_id estao TODOS NULL; preenchimento parcial
+// e' tratado como corrupcao fatal; claim apos expires_at_ms e' recusado.
+// =====================================================================
+
+test("claimForSending: reivindica com sucesso -- preenche os 3 campos, status continua 'reserved', devolve a linha atualizada", () => {
+  withTestDb("claim-basic", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    const row = claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 10 });
+    assert.equal(row.status, "reserved");
+    assert.ok(row.send_intent_at);
+    assert.equal(row.send_intent_at_ms, NOW + 10);
+    assert.equal(row.request_id, "attempt-1");
+  });
+});
+
+test("claimForSending: insere exatamente 1 evento SEND_INTENT_RECORDED", () => {
+  withTestDb("claim-event", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 10 });
+    const events = getLedgerEvents(db, { idempotencyKey: "test-key-001" });
+    const claimEvents = events.filter((e) => e.event_type === "SEND_INTENT_RECORDED");
+    assert.equal(claimEvents.length, 1);
+    assert.equal(claimEvents[0].from_status, "reserved");
+    assert.equal(claimEvents[0].to_status, "reserved");
+  });
+});
+
+test("claimForSending: update da linha e insercao do evento sao atomicos -- se o evento nao puder ser inserido, a linha reverte inteira", () => {
+  withTestDb("claim-atomic-rollback", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    const before = getLedgerEntry(db, { idempotencyKey: "test-key-001" });
+
+    // Forca falha na insercao do evento (event_type invalido) DENTRO de uma
+    // transacao que tambem faz exatamente a mesma UPDATE que claimForSending
+    // faria -- prova que a atualizacao nao "vaza" sozinha se o evento falhar.
+    assert.throws(() => {
+      db.transaction(() => {
+        db.prepare(
+          `UPDATE agentrouter_budget_ledger SET send_intent_at = @iso, send_intent_at_ms = @ms, request_id = @rid
+           WHERE idempotency_key = @key AND status = 'reserved' AND send_intent_at IS NULL AND send_intent_at_ms IS NULL AND request_id IS NULL`
+        ).run({ iso: new Date(NOW + 1).toISOString(), ms: NOW + 1, rid: "attempt-x", key: "test-key-001" });
+        db.prepare(
+          `INSERT INTO agentrouter_budget_events (ledger_id, event_type, from_status, to_status, effective_micros_usd, actor_type, occurred_at, occurred_at_ms)
+           VALUES (@id, 'NOT_A_REAL_EVENT_TYPE', 'reserved', 'reserved', 0, 'system', @iso, @ms)`
+        ).run({ id: before.id, iso: new Date(NOW + 1).toISOString(), ms: NOW + 1 });
+      }).immediate();
+    });
+
+    const after = getLedgerEntry(db, { idempotencyKey: "test-key-001" });
+    assert.equal(after.send_intent_at, null); // rollback confirmado -- nada persistiu
+    assert.equal(after.request_id, null);
+  });
+});
+
+test("claimForSending: chave inexistente -> ReservationNotFoundError", () => {
+  withTestDb("claim-notfound", (db) => {
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "ghost", requestId: "attempt-1", nowMs: NOW }), ReservationNotFoundError);
+  });
+});
+
+test("claimForSending: estado incompativel (nao 'reserved') -> InvalidTransitionError", () => {
+  withTestDb("claim-wrong-status", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    releaseBudget(db, { idempotencyKey: "test-key-001", nowMs: NOW + 1 });
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 2 }), InvalidTransitionError);
+  });
+});
+
+test("claimForSending: ja reivindicado (via claimForSending) -> AlreadyClaimedError, sem novo evento", () => {
+  withTestDb("claim-already-claimed", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 1 });
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-2", nowMs: NOW + 2 }), AlreadyClaimedError);
+    const events = getLedgerEvents(db, { idempotencyKey: "test-key-001" }).filter((e) => e.event_type === "SEND_INTENT_RECORDED");
+    assert.equal(events.length, 1); // so o primeiro claim
+  });
+});
+
+test("claimForSending: ja reivindicado (via markSendIntent legado) tambem e' recusado -- os 3 campos ficam preenchidos do mesmo jeito", () => {
+  withTestDb("claim-after-legacy-markSendIntent", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    markSendIntent(db, { idempotencyKey: "test-key-001", requestId: "legacy-req", nowMs: NOW + 1 });
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 2 }), AlreadyClaimedError);
+  });
+});
+
+test("claimForSending: requestId ausente/vazio/formato invalido -> InvalidFieldError, nunca aceito como null", () => {
+  withTestDb("claim-bad-requestid", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: undefined, nowMs: NOW + 1 }), InvalidFieldError);
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: null, nowMs: NOW + 1 }), InvalidFieldError);
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "", nowMs: NOW + 1 }), InvalidFieldError);
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "has spaces", nowMs: NOW + 1 }), InvalidFieldError);
+  });
+});
+
+test("claimForSending: campos de intencao PARCIALMENTE preenchidos (corrupcao simulada via SQL bruto) -> CorruptSendIntentStateError, nunca tratado como livre nem como ja-reivindicado", () => {
+  withTestDb("claim-partial-corruption", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    // Simula corrupcao: preenche SO send_intent_at, deixando send_intent_at_ms
+    // e request_id NULL -- estado que a API publica nunca produziria sozinha.
+    db.prepare(`UPDATE agentrouter_budget_ledger SET send_intent_at = @iso WHERE idempotency_key = 'test-key-001'`).run({
+      iso: new Date(NOW + 1).toISOString(),
+    });
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 2 }), CorruptSendIntentStateError);
+  });
+});
+
+test("claimForSending: cada uma das 3 combinacoes de preenchimento parcial (1 ou 2 de 3 campos) e' rejeitada como corrupcao", () => {
+  const partialCombos = [
+    { send_intent_at: true },
+    { send_intent_at_ms: true },
+    { request_id: true },
+    { send_intent_at: true, send_intent_at_ms: true },
+    { send_intent_at: true, request_id: true },
+    { send_intent_at_ms: true, request_id: true },
+  ];
+  for (const [i, combo] of partialCombos.entries()) {
+    withTestDb(`claim-partial-combo-${i}`, (db) => {
+      reserveBudget(db, baseReserveOpts());
+      const params = {};
+      if (combo.send_intent_at) params.send_intent_at = new Date(NOW + 1).toISOString();
+      if (combo.send_intent_at_ms) params.send_intent_at_ms = NOW + 1; // >= created_at_ms, respeita o CHECK do banco
+      if (combo.request_id) params.request_id = "x";
+      const sets = Object.keys(params)
+        .map((k) => `${k} = @${k}`)
+        .join(", ");
+      db.prepare(`UPDATE agentrouter_budget_ledger SET ${sets} WHERE idempotency_key = 'test-key-001'`).run(params);
+      assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 2 }), CorruptSendIntentStateError);
+    });
+  }
+});
+
+test("claimForSending: recusa quando nowMs >= expires_at_ms (exatamente no vencimento tambem e' recusado)", () => {
+  withTestDb("claim-at-expiry", (db) => {
+    reserveBudget(db, baseReserveOpts({ expiresAtMs: NOW + 1000 }));
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 1000 }), ClaimAfterExpiryError);
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 1001 }), ClaimAfterExpiryError);
+  });
+});
+
+test("claimForSending: aceita quando nowMs esta 1ms ANTES de expires_at_ms", () => {
+  withTestDb("claim-before-expiry", (db) => {
+    reserveBudget(db, baseReserveOpts({ expiresAtMs: NOW + 1000 }));
+    const row = claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 999 });
+    assert.equal(row.status, "reserved");
+    assert.ok(row.send_intent_at);
+  });
+});
+
+test("claimForSending: sem expires_at_ms (NULL) nunca recusa por vencimento", () => {
+  withTestDb("claim-no-expiry", (db) => {
+    reserveBudget(db, baseReserveOpts({ expiresAtMs: null }));
+    assert.doesNotThrow(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 999_999_999 }));
+  });
+});
+
+test("claimForSending: nowMs anterior a created_at_ms -> InvalidFieldError", () => {
+  withTestDb("claim-nowms-before-created", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    assertThrowsCode(() => claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW - 1 }), InvalidFieldError);
+  });
+});
+
+test("claimForSending: sweepExpiredReservations, apos claim + expiracao, resolve para expired_worst_case (integracao com o mecanismo existente)", () => {
+  withTestDb("claim-then-sweep-worstcase", (db) => {
+    reserveBudget(db, baseReserveOpts({ expiresAtMs: NOW + 1000, reservedMicrosUsd: 66_000 }));
+    claimForSending(db, { idempotencyKey: "test-key-001", requestId: "attempt-1", nowMs: NOW + 500 });
+    const result = sweepExpiredReservations(db, { nowMs: NOW + 2000 });
+    assert.equal(result.worstCaseCount, 1);
+    const row = getLedgerEntry(db, { idempotencyKey: "test-key-001" });
+    assert.equal(row.status, "expired_worst_case");
+    assert.equal(row.original_worst_case_micros_usd, 66_000);
   });
 });
 
@@ -1294,6 +1528,102 @@ try {
     const count = finalDb.prepare("SELECT COUNT(*) AS c FROM agentrouter_budget_ledger WHERE idempotency_key = 'shared-key'").get().c;
     finalDb.close();
     assert.equal(count, 1);
+  } finally {
+    await cleanupAll(dir, [
+      ["procA", procA],
+      ["procB", procB],
+    ]);
+  }
+});
+
+test("concorrencia real: 2 processos disputando claimForSending na MESMA reserva -- exatamente 1 vence, exatamente 1 evento SEND_INTENT_RECORDED no total", async () => {
+  const { dir, dbPath } = createTempDbFile("concurrency-claim");
+  let procA, procB;
+  try {
+    const setupDb = new Database(dbPath);
+    runMigrations(setupDb, MIGRATIONS_DIR);
+    // reserva criada ANTES da corrida -- so o claim disputa entre A e B
+    reserveBudget(setupDb, baseReserveOpts({ idempotencyKey: "claim-race-key" }));
+    setupDb.close();
+
+    const claimScript = (requestId) => `
+const Database = require(${JSON.stringify(BETTER_SQLITE3_PATH)});
+const ledgerMod = require(${JSON.stringify(LEDGER_MODULE_PATH)});
+const db = new Database(process.argv[1]);
+db.pragma("busy_timeout = 5000");
+try {
+  ledgerMod.claimForSending(db, { idempotencyKey: "claim-race-key", requestId: ${JSON.stringify(requestId)}, nowMs: ${NOW + 1} });
+  process.stdout.write("OK\\n");
+} catch (e) {
+  process.stdout.write("ERR:" + e.constructor.name + "\\n");
+}
+`;
+    procA = spawn(process.execPath, ["-e", claimScript("attempt-A"), "--", dbPath], { cwd: dir, stdio: ["pipe", "pipe", "pipe"] });
+    procB = spawn(process.execPath, ["-e", claimScript("attempt-B"), "--", dbPath], { cwd: dir, stdio: ["pipe", "pipe", "pipe"] });
+
+    const linesA = [];
+    const linesB = [];
+    const [resA, resB] = await Promise.all([
+      waitForLine(procA, (l) => l.startsWith("OK") || l.startsWith("ERR"), 10000, linesA),
+      waitForLine(procB, (l) => l.startsWith("OK") || l.startsWith("ERR"), 10000, linesB),
+    ]);
+
+    const results = [resA, resB];
+    assert.equal(results.filter((r) => r === "OK").length, 1, `esperava exatamente 1 OK, veio: ${JSON.stringify(results)}`);
+    assert.equal(results.filter((r) => r === "ERR:AlreadyClaimedError").length, 1, `esperava exatamente 1 AlreadyClaimedError, veio: ${JSON.stringify(results)}`);
+
+    const finalDb = new Database(dbPath, { readonly: true });
+    const row = finalDb.prepare("SELECT id, request_id FROM agentrouter_budget_ledger WHERE idempotency_key = 'claim-race-key'").get();
+    const eventCount = finalDb
+      .prepare("SELECT COUNT(*) AS c FROM agentrouter_budget_events WHERE ledger_id = ? AND event_type = 'SEND_INTENT_RECORDED'")
+      .get(row.id).c;
+    finalDb.close();
+    assert.equal(eventCount, 1, "exatamente 1 evento SEND_INTENT_RECORDED, mesmo sob corrida real");
+    assert.ok(["attempt-A", "attempt-B"].includes(row.request_id));
+  } finally {
+    await cleanupAll(dir, [
+      ["procA", procA],
+      ["procB", procB],
+    ]);
+  }
+});
+
+test("concorrencia real: 2 processos rodando sweepExpiredReservations sobre a MESMA linha expirada (com intencao) -- exatamente 1 evento de expiracao, sem duplicacao", async () => {
+  const { dir, dbPath } = createTempDbFile("concurrency-sweep");
+  let procA, procB;
+  try {
+    const setupDb = new Database(dbPath);
+    runMigrations(setupDb, MIGRATIONS_DIR);
+    reserveBudget(setupDb, baseReserveOpts({ idempotencyKey: "sweep-race-key", expiresAtMs: NOW + 1000 }));
+    claimForSending(setupDb, { idempotencyKey: "sweep-race-key", requestId: "attempt-1", nowMs: NOW + 500 });
+    setupDb.close();
+
+    const sweepScript = `
+const Database = require(${JSON.stringify(BETTER_SQLITE3_PATH)});
+const ledgerMod = require(${JSON.stringify(LEDGER_MODULE_PATH)});
+const db = new Database(process.argv[1]);
+db.pragma("busy_timeout = 5000");
+const result = ledgerMod.sweepExpiredReservations(db, { nowMs: ${NOW + 5000} });
+process.stdout.write("DONE:" + JSON.stringify(result) + "\\n");
+`;
+    procA = spawn(process.execPath, ["-e", sweepScript, "--", dbPath], { cwd: dir, stdio: ["pipe", "pipe", "pipe"] });
+    procB = spawn(process.execPath, ["-e", sweepScript, "--", dbPath], { cwd: dir, stdio: ["pipe", "pipe", "pipe"] });
+
+    const linesA = [];
+    const linesB = [];
+    await Promise.all([
+      waitForLine(procA, (l) => l.startsWith("DONE"), 10000, linesA),
+      waitForLine(procB, (l) => l.startsWith("DONE"), 10000, linesB),
+    ]);
+
+    const finalDb = new Database(dbPath, { readonly: true });
+    const row = finalDb.prepare("SELECT id, status FROM agentrouter_budget_ledger WHERE idempotency_key = 'sweep-race-key'").get();
+    const eventCount = finalDb
+      .prepare("SELECT COUNT(*) AS c FROM agentrouter_budget_events WHERE ledger_id = ? AND event_type = 'EXPIRED_WORST_CASE'")
+      .get(row.id).c;
+    finalDb.close();
+    assert.equal(row.status, "expired_worst_case");
+    assert.equal(eventCount, 1, "exatamente 1 evento de expiracao, mesmo com 2 processos rodando sweep ao mesmo tempo");
   } finally {
     await cleanupAll(dir, [
       ["procA", procA],
