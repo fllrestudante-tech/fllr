@@ -3,11 +3,15 @@ const assert = require("node:assert/strict");
 const {
   computeAssessmentKey,
   createAttemptId,
+  computeQuantFingerprint,
   ASSESSMENT_KEY_VERSION,
+  QUANT_FINGERPRINT_VERSION,
   InvalidAssessmentKeyInputError,
   InvalidAssessmentKeyOutputError,
   UnrecognizedAssessmentKeyFieldError,
   InvalidAttemptIdError,
+  InvalidQuantFingerprintInputError,
+  InvalidQuantSignalError,
 } = require("../../lib/aiGateway/agentRouterAssessmentKey");
 
 function assertThrowsCode(fn, ErrorClass, code) {
@@ -55,7 +59,7 @@ test("computeAssessmentKey: chave final sempre casa com o padrao de token do led
 
 test("computeAssessmentKey: valor golden fixo -- trava o algoritmo exato (canonicalizacao + SHA-256 + prefixo)", () => {
   const key = computeAssessmentKey(baseInput());
-  assert.equal(key, "ar-ak:v1:3631952fcd82551b36e3f64a74094d8fbbcef473d2fdf21f3e7774abfe7cb74c");
+  assert.equal(key, "ar-ak:v1:573a7f4ac164e6b8c0c42913802a844102b4195ad705b9b89f7abc8cf31adce5");
 });
 
 // =====================================================================
@@ -182,7 +186,7 @@ test("computeAssessmentKey: nenhuma linha e computada (a funcao lanca ANTES de t
   // golden normalmente (prova que a rejeicao e especifica do campo extra,
   // nao um efeito colateral de outra mudanca)
   const key = computeAssessmentKey(baseInput());
-  assert.equal(key, "ar-ak:v1:3631952fcd82551b36e3f64a74094d8fbbcef473d2fdf21f3e7774abfe7cb74c");
+  assert.equal(key, "ar-ak:v1:573a7f4ac164e6b8c0c42913802a844102b4195ad705b9b89f7abc8cf31adce5");
 });
 
 // =====================================================================
@@ -302,4 +306,193 @@ test("InvalidAssessmentKeyOutputError esta exportado e tem o formato esperado", 
   const err = new InvalidAssessmentKeyOutputError("bogus-key");
   assert.equal(err.code, "INVALID_ASSESSMENT_KEY_OUTPUT");
   assert.equal(err.key, "bogus-key");
+});
+
+// =====================================================================
+// 6) computeQuantFingerprint -- SHA-256 completo, serializacao numerica
+// EXATA (nao arredondamento), allowlist real de signal.analyze()
+// =====================================================================
+
+function baseQuant(overrides = {}) {
+  return {
+    signal: "buy",
+    price: 142.567891,
+    reasons: ["ema_cross_up", "stoch_oversold"],
+    indicators: {
+      emaShort: 141.234567,
+      emaLong: 139.876543,
+      rsi: 55.123456,
+      stochRsi: 12.5,
+      obv: 98765.4321,
+      atr: 0.98765,
+    },
+    ...overrides,
+  };
+}
+
+test("computeQuantFingerprint: formato qf:v1:<64 hex chars>, SHA-256 completo sem truncar", () => {
+  const fp = computeQuantFingerprint(baseQuant());
+  const [prefix, version, digest] = fp.split(":");
+  assert.equal(prefix, "qf");
+  assert.equal(version, QUANT_FINGERPRINT_VERSION);
+  assert.equal(digest.length, 64, "digest deve ser SHA-256 completo, nunca truncado a 16 chars");
+  assert.match(digest, /^[0-9a-f]{64}$/);
+});
+
+test("computeQuantFingerprint: quant null/undefined -> null (compatibilidade de modulo puro)", () => {
+  assert.equal(computeQuantFingerprint(null), null);
+  assert.equal(computeQuantFingerprint(undefined), null);
+});
+
+test("computeQuantFingerprint: quant nao-objeto (string/numero/array) -> InvalidQuantFingerprintInputError, NUNCA null silencioso", () => {
+  assertThrowsCode(() => computeQuantFingerprint("buy"), InvalidQuantFingerprintInputError, "INVALID_QUANT_FINGERPRINT_INPUT");
+  assertThrowsCode(() => computeQuantFingerprint(42), InvalidQuantFingerprintInputError);
+  assertThrowsCode(() => computeQuantFingerprint([1, 2, 3]), InvalidQuantFingerprintInputError);
+});
+
+test("computeQuantFingerprint: signal fora da allowlist real (wait|buy|sell) -> InvalidQuantSignalError", () => {
+  assertThrowsCode(() => computeQuantFingerprint(baseQuant({ signal: "hold" })), InvalidQuantSignalError, "INVALID_QUANT_SIGNAL");
+  assertThrowsCode(() => computeQuantFingerprint(baseQuant({ signal: "BUY" })), InvalidQuantSignalError); // case-sensitive, exatamente o enum real
+  assertThrowsCode(() => computeQuantFingerprint(baseQuant({ signal: "" })), InvalidQuantSignalError);
+  assertThrowsCode(() => computeQuantFingerprint(baseQuant({ signal: null })), InvalidQuantSignalError);
+  assertThrowsCode(() => computeQuantFingerprint(baseQuant({ signal: undefined })), InvalidQuantSignalError);
+});
+
+test("computeQuantFingerprint: os 3 valores reais de signal (wait/buy/sell) sao todos aceitos", () => {
+  for (const signal of ["wait", "buy", "sell"]) {
+    assert.doesNotThrow(() => computeQuantFingerprint(baseQuant({ signal })));
+  }
+});
+
+test("computeQuantFingerprint: campo numerico obrigatorio ausente/NaN/Infinito/string -> InvalidQuantFingerprintInputError, NUNCA vira null silenciosamente", () => {
+  const numericFields = ["price"];
+  const indicatorFields = ["emaShort", "emaLong", "rsi", "stochRsi", "obv", "atr"];
+  for (const field of numericFields) {
+    assertThrowsCode(() => computeQuantFingerprint(baseQuant({ [field]: undefined })), InvalidQuantFingerprintInputError);
+    assertThrowsCode(() => computeQuantFingerprint(baseQuant({ [field]: NaN })), InvalidQuantFingerprintInputError);
+    assertThrowsCode(() => computeQuantFingerprint(baseQuant({ [field]: Infinity })), InvalidQuantFingerprintInputError);
+    assertThrowsCode(() => computeQuantFingerprint(baseQuant({ [field]: -Infinity })), InvalidQuantFingerprintInputError);
+    assertThrowsCode(() => computeQuantFingerprint(baseQuant({ [field]: "142.5" })), InvalidQuantFingerprintInputError);
+  }
+  for (const field of indicatorFields) {
+    const q = baseQuant();
+    q.indicators = { ...q.indicators, [field]: undefined };
+    assertThrowsCode(() => computeQuantFingerprint(q), InvalidQuantFingerprintInputError);
+    const q2 = baseQuant();
+    q2.indicators = { ...q2.indicators, [field]: "1.23" };
+    assertThrowsCode(() => computeQuantFingerprint(q2), InvalidQuantFingerprintInputError, "INVALID_QUANT_FINGERPRINT_INPUT");
+  }
+});
+
+test("computeQuantFingerprint: string numerica '1.23' e REJEITADA em qualquer campo -- nunca convertida implicitamente", () => {
+  assertThrowsCode(() => computeQuantFingerprint(baseQuant({ price: "1.23" })), InvalidQuantFingerprintInputError);
+});
+
+test("computeQuantFingerprint: indicators ausente/malformado -> trata como {} -> campos obrigatorios ausentes -> erro (nunca null silencioso)", () => {
+  assertThrowsCode(() => computeQuantFingerprint(baseQuant({ indicators: undefined })), InvalidQuantFingerprintInputError);
+  assertThrowsCode(() => computeQuantFingerprint(baseQuant({ indicators: "not an object" })), InvalidQuantFingerprintInputError);
+  assertThrowsCode(() => computeQuantFingerprint(baseQuant({ indicators: null })), InvalidQuantFingerprintInputError);
+});
+
+// --- mudanca de CADA campo, isoladamente, altera o fingerprint ---
+
+const QUANT_FIELD_VARIANTS = [
+  { label: "signal", make: (q) => ({ ...q, signal: "sell" }) },
+  { label: "price", make: (q) => ({ ...q, price: q.price + 0.01 }) },
+  { label: "emaShort", make: (q) => ({ ...q, indicators: { ...q.indicators, emaShort: q.indicators.emaShort + 0.01 } }) },
+  { label: "emaLong", make: (q) => ({ ...q, indicators: { ...q.indicators, emaLong: q.indicators.emaLong + 0.01 } }) },
+  { label: "rsi", make: (q) => ({ ...q, indicators: { ...q.indicators, rsi: q.indicators.rsi + 0.01 } }) },
+  { label: "stochRsi", make: (q) => ({ ...q, indicators: { ...q.indicators, stochRsi: q.indicators.stochRsi + 0.01 } }) },
+  { label: "obv", make: (q) => ({ ...q, indicators: { ...q.indicators, obv: q.indicators.obv + 0.01 } }) },
+  { label: "atr", make: (q) => ({ ...q, indicators: { ...q.indicators, atr: q.indicators.atr + 0.01 } }) },
+];
+
+for (const { label, make } of QUANT_FIELD_VARIANTS) {
+  test(`computeQuantFingerprint: mudanca isolada em "${label}" produz fingerprint diferente`, () => {
+    const base = baseQuant();
+    const fp1 = computeQuantFingerprint(base);
+    const fp2 = computeQuantFingerprint(make(base));
+    assert.notEqual(fp1, fp2, `campo "${label}" deveria alterar o fingerprint`);
+  });
+}
+
+test("computeQuantFingerprint: mesma estrutura, ordem de propriedades DIFERENTE no objeto de entrada -> mesmo fingerprint", () => {
+  const q1 = baseQuant();
+  const q2 = {
+    indicators: { atr: q1.indicators.atr, obv: q1.indicators.obv, stochRsi: q1.indicators.stochRsi, rsi: q1.indicators.rsi, emaLong: q1.indicators.emaLong, emaShort: q1.indicators.emaShort },
+    reasons: q1.reasons,
+    price: q1.price,
+    signal: q1.signal,
+  };
+  assert.equal(computeQuantFingerprint(q1), computeQuantFingerprint(q2));
+});
+
+test("computeQuantFingerprint: -0 e 0 produzem o MESMO fingerprint (regra canonica Object.is(-0) -> '0')", () => {
+  const fpZero = computeQuantFingerprint(baseQuant({ indicators: { ...baseQuant().indicators, obv: 0 } }));
+  const fpNegZero = computeQuantFingerprint(baseQuant({ indicators: { ...baseQuant().indicators, obv: -0 } }));
+  assert.equal(fpZero, fpNegZero);
+});
+
+test("computeQuantFingerprint: texto narrativo em reasons[] NAO afeta o fingerprint -- so os 7 numeros + signal entram na canonicalizacao", () => {
+  const fp1 = computeQuantFingerprint(baseQuant({ reasons: ["ema_cross_up", "stoch_oversold"] }));
+  const fp2 = computeQuantFingerprint(baseQuant({ reasons: ["texto completamente diferente, uma frase livre qualquer!!"] }));
+  const fp3 = computeQuantFingerprint(baseQuant({ reasons: [] }));
+  const fp4 = computeQuantFingerprint(baseQuant({ reasons: undefined }));
+  assert.equal(fp1, fp2);
+  assert.equal(fp1, fp3);
+  assert.equal(fp1, fp4);
+});
+
+test("computeQuantFingerprint: posicao, saldo, prompt e Telegram nunca aparecem no payload canonico -- so os campos esperados sao lidos, mesmo se presentes na entrada", () => {
+  const contaminated = baseQuant({
+    qty: 12.5,
+    entryPrice: 140.0,
+    stopLossPrice: 135.0,
+    takeProfitPrice: 150.0,
+    balance: 9999.99,
+    prompt: "You are a context-enrichment module...",
+    telegramText: "compra agora, sinal forte!!",
+    apiKey: "rejected-sensitive-field-value",
+  });
+  const fpContaminated = computeQuantFingerprint(contaminated);
+  const fpClean = computeQuantFingerprint(baseQuant());
+  // campos extras nao reconhecidos sao simplesmente ignorados (computeQuantFingerprint
+  // so LE os campos que conhece) -- prova, pelo NOME do campo (qty, entryPrice,
+  // stopLossPrice, takeProfitPrice, balance, prompt, telegramText, apiKey) e nao
+  // por semelhanca de valor com credencial real, que nenhum deles altera o hash
+  assert.equal(fpContaminated, fpClean);
+});
+
+test("computeQuantFingerprint diferente altera a assessmentKey; ausente/undefined/null produz a MESMA chave", () => {
+  const base = {
+    symbol: "SOLUSDT",
+    interval: "15",
+    candleTimestampMs: 1_756_000_000_000,
+    triggerReason: "quant_signal",
+    taskClass: "normal_analysis",
+    promptVersion: "v1",
+    schemaVersion: "v1",
+  };
+  const fpA = computeQuantFingerprint(baseQuant({ signal: "buy" }));
+  const fpB = computeQuantFingerprint(baseQuant({ signal: "sell" }));
+
+  const kAbsent = computeAssessmentKey(base);
+  const kUndefined = computeAssessmentKey({ ...base, quantFingerprint: undefined });
+  const kNull = computeAssessmentKey({ ...base, quantFingerprint: null });
+  const kA = computeAssessmentKey({ ...base, quantFingerprint: fpA });
+  const kB = computeAssessmentKey({ ...base, quantFingerprint: fpB });
+
+  assert.equal(kAbsent, kUndefined);
+  assert.equal(kUndefined, kNull);
+  assert.notEqual(kAbsent, kA);
+  assert.notEqual(kA, kB);
+});
+
+test("computeAssessmentKey: quantFingerprint com formato invalido (nao gerado por computeQuantFingerprint) -> InvalidAssessmentKeyInputError", () => {
+  const base = {
+    symbol: "SOLUSDT", interval: "15", candleTimestampMs: 1_756_000_000_000,
+    triggerReason: "quant_signal", taskClass: "normal_analysis", promptVersion: "v1", schemaVersion: "v1",
+  };
+  assertThrowsCode(() => computeAssessmentKey({ ...base, quantFingerprint: "texto livre nao e um fingerprint valido" }), InvalidAssessmentKeyInputError);
+  assertThrowsCode(() => computeAssessmentKey({ ...base, quantFingerprint: "" }), InvalidAssessmentKeyInputError);
 });
