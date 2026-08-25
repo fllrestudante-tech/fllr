@@ -11,6 +11,8 @@ const ledger = require("../../lib/aiGateway/agentRouterLedger");
 
 const {
   reserveBudget,
+  resolvePolicyIdempotentReservation,
+  EFFECTIVE_MICROS_USD_CASE_SQL,
   markSendIntent,
   confirmBudget,
   releaseBudget,
@@ -293,6 +295,123 @@ test("reserveBudget: cada campo canonico, isoladamente, causa conflito se diverg
     for (const variant of variants) {
       assertThrowsCode(() => reserveBudget(db, baseReserveOpts(variant)), IdempotencyConflictError);
     }
+  });
+});
+
+// =====================================================================
+// 2b) resolvePolicyIdempotentReservation -- helper especifico da politica
+// (Commit 3). NUNCA usado por reserveBudget(); nao altera seu contrato --
+// prova disso ja e' o fato de que TODA a secao 2) acima permanece
+// inalterada e passando. Aqui a janela e reservedMicrosUsd sao
+// propositalmente EXCLUIDOS da comparacao canonica.
+// =====================================================================
+
+function basePolicyLookupOpts(overrides = {}) {
+  return {
+    idempotencyKey: "test-key-001",
+    correlationId: "corr-001",
+    model: "gpt-5.6-sol",
+    taskClass: "triage",
+    estimatedMicrosUsd: 50_000,
+    priceSource: "observed_sample_20260824",
+    priceSourceStatus: "observed",
+    pricingTableVersion: "v1",
+    expiresAtMs: NOW + 5 * 60 * 1000,
+    ...overrides,
+  };
+}
+
+test("resolvePolicyIdempotentReservation: chave inexistente retorna null", () => {
+  withTestDb("policy-idem-null", (db) => {
+    const result = resolvePolicyIdempotentReservation(db, basePolicyLookupOpts());
+    assert.equal(result, null);
+  });
+});
+
+test("resolvePolicyIdempotentReservation: payload identico (sem janela) devolve a linha original", () => {
+  withTestDb("policy-idem-match", (db) => {
+    const created = reserveBudget(db, baseReserveOpts());
+    const result = resolvePolicyIdempotentReservation(db, basePolicyLookupOpts());
+    assert.equal(result.id, created.id);
+    assert.equal(result.status, "reserved");
+  });
+});
+
+test("resolvePolicyIdempotentReservation: nao recebe/compara janela -- retorno inclui a janela ja persistida, mesmo sem o chamador informa-la", () => {
+  withTestDb("policy-idem-window-agnostic", (db) => {
+    reserveBudget(db, baseReserveOpts({ budgetWindowStartMs: NOW, budgetWindowEndMs: NOW + DAY_MS }));
+    const result = resolvePolicyIdempotentReservation(db, basePolicyLookupOpts());
+    assert.equal(result.budget_window_start_ms, NOW);
+    assert.equal(result.budget_window_end_ms, NOW + DAY_MS);
+  });
+});
+
+test("resolvePolicyIdempotentReservation: reservedMicrosUsd persistido diferente do que a politica recalcularia agora NAO bloqueia (campo fora da comparacao)", () => {
+  withTestDb("policy-idem-reserved-agnostic", (db) => {
+    reserveBudget(db, baseReserveOpts({ reservedMicrosUsd: 999_000 }));
+    // resolvePolicyIdempotentReservation nem aceita reservedMicrosUsd como parametro --
+    // reconhece o retry mesmo que a politica, agora, calcularia um valor bem diferente.
+    assert.doesNotThrow(() => resolvePolicyIdempotentReservation(db, basePolicyLookupOpts()));
+  });
+});
+
+test("resolvePolicyIdempotentReservation: janela fornecida a reserveBudget() divergente da original AINDA gera IdempotencyConflictError em reserveBudget (contrato original intacto) mesmo que resolvePolicyIdempotentReservation nao se importe com janela", () => {
+  withTestDb("policy-idem-vs-ledger-contract", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    // contrato de reserveBudget() permanece: janela diferente = conflito
+    assertThrowsCode(() => reserveBudget(db, baseReserveOpts({ budgetWindowStartMs: NOW + 1 })), IdempotencyConflictError);
+    // mas o helper da politica, que nunca olha pra janela, reconhece o retry normalmente
+    assert.doesNotThrow(() => resolvePolicyIdempotentReservation(db, basePolicyLookupOpts()));
+  });
+});
+
+test("resolvePolicyIdempotentReservation: cada campo canonico (dos que ela de fato compara), isoladamente, causa conflito se divergir", () => {
+  withTestDb("policy-idem-fields-conflict", (db) => {
+    reserveBudget(db, baseReserveOpts());
+    const variants = [
+      { correlationId: "other-corr" },
+      { model: "other-model" },
+      { taskClass: "other-class" },
+      { estimatedMicrosUsd: 1 },
+      { priceSource: "other-source" },
+      { priceSourceStatus: "confirmed" },
+      { pricingTableVersion: "v2" },
+      { expiresAtMs: NOW + 999_999 },
+    ];
+    for (const variant of variants) {
+      assertThrowsCode(() => resolvePolicyIdempotentReservation(db, basePolicyLookupOpts(variant)), IdempotencyConflictError);
+    }
+  });
+});
+
+test("resolvePolicyIdempotentReservation: valida formato dos campos antes de consultar (mesmas regras de reserveBudget)", () => {
+  withTestDb("policy-idem-invalid-fields", (db) => {
+    assert.throws(() => resolvePolicyIdempotentReservation(db, basePolicyLookupOpts({ estimatedMicrosUsd: -1 })), NegativeAmountError);
+    assert.throws(() => resolvePolicyIdempotentReservation(db, basePolicyLookupOpts({ priceSourceStatus: "made_up" })), InvalidFieldError);
+  });
+});
+
+// =====================================================================
+// 2c) EFFECTIVE_MICROS_USD_CASE_SQL -- constante extraida, reusada pelo
+// modulo de politica para somar por categoria sem duplicar/divergir do
+// mapeamento status -> valor efetivo ja usado por getBudgetStateForWindow.
+// =====================================================================
+
+test("EFFECTIVE_MICROS_USD_CASE_SQL: e uma string SQL utilizavel diretamente, produz o MESMO total que getBudgetStateForWindow", () => {
+  withTestDb("effective-case-sql", (db) => {
+    assert.equal(typeof EFFECTIVE_MICROS_USD_CASE_SQL, "string");
+    assert.ok(EFFECTIVE_MICROS_USD_CASE_SQL.includes("reserved_micros_usd"));
+
+    toWorstCase(db, "k1", 90_000);
+    reconcileDown(db, { idempotencyKey: "k1", reconciledEffectiveMicrosUsd: 30_000, evidenceType: "agentrouter_panel", actorType: "operator", nowMs: NOW + 1 });
+    reserveBudget(db, baseReserveOpts({ idempotencyKey: "k2", reservedMicrosUsd: 5_000 }));
+
+    const viaExportedConstant = db
+      .prepare(`SELECT SUM(${EFFECTIVE_MICROS_USD_CASE_SQL}) AS total FROM agentrouter_budget_ledger WHERE budget_window_start_ms = ? AND budget_window_end_ms = ?`)
+      .get(NOW, NOW + DAY_MS).total;
+    const viaPublicApi = getBudgetStateForWindow(db, { windowStartMs: NOW, windowEndMs: NOW + DAY_MS }).totalMicrosUsd;
+    assert.equal(viaExportedConstant, viaPublicApi);
+    assert.equal(viaExportedConstant, 35_000);
   });
 });
 
