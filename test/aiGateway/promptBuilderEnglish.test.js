@@ -1,8 +1,10 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const crypto = require("crypto");
 const {
   buildPrompt,
   SYSTEM_PROMPT,
+  PROMPT_VERSION,
   translateFreeTextOrMask,
   translateFusionReason,
   sanitizeTechnicalToken,
@@ -713,4 +715,20 @@ test("fuzz combinado determinístico: todos os fixtures PT/Unicode/injection des
     assert.ok(!userFree.includes(dangerous), `vazou (texto livre): ${JSON.stringify(dangerous)}`);
     assert.ok(!userToken.includes(dangerous), `vazou (token): ${JSON.stringify(dangerous)}`);
   }
+});
+
+// =====================================================================
+// PROMPT_VERSION (Fase 10 / Commit 4a) -- so' o export e' novo; o conteudo
+// de SYSTEM_PROMPT (e portanto de buildPrompt) precisa continuar
+// byte-a-byte identico. Travado por hash, nao so por comparacao de string
+// solta no teste (mais dificil de alterar por acidente sem notar).
+// =====================================================================
+
+test("PROMPT_VERSION esta exportado e vale 'v1'", () => {
+  assert.equal(PROMPT_VERSION, "v1");
+});
+
+test("SYSTEM_PROMPT continua byte-a-byte identico (hash travado) -- Commit 4a nao alterou o conteudo do prompt", () => {
+  const digest = crypto.createHash("sha256").update(SYSTEM_PROMPT, "utf8").digest("hex");
+  assert.equal(digest, "e9973b18ff02cd8bd37993d278adea0183262ae6af3d30f49c1d4afd383e61a0");
 });

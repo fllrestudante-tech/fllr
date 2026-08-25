@@ -1,6 +1,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { getAgentRouterAssessmentSchema } = require("../../lib/agentrouterCli/outputSchema");
+const crypto = require("crypto");
+const { getAgentRouterAssessmentSchema, SCHEMA_VERSION } = require("../../lib/agentrouterCli/outputSchema");
 const {
   parseAssessment,
   VALID_BIAS,
@@ -115,4 +116,18 @@ test("compatibilidade: campos do schema batem com o que parseAssessment devolve 
   );
   const fields = Object.keys(parsed).filter((k) => k !== "parseError");
   assert.deepEqual(fields.sort(), [...REQUIRED_FIELDS].sort());
+});
+
+// =====================================================================
+// SCHEMA_VERSION (Fase 10 / Commit 4a) -- so' o export e' novo; o schema
+// em si precisa continuar identico. Travado por hash do JSON serializado.
+// =====================================================================
+
+test("SCHEMA_VERSION esta exportado e vale 'v1'", () => {
+  assert.equal(SCHEMA_VERSION, "v1");
+});
+
+test("getAgentRouterAssessmentSchema() continua produzindo exatamente o mesmo JSON (hash travado) -- Commit 4a nao alterou o schema", () => {
+  const digest = crypto.createHash("sha256").update(JSON.stringify(getAgentRouterAssessmentSchema()), "utf8").digest("hex");
+  assert.equal(digest, "6c29a6748cda8484797fbaa4bd9a5ef5a08a33d395b4d47068241bc13946b82b");
 });
