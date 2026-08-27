@@ -358,3 +358,449 @@ test("getAssessment: erro sem .code produz errorCode null, fallback continua fun
   assert.equal(result.ai.provider, "anthropic");
   assert.equal(logs[0].providerAttempts[0].errorCode, null);
 });
+
+// =====================================================================
+// Fase 10 / Commit 4c2 -- gate do orçamento do AgentRouter (identidade +
+// wrapper orçamentado). Todo teste abaixo injeta opts.agentRouterGate
+// (fakes de dbProvider/policy/createBudgetedClient/realRunAgentRouterPrompt)
+// -- ZERO SQLite real, ZERO transporte real, ZERO rede em qualquer teste
+// deste bloco (exceto o de isolamento estrutural, que roda em subprocesso
+// isolado e nunca chega perto de I/O real -- ver mais abaixo).
+// =====================================================================
+
+function validGatedContext(overrides = {}) {
+  return {
+    symbol: "SOLUSDT",
+    interval: "1",
+    riskState: { volatilityRegime: "NORMAL" },
+    position: { isOpened: false },
+    quant: {
+      signal: "wait",
+      price: 150.5,
+      indicators: { emaShort: 150.1, emaLong: 149.8, rsi: 55, stochRsi: 40, obv: 1000, atr: 0.8 },
+    },
+    ...overrides,
+  };
+}
+
+function validAssessmentMeta(overrides = {}) {
+  return { triggerReason: "quant_signal", lastClosedCandleTimestampMs: 1_756_000_000_000, ...overrides };
+}
+
+/** dbProvider fake -- nunca abre nada de verdade, só conta chamadas a closeDb() (fechamento determinístico). */
+function fakeDbProvider() {
+  const provider = { getDb: () => ({ marker: "fake-db-never-real" }), closeDb: () => {}, closeDbCalls: 0 };
+  const realClose = provider.closeDb;
+  provider.closeDb = () => {
+    provider.closeDbCalls += 1;
+    realClose();
+  };
+  return provider;
+}
+
+/** transporte fake que FALHA IMEDIATAMENTE se chamado -- prova de "zero rede" por construção, não por inspeção. */
+function neverCallTransport() {
+  return async () => {
+    throw new Error("POISON: transporte real não deveria ser alcançado neste teste");
+  };
+}
+
+/** policy/createBudgetedClient fakes que nunca tocam SQLite/rede -- devolvem/lançam exatamente o que o teste configurar. */
+function fakeAgentRouterGate({ runAgentRouterPromptImpl } = {}) {
+  const dbProvider = fakeDbProvider();
+  const createBudgetedClientCalls = [];
+  return {
+    dbProvider,
+    policy: { marker: "fake-policy-never-real" },
+    createBudgetedClient: (args) => {
+      createBudgetedClientCalls.push(args);
+      return { runAgentRouterPrompt: runAgentRouterPromptImpl || (async () => ({ text: "{}", usage: null })) };
+    },
+    createBudgetedClientCalls,
+    realRunAgentRouterPrompt: neverCallTransport(), // nunca chamado DIRETAMENTE -- só createBudgetedClient's fake runAgentRouterPrompt é chamado
+  };
+}
+
+function fakeAgentRouterProviderEntry(overrides = {}) {
+  return {
+    provider: { name: "agentrouter", callProvider: async (client, ctx) => client.runAgentRouterPrompt({ system: "sys", user: "usr", model: client.model }), normalize: () => bullishAssessment },
+    client: { model: "gpt-5.6-sol", marker: "ORIGINAL_UNWRAPPED_CLIENT" },
+    hasKey: () => true,
+    ...overrides,
+  };
+}
+
+test("gate desligado (padrão): objeto de client ORIGINAL chega por identidade de referência ao provider -- nenhum wrapper construído", async () => {
+  const originalClient = { model: "gpt-5.6-sol", marker: "ORIGINAL" };
+  let receivedClient = null;
+  const logs = [];
+  await getAssessment(
+    validGatedContext(),
+    {
+      providers: {
+        agentrouter: {
+          provider: { name: "agentrouter", callProvider: async (client) => { receivedClient = client; return {}; }, normalize: () => bullishAssessment },
+          client: originalClient,
+          hasKey: () => true,
+        },
+      },
+      providerOrder: ["agentrouter"],
+      // agentRouterBudgetEnabled OMITIDO -- default false (config.ai.agentRouterBudgetEnabled)
+      assessmentMeta: validAssessmentMeta(), // fornecido "por acidente" -- deve ser ignorado
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(receivedClient, originalClient); // === , nunca um wrapper
+  assert.equal(logs[0].providerAttempts[0].status, "success");
+  assert.equal(Object.hasOwn(logs[0].providerAttempts[0], "taskClass"), false);
+  assert.equal(Object.hasOwn(logs[0].providerAttempts[0], "assessmentKey"), false);
+  assert.equal(Object.hasOwn(logs[0].providerAttempts[0], "attemptId"), false);
+});
+
+test("gate desligado: erro do agentrouter mantém status:\"error\" e o fallback legado continua (mesmo com assessmentMeta acidental)", async () => {
+  const logs = [];
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeProvider("agentrouter", { shouldThrow: true }), anthropic: fakeProvider("anthropic", { normalized: bearishAssessment }) },
+      providerOrder: ["agentrouter", "anthropic"],
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, "anthropic");
+  assert.equal(logs[0].providerAttempts[0].status, "error");
+  assert.notEqual(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+});
+
+test("gate ligado: assessmentMeta ausente -> agentrouter_fatal, nenhum provider seguinte tentado, status superior provider_error", async () => {
+  const logs = [];
+  const openaiCalls = [];
+  const gate = fakeAgentRouterGate();
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: {
+        agentrouter: fakeAgentRouterProviderEntry(),
+        openai: { provider: { name: "openai", callProvider: async () => { openaiCalls.push(1); return {}; }, normalize: () => bullishAssessment }, client: {}, hasKey: () => true },
+      },
+      providerOrder: ["agentrouter", "openai"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      // assessmentMeta OMITIDO de propósito
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, null);
+  assert.equal(logs[0].status, "provider_error");
+  assert.deepEqual(logs[0].attempted, ["agentrouter"]); // openai nunca chega a ser "attempted"
+  assert.equal(openaiCalls.length, 0);
+  assert.equal(logs[0].providerAttempts.length, 1);
+  const attempt = logs[0].providerAttempts[0];
+  assert.equal(attempt.status, "agentrouter_fatal");
+  assert.equal(attempt.errorCode, "MISSING_ASSESSMENT_META");
+  assert.equal(attempt.taskClass, null);
+  assert.equal(attempt.assessmentKey, null);
+  assert.equal(attempt.attemptId, null);
+  assert.equal(gate.dbProvider.closeDbCalls, 1); // fechamento determinístico mesmo na falha
+  assert.equal(gate.createBudgetedClientCalls.length, 0); // nunca chegou a construir o wrapper
+});
+
+test("gate ligado: trigger desconhecido -> agentrouter_fatal com errorCode UNKNOWN_TRIGGER_REASON, fallback não tentado", async () => {
+  const logs = [];
+  const gate = fakeAgentRouterGate();
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry(), openai: fakeProvider("openai", { normalized: bullishAssessment }) },
+      providerOrder: ["agentrouter", "openai"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta({ triggerReason: "nunca_visto" }),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, null);
+  assert.equal(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+  assert.equal(logs[0].providerAttempts[0].errorCode, "UNKNOWN_TRIGGER_REASON");
+  assert.deepEqual(logs[0].attempted, ["agentrouter"]);
+});
+
+test("gate ligado: candle ausente/inválido -> agentrouter_fatal com errorCode INVALID_ASSESSMENT_KEY_INPUT", async () => {
+  const logs = [];
+  const gate = fakeAgentRouterGate();
+  await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry() },
+      providerOrder: ["agentrouter"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta({ lastClosedCandleTimestampMs: null }),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+  assert.equal(logs[0].providerAttempts[0].errorCode, "INVALID_ASSESSMENT_KEY_INPUT");
+});
+
+test("gate ligado: context.quant ausente -> agentrouter_fatal com errorCode MISSING_QUANT_FINGERPRINT", async () => {
+  const logs = [];
+  const gate = fakeAgentRouterGate();
+  await getAssessment(
+    validGatedContext({ quant: null }),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry() },
+      providerOrder: ["agentrouter"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+  assert.equal(logs[0].providerAttempts[0].errorCode, "MISSING_QUANT_FINGERPRINT");
+});
+
+test("gate ligado: fallbackAllowed===true (orçamento esgotado) -> status \"error\" (NÃO fatal), fallback CONTINUA e pode vencer", async () => {
+  const logs = [];
+  const gate = fakeAgentRouterGate({
+    runAgentRouterPromptImpl: async () => {
+      const err = new Error("orçamento esgotado -- mensagem interna nunca deveria aparecer no log sanitizado do caminho fatal (mas este NÃO é o caminho fatal)");
+      err.code = "GLOBAL_BUDGET_EXHAUSTED";
+      err.fallbackAllowed = true;
+      throw err;
+    },
+  });
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry(), openai: fakeProvider("openai", { normalized: bullishAssessment }) },
+      providerOrder: ["agentrouter", "openai"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, "openai"); // fallback venceu
+  assert.deepEqual(logs[0].attempted, ["agentrouter", "openai"]);
+  const attempt = logs[0].providerAttempts[0];
+  assert.equal(attempt.status, "error"); // nunca "agentrouter_fatal"
+  assert.equal(attempt.errorCode, "GLOBAL_BUDGET_EXHAUSTED");
+  // G) taskClass/assessmentKey/attemptId preservados mesmo no caminho de fallback permitido
+  assert.equal(attempt.taskClass, "normal_analysis");
+  assert.match(attempt.assessmentKey, /^ar-ak:v1:[0-9a-f]{64}$/);
+  assert.equal(typeof attempt.attemptId, "string");
+  // G) openai recebe só seu client/contexto legados -- nunca metadata do agentrouter
+  assert.equal(Object.hasOwn(logs[0].providerAttempts[1], "taskClass"), false);
+  assert.equal(Object.hasOwn(logs[0].providerAttempts[1], "assessmentKey"), false);
+  assert.equal(Object.hasOwn(logs[0].providerAttempts[1], "attemptId"), false);
+});
+
+test("gate ligado: fallbackAllowed===false (ex.: claim SQLITE_BUSY) -> agentrouter_fatal, fallback NÃO tentado", async () => {
+  const logs = [];
+  const openaiCalls = [];
+  const gate = fakeAgentRouterGate({
+    runAgentRouterPromptImpl: async () => {
+      const err = new Error("claim busy -- nunca deve vazar");
+      err.code = "ATOMIC_CLAIM_UNAVAILABLE";
+      err.fallbackAllowed = false;
+      throw err;
+    },
+  });
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: {
+        agentrouter: fakeAgentRouterProviderEntry(),
+        openai: { provider: { name: "openai", callProvider: async () => { openaiCalls.push(1); return {}; }, normalize: () => bullishAssessment }, client: {}, hasKey: () => true },
+      },
+      providerOrder: ["agentrouter", "openai"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, null);
+  assert.equal(openaiCalls.length, 0);
+  assert.deepEqual(logs[0].attempted, ["agentrouter"]);
+  const attempt = logs[0].providerAttempts[0];
+  assert.equal(attempt.status, "agentrouter_fatal");
+  assert.equal(attempt.errorCode, "ATOMIC_CLAIM_UNAVAILABLE");
+  assert.ok(!attempt.error.includes("nunca deve vazar")); // A) mensagem real do erro nunca vaza
+  assert.equal(attempt.error, "AgentRouter call rejected: send-intent claim busy"); // mensagem pública fixa
+});
+
+test("gate ligado: erro fatal com código desconhecido -> AGENTROUTER_FATAL genérico, mensagem real (com caminho local/SQL/segredo simulado) NUNCA aparece no log", async () => {
+  const logs = [];
+  // Valor propositalmente NÃO parecido com uma credencial real -- só
+  // sensível o bastante (caminho local, SQL, token rotulado como interno)
+  // pra provar que o caminho fatal nunca serializa err.message no log.
+  const dangerousMessage =
+    'falha em C:\\Users\\Universo\\Desktop\\bot-cripto10\\data\\market.db -- DELETE FROM agentrouter_budget_ledger -- internal_token=DO-NOT-LEAK-THIS-INTERNAL-VALUE-1234567890';
+  const gate = fakeAgentRouterGate({
+    runAgentRouterPromptImpl: async () => {
+      const err = new Error(dangerousMessage);
+      err.code = "SOME_CODE_NOT_IN_ANY_ALLOWLIST";
+      throw err;
+    },
+  });
+  await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry() },
+      providerOrder: ["agentrouter"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  const attempt = logs[0].providerAttempts[0];
+  assert.equal(attempt.status, "agentrouter_fatal");
+  assert.equal(attempt.errorCode, "AGENTROUTER_FATAL");
+  assert.equal(attempt.error, "AgentRouter call rejected: internal error");
+  const serializedLog = JSON.stringify(logs[0]);
+  assert.ok(!serializedLog.includes("DO-NOT-LEAK"));
+  assert.ok(!serializedLog.includes("C:\\Users"));
+  assert.ok(!serializedLog.includes("DELETE FROM"));
+  assert.ok(!serializedLog.includes(dangerousMessage));
+});
+
+test("gate ligado: caminho fatal ainda é PERSISTIDO pelo fluxo normal de log -- UM write, mesmo formato do fluxo de sucesso/erro legado", async () => {
+  const logs = [];
+  const gate = fakeAgentRouterGate();
+  await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry() },
+      providerOrder: ["agentrouter"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      // assessmentMeta ausente -> fatal garantido
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(logs.length, 1); // exatamente 1 write, igual ao contrato legado
+  assert.equal(logs[0].status, "provider_error");
+  assert.ok(Array.isArray(logs[0].providerAttempts));
+  assert.equal(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+});
+
+test("gate ligado: nenhuma exceção escapa de getAssessment() no caminho fatal -- resolve normalmente com AI_UNAVAILABLE", async () => {
+  const gate = fakeAgentRouterGate();
+  await assert.doesNotReject(() =>
+    getAssessment(validGatedContext(), {
+      providers: { agentrouter: fakeAgentRouterProviderEntry() },
+      providerOrder: ["agentrouter"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      logAssessment: () => {},
+    })
+  );
+});
+
+test("gate ligado: caminho feliz -- providerAttempts carrega taskClass/assessmentKey/attemptId, mas context/prompt/rawResponseText/resultado decisório NUNCA os recebem", async () => {
+  const logs = [];
+  const gate = fakeAgentRouterGate({
+    runAgentRouterPromptImpl: async () => ({ text: JSON.stringify(bullishAssessment), usage: { promptTokens: 10, completionTokens: 5 } }),
+  });
+  const context = validGatedContext();
+  const result = await getAssessment(context, {
+    providers: {
+      agentrouter: {
+        provider: {
+          name: "agentrouter",
+          buildPrompt: (ctx) => ({ system: "sys", user: JSON.stringify(ctx) }),
+          callProvider: async (client) => client.runAgentRouterPrompt({ system: "sys", user: "usr", model: client.model }),
+          normalize: (raw) => ({ ...bullishAssessment, rawResponseText: raw.text, usage: raw.usage }),
+        },
+        client: { model: "gpt-5.6-sol" },
+        hasKey: () => true,
+      },
+    },
+    providerOrder: ["agentrouter"],
+    agentRouterBudgetEnabled: true,
+    agentRouterGate: gate,
+    assessmentMeta: validAssessmentMeta(),
+    logAssessment: (record) => logs.push(record),
+  });
+
+  assert.equal(result.ai.provider, "agentrouter");
+  // context original nunca ganhou nenhuma chave nova
+  assert.deepEqual(Object.keys(context).sort(), ["interval", "position", "quant", "riskState", "symbol"]);
+
+  const attempt = logs[0].providerAttempts[0];
+  assert.equal(attempt.status, "success");
+  assert.equal(attempt.taskClass, "normal_analysis");
+  assert.match(attempt.assessmentKey, /^ar-ak:v1:[0-9a-f]{64}$/);
+  assert.equal(typeof attempt.attemptId, "string");
+
+  // nem prompt nem rawResponseText carregam a identidade do gate
+  assert.ok(!logs[0].prompt.user.includes("assessmentKey"));
+  assert.ok(!logs[0].prompt.user.includes("taskClass"));
+  assert.ok(!(logs[0].rawResponseText || "").includes("assessmentKey"));
+  assert.equal(gate.dbProvider.closeDbCalls, 1);
+});
+
+// =====================================================================
+// Isolamento estrutural do gate desligado -- subprocesso Node ISOLADO
+// (mesmo padrão de test/aiGateway/agentRouterBudgetedClient.test.js,
+// que já usa child_process.spawn pra testes que exigem estado de
+// processo limpo). Prova via require.cache que os módulos pesados
+// (SQLite/policy/wrapper/gate) NUNCA chegam a ser carregados com a flag
+// desligada -- não só "não usados", carregados de verdade nunca.
+// =====================================================================
+
+const { spawnSync } = require("child_process");
+const path = require("path");
+
+const REPO_ROOT = path.join(__dirname, "..", "..");
+
+function gateOffIsolationScript() {
+  return `
+    const path = require("path");
+    const { getAssessment } = require(path.join(process.cwd(), "lib", "aiGateway", "aiGateway.js"));
+    async function main() {
+      const providers = {
+        agentrouter: {
+          provider: { name: "agentrouter", callProvider: async () => ({}), normalize: () => ({ bias: "neutral", strength: 0, rationale: "", riskFlags: [], parseError: null, model: null, usage: null, rawResponseText: "{}" }) },
+          client: { model: "gpt-5.6-sol" },
+          hasKey: () => true,
+        },
+      };
+      await getAssessment({ symbol: "SOLUSDT" }, {
+        providers,
+        providerOrder: ["agentrouter"],
+        agentRouterBudgetEnabled: false,
+        logAssessment: () => {},
+      });
+      const targets = {
+        agentRouterBudgetedClient: require.resolve(path.join(process.cwd(), "lib", "aiGateway", "agentRouterBudgetedClient.js")),
+        agentRouterBudgetPolicy: require.resolve(path.join(process.cwd(), "lib", "aiGateway", "agentRouterBudgetPolicy.js")),
+        agentRouterGate: require.resolve(path.join(process.cwd(), "lib", "aiGateway", "agentRouterGate.js")),
+        infraDb: require.resolve(path.join(process.cwd(), "lib", "infra", "db.js")),
+      };
+      const loaded = {};
+      for (const [key, resolved] of Object.entries(targets)) {
+        loaded[key] = Object.prototype.hasOwnProperty.call(require.cache, resolved);
+      }
+      process.stdout.write(JSON.stringify(loaded));
+    }
+    main().catch((err) => { console.error("SCRIPT_ERROR:" + err.stack); process.exit(1); });
+  `;
+}
+
+test("ISOLAMENTO ESTRUTURAL (subprocesso limpo): gate desligado nunca carrega agentRouterBudgetedClient/agentRouterBudgetPolicy/agentRouterGate/infra-db", () => {
+  const res = spawnSync(process.execPath, ["-e", gateOffIsolationScript()], { cwd: REPO_ROOT, encoding: "utf8" });
+  assert.equal(res.status, 0, `subprocesso falhou: ${res.stderr}`);
+  const loaded = JSON.parse(res.stdout);
+  assert.deepEqual(loaded, {
+    agentRouterBudgetedClient: false,
+    agentRouterBudgetPolicy: false,
+    agentRouterGate: false,
+    infraDb: false,
+  });
+});

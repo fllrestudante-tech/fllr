@@ -50,7 +50,34 @@ function parseProviderOrder(env = {}) {
   return order;
 }
 
+/**
+ * Parser ESTRITO -- deliberadamente separado de bool() (topo deste
+ * arquivo), que é permissivo por design (qualquer valor que não seja
+ * "true"/"1" vira `fallback` silenciosamente, usado hoje por
+ * BYBIT_TESTNET/BYBIT_DEMO/CIRCUIT_BREAKER_ON_HIGH_VOLATILITY -- bool()
+ * NÃO é alterado, nenhum outro flag passa a usar este parser).
+ *
+ * AGENTROUTER_BUDGET_ENABLED liga o gate de orçamento/ledger do AgentRouter
+ * (Fase 10 / Commit 4c2) -- superfície sensível o bastante (SQLite, reserva
+ * de orçamento real, contabilização) para que um valor mal digitado no
+ * .env NUNCA vire "false" silencioso: só os 3 valores abaixo são aceitos,
+ * qualquer outra coisa derruba a inicialização com um erro claro.
+ *
+ * Ausente/"" -> false (default seguro, flag desligada por padrão).
+ * "true" -> true. "false" -> false. Qualquer outro valor (ex.: "1", "0",
+ * "TRUE", "yes", " true", "True") -> lança, nomeando a variável e o valor
+ * recebido (nunca o valor de nenhuma outra env var, mesmo por engano).
+ */
+function parseAgentRouterBudgetEnabled(env = {}) {
+  const raw = env.AGENTROUTER_BUDGET_ENABLED;
+  if (raw === undefined || raw === "") return false;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  throw new Error(`AGENTROUTER_BUDGET_ENABLED: valor inválido (${JSON.stringify(raw)}) -- use exatamente "true" ou "false"`);
+}
+
 const AI_PROVIDER_ORDER = parseProviderOrder(process.env);
+const AGENTROUTER_BUDGET_ENABLED = parseAgentRouterBudgetEnabled(process.env);
 
 const config = {
   bybit: {
@@ -238,6 +265,10 @@ const config = {
     agentRouterCodexCommand: process.env.AGENTROUTER_CODEX_COMMAND || "codex",
     agentRouterTimeoutMs: num(process.env.AGENTROUTER_TIMEOUT_MS, 60000),
     agentRouterGracefulShutdownMs: num(process.env.AGENTROUTER_GRACEFUL_SHUTDOWN_MS, 5000),
+    // Fase 10 / Commit 4c2 -- gate do ledger/orçamento do AgentRouter,
+    // desligado por padrão. Ver parseAgentRouterBudgetEnabled() no topo
+    // deste arquivo (parser estrito, não usa bool()).
+    agentRouterBudgetEnabled: AGENTROUTER_BUDGET_ENABLED,
 
     requestTimeoutMs: num(process.env.AI_REQUEST_TIMEOUT_MS, 20000),
     // 500 -> 2000 (2026-08-13): gpt-5.6-luna produz respostas bem mais
@@ -362,6 +393,10 @@ if (!config.ai.openaiApiKey && !config.ai.anthropicApiKey) {
 
 Object.defineProperty(config, "parseProviderOrder", {
   value: parseProviderOrder,
+  enumerable: false,
+});
+Object.defineProperty(config, "parseAgentRouterBudgetEnabled", {
+  value: parseAgentRouterBudgetEnabled,
   enumerable: false,
 });
 

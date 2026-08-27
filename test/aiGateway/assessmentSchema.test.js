@@ -1,6 +1,18 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { parseAssessment } = require("../../lib/aiGateway/assessmentSchema");
+const { parseAssessment, SCHEMA_VERSION } = require("../../lib/aiGateway/assessmentSchema");
+
+// SHORT_TOKEN_PATTERN real de lib/aiGateway/agentRouterAssessmentKey.js --
+// duplicado aqui de proposito (mesma disciplina de defesa em profundidade
+// ja usada nesse modulo pra LEDGER_TOKEN_ID_PATTERN) pra provar que
+// SCHEMA_VERSION sempre passaria na validacao de computeAssessmentKey()
+// sem precisar importar o modulo do assessmentKey aqui.
+const SHORT_TOKEN_PATTERN = /^[A-Za-z0-9_.:-]{1,64}$/;
+
+test("SCHEMA_VERSION: exportado, string curta e tecnica, compativel com o token exigido por computeAssessmentKey()", () => {
+  assert.equal(typeof SCHEMA_VERSION, "string");
+  assert.ok(SHORT_TOKEN_PATTERN.test(SCHEMA_VERSION));
+});
 
 const FULL_PAYLOAD = {
   bias: "bullish",

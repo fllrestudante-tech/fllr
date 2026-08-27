@@ -14,6 +14,7 @@ const alerts = require("./lib/alerts");
 const connectivityStatus = require("./lib/connectivityStatus");
 const { buildContextSnapshot } = require("./lib/aiGateway/contextSnapshot");
 const { shouldCallAi } = require("./lib/aiGateway/decisionCyclePolicy");
+const { buildAgentRouterAssessmentMeta } = require("./lib/aiGateway/agentRouterAssessmentMeta");
 const aiGateway = require("./lib/aiGateway/aiGateway");
 
 let botState;
@@ -322,7 +323,7 @@ async function closePosition(reason, equity) {
 // desta integração. Chamada sem `await` em cycle() (fire-and-forget) de
 // propósito: um provider lento (até config.ai.requestTimeoutMs=20s) nunca
 // pode atrasar a checagem de SL/TP/trailing do próximo tick.
-async function maybeRunAiAssessment(analysis, regime) {
+async function maybeRunAiAssessment(analysis, regime, candles) {
   const context = buildContextSnapshot({ analysis, regime, botState });
   const contextHash = aiGateway.hashContext(context);
   const decision = shouldCallAi({ analysis, botState, contextHash, config, now: Date.now() });
@@ -337,8 +338,24 @@ async function maybeRunAiAssessment(analysis, regime) {
   botState.lastAiContextHash = contextHash;
   state.save(botState);
 
+  // Fase 10 / Commit 4c2 -- assessmentMeta é metadata LOCAL do gate do
+  // AgentRouter, nunca mesclada a `context` (que continua indo pra
+  // prompt/providers exatamente como sempre foi). Com a flag desligada
+  // (padrão), buildAgentRouterAssessmentMeta() devolve `undefined` SEM
+  // chamar o helper de candle -- getAssessment() recebe a MESMA chamada de
+  // sempre, sem segundo argumento.
+  const assessmentMeta = buildAgentRouterAssessmentMeta({
+    enabled: config.ai.agentRouterBudgetEnabled,
+    triggerReason: decision.reason,
+    candles,
+    interval: config.interval,
+  });
+
   try {
-    const result = await aiGateway.getAssessment(context);
+    // Chamada literalmente igual à legada (getAssessment(context), sem
+    // segundo argumento) quando a flag está desligada -- nunca
+    // getAssessment(context, undefined).
+    const result = assessmentMeta ? await aiGateway.getAssessment(context, { assessmentMeta }) : await aiGateway.getAssessment(context);
     botState.lastAiAssessment = {
       at: new Date().toISOString(),
       requestId: result.ai.requestId,
@@ -460,7 +477,7 @@ async function cycle() {
     // roda por último, depois de toda execução real deste tick já ter
     // acontecido (ou não). .catch() aqui é só rede de segurança extra; a
     // função já nunca lança por dentro.
-    maybeRunAiAssessment(analysis, regime).catch((err) => console.error("⚠️  AI Assessment (fire-and-forget) falhou:", err.message));
+    maybeRunAiAssessment(analysis, regime, candles).catch((err) => console.error("⚠️  AI Assessment (fire-and-forget) falhou:", err.message));
 
     return true;
   } catch (err) {
