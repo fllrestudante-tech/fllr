@@ -161,6 +161,37 @@ async function handleIncomingMessage({ db, eventBus, alertManager, targets, targ
   }
 }
 
+// Resolve os canais autorizados a partir dos diálogos que a conta já segue
+// (client.getDialogs) -- nunca entra em canal novo sozinho. Casamento por
+// substring (title.toLowerCase().includes(name)) tolera variação visual
+// mínima do título pedido (ex: emoji no fim, "Velatrader Squad Oficial 🦈"
+// batendo com o nome pedido "velatrader squad oficial"), mas a resolução
+// INTEIRA falha (fail-closed) se qualquer nome pedido bater em ZERO ou em
+// MAIS DE UM diálogo -- nunca escolhe silenciosamente entre candidatos
+// ambíguos, e nunca segue parcialmente com só alguns dos nomes pedidos
+// resolvidos (diferente do comportamento antigo, que tolerava nomes sem
+// match e só avisava). Restrita a d.isChannel||d.isGroup (nunca um DM
+// individual, mesmo que o título bata por acaso). Extraída de main() pra
+// ser testável sem conexão real com o Telegram -- dialogs é só um array de
+// objetos {id, title, isChannel, isGroup} aqui, nunca uma sessão real.
+function resolveTargetChannels({ dialogs, targetChannelNames: names }) {
+  const candidates = dialogs.filter((d) => d.isChannel || d.isGroup);
+  const byName = names.map((name) => ({
+    name,
+    matches: candidates.filter((d) => (d.title || "").trim().toLowerCase().includes(name)),
+  }));
+  const zeroMatches = byName.filter((m) => m.matches.length === 0).map((m) => m.name);
+  const ambiguousMatches = byName
+    .filter((m) => m.matches.length > 1)
+    .map((m) => ({ name: m.name, titles: m.matches.map((d) => d.title) }));
+
+  if (zeroMatches.length > 0 || ambiguousMatches.length > 0) {
+    return { ok: false, zeroMatches, ambiguousMatches, availableTitles: candidates.map((d) => d.title) };
+  }
+
+  return { ok: true, targets: byName.map((m) => m.matches[0]) };
+}
+
 async function main() {
   ensureDataDir();
   const db = openDb(); // market.db único (lib/infra/db.js) -- não abre mais um banco isolado do radar
@@ -173,30 +204,24 @@ async function main() {
   setInterval(() => writeHeartbeat({ status: "connected" }), HEARTBEAT_INTERVAL_MS);
 
   const dialogs = await client.getDialogs({});
-  const targets = dialogs.filter((d) => {
-    const title = (d.title || "").trim().toLowerCase();
-    return targetChannelNames.some((name) => title.includes(name));
-  });
+  const resolution = resolveTargetChannels({ dialogs, targetChannelNames });
 
-  if (targets.length === 0) {
-    console.error(`⚠️  Nenhum canal encontrado com o nome: ${targetChannelNames.join(", ")}. Canais disponíveis:`);
-    dialogs.filter((d) => d.isChannel || d.isGroup).forEach((d) => console.error(`  - ${d.title}`));
+  if (!resolution.ok) {
+    if (resolution.zeroMatches.length > 0) {
+      console.error(`⚠️  Nenhum canal encontrado com o nome: ${resolution.zeroMatches.join(", ")}. Canais disponíveis:`);
+      resolution.availableTitles.forEach((title) => console.error(`  - ${title}`));
+    }
+    if (resolution.ambiguousMatches.length > 0) {
+      for (const amb of resolution.ambiguousMatches) {
+        console.error(`⚠️  Nome "${amb.name}" corresponde a mais de um canal -- ambíguo, nenhum será escolhido automaticamente. Candidatos:`);
+        amb.titles.forEach((title) => console.error(`  - ${title}`));
+      }
+      console.error('⚠️  Ajuste TELEGRAM_CHANNELS para um nome mais específico e confirme manualmente antes de rodar de novo.');
+    }
     process.exit(1);
   }
 
-  // Casamento é por substring contra os dialogs que a conta já segue -- não
-  // entra em canal novo sozinho. Se algum nome pedido não bateu com nada,
-  // avisa qual (senão fica silenciosamente incompleto quando pelo menos 1
-  // dos N nomes bate e os outros não).
-  const unmatched = targetChannelNames.filter(
-    (name) => !targets.some((t) => (t.title || "").trim().toLowerCase().includes(name))
-  );
-  if (unmatched.length > 0) {
-    console.warn(
-      `⚠️  ${unmatched.length} canal(is) pedido(s) no TELEGRAM_CHANNELS não foram encontrados nos diálogos da conta (provavelmente ainda não seguidos/entrou no grupo): ${unmatched.join(", ")}`
-    );
-  }
-
+  const targets = resolution.targets;
   console.log(`📡 Escutando (${targets.length}/${targetChannelNames.length} pedidos): ${targets.map((t) => t.title).join(", ")}`);
   const targetIds = new Set(targets.map((t) => t.id.toString()));
 
@@ -219,4 +244,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { shouldSkipMessage, extractLinks, detectMediaType, handleIncomingMessage };
+module.exports = { shouldSkipMessage, extractLinks, detectMediaType, handleIncomingMessage, resolveTargetChannels };
