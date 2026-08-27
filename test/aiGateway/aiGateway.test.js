@@ -1,6 +1,11 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { getAssessment, computeContextCompleteness, hashContext, sanitizeErrorCode } = require("../../lib/aiGateway/aiGateway");
+// Provider real (produção) -- usado só no teste de lifecycle/prompt legado
+// do gate (mais abaixo) pra capturar o prompt de verdade construído por
+// lib/aiGateway/promptBuilder.js, em vez de inventar uma estrutura de
+// prompt no teste. Só client.chatCompletion (fronteira de rede) é fake.
+const openaiProviderReal = require("../../lib/aiGateway/providers/openaiProvider");
 
 function fakeProvider(name, { normalized, shouldThrow } = {}) {
   return {
@@ -471,6 +476,10 @@ test("gate desligado: erro do agentrouter mantém status:\"error\" e o fallback 
   assert.equal(result.ai.provider, "anthropic");
   assert.equal(logs[0].providerAttempts[0].status, "error");
   assert.notEqual(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+  // Regressão: caminho NÃO gateado preserva err.message bruto exatamente
+  // como sempre foi -- a sanitização nova (fix pós-4c2) só se aplica a
+  // isAgentRouterGated && fallbackAllowed===true, nunca aqui.
+  assert.equal(logs[0].providerAttempts[0].error, "agentrouter indisponível");
 });
 
 test("gate ligado: assessmentMeta ausente -> agentrouter_fatal, nenhum provider seguinte tentado, status superior provider_error", async () => {
@@ -562,13 +571,190 @@ test("gate ligado: context.quant ausente -> agentrouter_fatal com errorCode MISS
   assert.equal(logs[0].providerAttempts[0].errorCode, "MISSING_QUANT_FINGERPRINT");
 });
 
-test("gate ligado: fallbackAllowed===true (orçamento esgotado) -> status \"error\" (NÃO fatal), fallback CONTINUA e pode vencer", async () => {
+test("gate ligado: fallbackAllowed===true (orçamento esgotado) -> status \"error\" (NÃO fatal), fallback CONTINUA e pode vencer, com gate_close ANTES do próximo provider", async () => {
   const logs = [];
+  // Mensagem interna "perigosa" simulada -- caminho local fictício, SQL
+  // fictício e texto interno neutro (nunca algo parecido com credencial
+  // real), mesmo padrão de test/aiGateway/agentRouterGate.test.js. Prova que
+  // NENHUM pedaço disso -- nem a mensagem inteira, nem a stack sintética --
+  // sobrevive no caminho de fallback permitido (fallbackAllowed===true),
+  // que é DIFERENTE do caminho fatal (já sanitizado desde o 4c2).
+  const INTERNAL_ERROR_MESSAGE =
+    "orçamento esgotado -- consulta em C:\\Users\\Universo\\Desktop\\bot-cripto10\\data\\market.db -- SELECT balance FROM agentrouter_budget_ledger WHERE window='daily' -- mensagem interna nunca deveria aparecer no log sanitizado (mas este NÃO é o caminho fatal)";
+  const INTERNAL_FAKE_STACK = `Error: ${INTERNAL_ERROR_MESSAGE}\n    at fakeInternalLedgerCheck (C:\\Users\\Universo\\Desktop\\bot-cripto10\\lib\\aiGateway\\agentRouterBudgetPolicy.js:999:1)\n    at Object.runAgentRouterPromptImpl (test-fixture:1:1)`;
+  const PUBLIC_MESSAGE = "AgentRouter budget is exhausted."; // mensagem pública esperada, mapeada em agentRouterGate.js::KNOWN_FATAL_ERROR_MESSAGES
+  // Array de eventos local e determinístico -- prova a ORDEM OBSERVADA nesta
+  // execução, registrando cada evento no ponto real do fluxo aguardado por
+  // getAssessment() (agentrouter falha -> gate fecha no finally -> só então
+  // o próximo provider é chamado), sem depender de relógio/sleep. O
+  // isolamento de produção NÃO decorre de Node ser single-threaded (Promises
+  // e callbacks podem intercalar execução) -- decorre de cada avaliação
+  // gateada criar seu próprio createLazyDbProvider(), nunca compartilhado
+  // entre chamadas (ver lib/aiGateway/agentRouterBudgetedClient.js).
+  const events = [];
   const gate = fakeAgentRouterGate({
     runAgentRouterPromptImpl: async () => {
-      const err = new Error("orçamento esgotado -- mensagem interna nunca deveria aparecer no log sanitizado do caminho fatal (mas este NÃO é o caminho fatal)");
+      events.push("agentrouter_call");
+      const err = new Error(INTERNAL_ERROR_MESSAGE);
+      err.stack = INTERNAL_FAKE_STACK; // stack sintética -- prova que nem ela vaza
       err.code = "GLOBAL_BUDGET_EXHAUSTED";
       err.fallbackAllowed = true;
+      throw err;
+    },
+  });
+  // Envolve o closeDb() já criado por fakeAgentRouterGate() (mesmo contador
+  // closeDbCalls de sempre) só pra também registrar a ORDEM em `events`.
+  const originalCloseDb = gate.dbProvider.closeDb;
+  gate.dbProvider.closeDb = () => {
+    events.push("gate_close");
+    originalCloseDb();
+  };
+
+  // openai REAL (buildPrompt + callProvider de
+  // lib/aiGateway/providers/openaiProvider.js) -- só client.chatCompletion
+  // (fronteira de rede) é fake. Prova que o prompt recebido pelo transporte
+  // é o prompt legado de produção de verdade, não uma estrutura inventada
+  // pelo teste. normalize continua fake (não é o que este teste verifica).
+  let capturedCallProviderArgs = null;
+  let capturedChatCompletionArgs = null;
+  const fakeOpenaiClient = {
+    chatCompletion: async ({ system, user }) => {
+      capturedChatCompletionArgs = { system, user };
+      return { choices: [{ message: { content: JSON.stringify(bullishAssessment) } }], usage: null, model: "gpt-fake-not-a-real-model" };
+    },
+  };
+  const openaiEntry = {
+    provider: {
+      name: "openai",
+      buildPrompt: openaiProviderReal.buildPrompt,
+      callProvider: async (client, ctx) => {
+        capturedCallProviderArgs = { client, context: ctx };
+        events.push("openai_call");
+        return openaiProviderReal.callProvider(client, ctx);
+      },
+      normalize: () => bullishAssessment,
+    },
+    client: fakeOpenaiClient,
+    hasKey: () => true,
+  };
+
+  const context = validGatedContext();
+  // Cópia profunda determinística -- fixture é 100% JSON-safe (só strings/
+  // números/booleans/objetos planos aninhados, confirmado por leitura de
+  // validGatedContext() acima), mesmo padrão já usado em
+  // test/aiGateway/contextSnapshot.test.js e test/aiGateway/promptBuilderEnglish.test.js.
+  const contextBefore = JSON.parse(JSON.stringify(context));
+
+  const result = await getAssessment(
+    context,
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry(), openai: openaiEntry },
+      providerOrder: ["agentrouter", "openai"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+
+  // Ordem operacional exata e única possível: AgentRouter falha -> gate fecha
+  // -> só então OpenAI é chamado.
+  assert.deepEqual(events, ["agentrouter_call", "gate_close", "openai_call"]);
+  assert.equal(gate.dbProvider.closeDbCalls, 1); // exatamente uma vez, nunca 0 nem 2+
+
+  assert.equal(result.ai.provider, "openai"); // fallback venceu
+  assert.deepEqual(logs[0].attempted, ["agentrouter", "openai"]);
+  assert.equal(logs[0].providerAttempts.length, 2); // nenhum provider adicional foi chamado
+  const attempt = logs[0].providerAttempts[0];
+  assert.equal(attempt.status, "error"); // nunca "agentrouter_fatal"
+  assert.equal(attempt.errorCode, "GLOBAL_BUDGET_EXHAUSTED"); // código conhecido, preservado (reaproveita sanitizeAgentRouterFatalError)
+  assert.equal(attempt.error, PUBLIC_MESSAGE); // mensagem pública exata, nunca err.message
+  // G) taskClass/assessmentKey/attemptId preservados mesmo no caminho de fallback permitido
+  assert.equal(attempt.taskClass, "normal_analysis");
+  assert.match(attempt.assessmentKey, /^ar-ak:v1:[0-9a-f]{64}$/);
+  assert.equal(typeof attempt.attemptId, "string");
+  // G) openai recebe só seu client/contexto legados -- nunca metadata do agentrouter
+  assert.equal(Object.hasOwn(logs[0].providerAttempts[1], "taskClass"), false);
+  assert.equal(Object.hasOwn(logs[0].providerAttempts[1], "assessmentKey"), false);
+  assert.equal(Object.hasOwn(logs[0].providerAttempts[1], "attemptId"), false);
+
+  // Contexto INTEIRO (não só as chaves de primeiro nível) permanece
+  // byte-a-byte idêntico -- detecta mutação em valores ou objetos aninhados,
+  // não só chaves novas no topo.
+  assert.deepEqual(context, contextBefore);
+  assert.deepEqual(Object.keys(context).sort(), ["interval", "position", "quant", "riskState", "symbol"]); // prova complementar, não principal
+
+  // callProvider(client, context) do openai recebeu exatamente o client e o
+  // context legados desta chamada -- mesma referência, nenhum wrapper.
+  assert.equal(capturedCallProviderArgs.client, fakeOpenaiClient);
+  assert.equal(capturedCallProviderArgs.context, context);
+
+  // O prompt recebido pelo transporte é EXATAMENTE o que a função real de
+  // produção constrói para este context -- não uma estrutura inventada pelo
+  // teste.
+  const expectedPrompt = openaiProviderReal.buildPrompt(context);
+  assert.deepEqual(capturedChatCompletionArgs, expectedPrompt);
+
+  // O prompt legado não pode conter NADA de metadata do gate (nem os nomes
+  // de campo, nem valores, nem a mensagem/stack/SQL/caminho internos
+  // simulados) -- lista ampla, porque o prompt é texto puro pra LLM, nunca
+  // deveria carregar nenhum destes fragmentos.
+  const promptText = capturedChatCompletionArgs.system + "\n" + capturedChatCompletionArgs.user;
+  const PROMPT_FORBIDDEN_FRAGMENTS = [
+    "assessmentMeta",
+    "triggerReason",
+    "lastClosedCandleTimestampMs",
+    "taskClass",
+    "assessmentKey",
+    "attemptId",
+    attempt.assessmentKey, // valor real do fingerprint/identidade computado nesta chamada
+    "GLOBAL_BUDGET_EXHAUSTED",
+    INTERNAL_ERROR_MESSAGE,
+    INTERNAL_FAKE_STACK,
+    "SELECT balance FROM agentrouter_budget_ledger", // fragmento do SQL fictício
+    "C:\\Users\\Universo\\Desktop\\bot-cripto10\\data\\market.db", // fragmento do caminho fictício
+    "agentRouterBudgetPolicy.js:999:1", // fragmento da stack fictícia
+  ];
+  for (const forbidden of PROMPT_FORBIDDEN_FRAGMENTS) {
+    assert.ok(!promptText.includes(forbidden), `prompt não deveria conter "${forbidden}"`);
+  }
+
+  // Resultado final e log persistido: lista ESTRITA -- só o conteúdo
+  // sensível de verdade (mensagem/stack/SQL/caminho internos simulados).
+  // NÃO inclui taskClass/assessmentKey/attemptId/GLOBAL_BUDGET_EXHAUSTED,
+  // porque esses SÃO campos legítimos de providerAttempts[0] por contrato
+  // (já asserido acima com valores reais) -- o que não pode acontecer é
+  // eles vazarem PRO PRÓXIMO provider (já asserido também, providerAttempts[1]).
+  // Esta é a asserção que falhou antes da correção e agora prova que o
+  // vazamento foi fechado.
+  const LEAK_FORBIDDEN_FRAGMENTS = [
+    INTERNAL_ERROR_MESSAGE,
+    INTERNAL_FAKE_STACK,
+    "SELECT balance FROM agentrouter_budget_ledger",
+    "C:\\Users\\Universo\\Desktop\\bot-cripto10\\data\\market.db",
+    "agentRouterBudgetPolicy.js:999:1",
+  ];
+  const serializedResult = JSON.stringify(result);
+  const serializedLog = JSON.stringify(logs[0]);
+  for (const forbidden of LEAK_FORBIDDEN_FRAGMENTS) {
+    assert.ok(!serializedResult.includes(forbidden), `result não deveria conter "${forbidden}"`);
+    assert.ok(!serializedLog.includes(forbidden), `log não deveria conter "${forbidden}"`);
+  }
+
+  // "razão agregada" -- logs[0].error (nível superior, distinto de
+  // providerAttempts[0].error) é a junção de errorMessages -- também precisa
+  // usar a mensagem pública, nunca err.message bruto.
+  assert.equal(logs[0].error, `agentrouter: ${PUBLIC_MESSAGE}`);
+});
+
+test("gate ligado: fallbackAllowed===true com código DESCONHECIDO (fora da allowlist) -> degrada para AGENTROUTER_FATAL genérico, sem vazar a mensagem real, fallback ainda continua", async () => {
+  const logs = [];
+  const dangerousMessage = "erro interno não catalogado -- caminho C:\\Users\\Universo\\segredo.txt, SQL: DROP TABLE agentrouter_budget_ledger";
+  const gate = fakeAgentRouterGate({
+    runAgentRouterPromptImpl: async () => {
+      const err = new Error(dangerousMessage);
+      err.code = "SOME_CODE_NOT_IN_ANY_ALLOWLIST";
+      err.fallbackAllowed = true; // fallback permitido, mas código fora da allowlist do sanitizador
       throw err;
     },
   });
@@ -583,19 +769,17 @@ test("gate ligado: fallbackAllowed===true (orçamento esgotado) -> status \"erro
       logAssessment: (record) => logs.push(record),
     }
   );
-  assert.equal(result.ai.provider, "openai"); // fallback venceu
-  assert.deepEqual(logs[0].attempted, ["agentrouter", "openai"]);
+  assert.equal(result.ai.provider, "openai"); // fallback ainda venceu -- degradar o código não vira fatal
   const attempt = logs[0].providerAttempts[0];
   assert.equal(attempt.status, "error"); // nunca "agentrouter_fatal"
-  assert.equal(attempt.errorCode, "GLOBAL_BUDGET_EXHAUSTED");
-  // G) taskClass/assessmentKey/attemptId preservados mesmo no caminho de fallback permitido
-  assert.equal(attempt.taskClass, "normal_analysis");
-  assert.match(attempt.assessmentKey, /^ar-ak:v1:[0-9a-f]{64}$/);
-  assert.equal(typeof attempt.attemptId, "string");
-  // G) openai recebe só seu client/contexto legados -- nunca metadata do agentrouter
-  assert.equal(Object.hasOwn(logs[0].providerAttempts[1], "taskClass"), false);
-  assert.equal(Object.hasOwn(logs[0].providerAttempts[1], "assessmentKey"), false);
-  assert.equal(Object.hasOwn(logs[0].providerAttempts[1], "attemptId"), false);
+  assert.equal(attempt.errorCode, "AGENTROUTER_FATAL"); // genérico -- mesmo código do caminho fatal pra código desconhecido
+  assert.equal(attempt.error, "AgentRouter call rejected: internal error"); // GENERIC_FATAL_ERROR_MESSAGE
+  assert.ok(!attempt.error.includes(dangerousMessage));
+  assert.equal(logs[0].error, "agentrouter: AgentRouter call rejected: internal error");
+  const serializedLog = JSON.stringify(logs[0]);
+  assert.ok(!serializedLog.includes(dangerousMessage));
+  assert.ok(!serializedLog.includes("segredo.txt"));
+  assert.ok(!serializedLog.includes("DROP TABLE"));
 });
 
 test("gate ligado: fallbackAllowed===false (ex.: claim SQLITE_BUSY) -> agentrouter_fatal, fallback NÃO tentado", async () => {

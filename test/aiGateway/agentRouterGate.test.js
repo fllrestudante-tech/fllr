@@ -329,6 +329,54 @@ test("sanitizeAgentRouterFatalError: TODOS os códigos conhecidos de todo o pipe
 });
 
 // =====================================================================
+// GLOBAL_BUDGET_EXHAUSTED / CATEGORY_BUDGET_EXHAUSTED -- os únicos dois
+// códigos desta allowlist que NUNCA alcançam o caminho fatal deste módulo
+// (classifyPreflightError() em agentRouterBudgetedClient.js já marca
+// fallbackAllowed=true pra eles, então em aiGateway.js caem no caminho de
+// fallback permitido, não no `break` do "agentrouter_fatal"). Foram
+// adicionados aqui só pra permitir que aiGateway.js reaproveite esta MESMA
+// função/allowlist nesse caminho, sem duplicar uma segunda tabela de
+// mensagens públicas (ver comentário de dívida de nomenclatura acima de
+// KNOWN_FATAL_ERROR_MESSAGES).
+// =====================================================================
+
+test("sanitizeAgentRouterFatalError: GLOBAL_BUDGET_EXHAUSTED preserva o código e devolve a mensagem pública exata, nunca a mensagem real", () => {
+  const dangerousMessage =
+    'orçamento estourado -- consulta em C:\\Users\\Universo\\Desktop\\bot-cripto10\\data\\market.db -- SELECT SUM(amount) FROM agentrouter_budget_ledger WHERE window=... -- internal_balance=DO-NOT-LEAK-1234567890';
+  const err = new Error(dangerousMessage);
+  err.code = "GLOBAL_BUDGET_EXHAUSTED";
+  const { errorCode, message } = sanitizeAgentRouterFatalError(err);
+  assert.equal(errorCode, "GLOBAL_BUDGET_EXHAUSTED");
+  assert.equal(message, "AgentRouter budget is exhausted.");
+  assert.equal(message, KNOWN_FATAL_ERROR_MESSAGES.GLOBAL_BUDGET_EXHAUSTED);
+  assert.ok(!message.includes("DO-NOT-LEAK"));
+  assert.ok(!message.includes("C:\\Users"));
+  assert.ok(!message.includes("SELECT SUM"));
+  assert.ok(!message.includes(dangerousMessage));
+});
+
+test("sanitizeAgentRouterFatalError: CATEGORY_BUDGET_EXHAUSTED preserva o código e devolve a mensagem pública exata, nunca a mensagem real", () => {
+  const dangerousMessage = "categoria 'triage' estourada -- reservedMicrosUsd=DO-NOT-LEAK-9988, cap=DO-NOT-LEAK-1122, path=/home/user/.secret";
+  const err = new Error(dangerousMessage);
+  err.code = "CATEGORY_BUDGET_EXHAUSTED";
+  const { errorCode, message } = sanitizeAgentRouterFatalError(err);
+  assert.equal(errorCode, "CATEGORY_BUDGET_EXHAUSTED");
+  assert.equal(message, "AgentRouter category budget is exhausted.");
+  assert.equal(message, KNOWN_FATAL_ERROR_MESSAGES.CATEGORY_BUDGET_EXHAUSTED);
+  assert.ok(!message.includes("DO-NOT-LEAK"));
+  assert.ok(!message.includes("/home/user/.secret"));
+  assert.ok(!message.includes(dangerousMessage));
+});
+
+test("sanitizeAgentRouterFatalError: GLOBAL_BUDGET_EXHAUSTED -- mensagens brutas diferentes produzem sempre a MESMA saída pública", () => {
+  const err1 = new Error("mensagem completamente diferente A");
+  err1.code = "GLOBAL_BUDGET_EXHAUSTED";
+  const err2 = new Error("mensagem completamente diferente B, com stack fictícia\n  at foo (/x/y.js:1:1)");
+  err2.code = "GLOBAL_BUDGET_EXHAUSTED";
+  assert.deepEqual(sanitizeAgentRouterFatalError(err1), sanitizeAgentRouterFatalError(err2));
+});
+
+// =====================================================================
 // Integração ponta-a-ponta -- SQLite REAL em arquivo temporário, policy
 // REAL (Commit 3), createBudgetedAgentRouterClient REAL (Commit 4b).
 // Transporte continua SEMPRE fake (zero rede). Mesmo padrão de
