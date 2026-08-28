@@ -25,6 +25,7 @@ const { getSla } = require("../lib/slaRegistry");
 const { sampleDatabaseHealth } = require("../lib/databaseHealth");
 const bybitClient = require("../lib/bybit");
 const config = require("../config");
+const { resolveSupervisorProfile, selectSupervisedChildren } = require("../lib/supervisorProfile");
 
 const RUNTIME_DIR = path.join(__dirname, "..", "runtime");
 const LOCK_FILE = path.join(RUNTIME_DIR, "locks", "supervisor.lock");
@@ -41,22 +42,18 @@ const BOOT_INCIDENT_TYPE = "SYSTEM";
 // antes de qualquer outra coisa.
 fs.mkdirSync(RUNTIME_DIR, { recursive: true });
 
-const CHILDREN = [
-  { name: "bot", script: path.join(__dirname, "..", "index.js") },
-  { name: "bybit_collector", script: path.join(__dirname, "collector.js") },
-  { name: "fear_greed_collector", script: path.join(__dirname, "fearGreedCollector.js") },
-  { name: "btc_dominance_collector", script: path.join(__dirname, "btcDominanceCollector.js") },
-  { name: "knowledge_collector", script: path.join(__dirname, "knowledgeCollector.js") },
-  { name: "metrics_sampler", script: path.join(__dirname, "metricsSampler.js") },
-  { name: "backup_daemon", script: path.join(__dirname, "backupDaemon.js") },
-  // Dashboard Operacional Web (config.dashboard.port, 4300 por padrão) --
-  // servidor HTTP nativo, só leitura, nunca chama a Bybit (ver
-  // scripts/dashboardServer.js). Adicionado 2026-08-13 pra sobreviver a
-  // restart/sleep da máquina como qualquer outro processo de longa duração
-  // -- antes rodava solto via `node scripts/dashboardServer.js`, sem
-  // restart automático se caísse.
-  { name: "dashboard_server", script: path.join(__dirname, "dashboardServer.js") },
-];
+// Perfil do supervisor -- SUPERVISOR_PROFILE ausente/vazio vira "safe"
+// (nunca inclui "bot", o trading real); qualquer valor não reconhecido
+// lança e encerra o processo ANTES de qualquer setup (lock, banco,
+// conectividade) -- fail-closed, ver lib/supervisorProfile.js. A lista de
+// processos é a ÚNICA fonte de verdade (lib/supervisorProfile.js::
+// ALL_CHILDREN); este arquivo nunca mantém uma lista paralela.
+const supervisorProfile = resolveSupervisorProfile();
+const { children: CHILDREN, skipped: skippedChildren } = selectSupervisedChildren(supervisorProfile);
+console.log(`🐕 Perfil do supervisor: "${supervisorProfile}" -- processos: ${CHILDREN.map((c) => c.name).join(", ") || "(nenhum)"}`);
+for (const skip of skippedChildren) {
+  console.warn(`🐕 Componente "${skip.name}" fora deste perfil -- ${skip.reason}`);
+}
 
 function ensureDirs() {
   fs.mkdirSync(path.dirname(LOCK_FILE), { recursive: true });
