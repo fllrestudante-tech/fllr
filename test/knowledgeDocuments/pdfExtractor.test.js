@@ -108,6 +108,36 @@ test("extractPdf: PDF textual válido -- extrai texto correto por página, deter
   });
 });
 
+test("extractPdf: campos de reconstrução geométrica presentes por página, sem sobrescrever rawText/normalizedText -- sourceOrderedText/layoutCandidateText e as duas invariantes separadas", async () => {
+  const buf = buildMinimalPdf({ pageTexts: ["Hello World Page One"] });
+  await withTempPdf(buf, async (filePath, sha256) => {
+    const result = await extractPdf(filePath, { expectedSha256: sha256 });
+    const p = result.pages[0];
+    assert.equal(p.rawText, "Hello World Page One"); // inalterado
+    assert.equal(p.normalizedText, "Hello World Page One"); // inalterado
+    assert.equal(typeof p.sourceOrderedText, "string");
+    assert.equal(p.sourceOrderedText, "Hello World Page One");
+    assert.equal(typeof p.layoutCandidateText, "string");
+    assert.equal(p.reconstructionApplied, true);
+    assert.equal(typeof p.reconstructionConfidence, "number");
+    assert.equal(typeof p.reconstructionDiagnostics, "object");
+    assert.equal(typeof p.ambiguousGapCount, "number");
+    assert.equal(typeof p.lineCount, "number");
+    assert.equal(typeof p.orientationGroups, "number");
+    assert.equal(typeof p.layoutCandidateMultisetInvariant, "boolean");
+    assert.equal(typeof p.layoutCandidateAmbiguousGapCount, "number");
+    assert.equal(typeof p.layoutCandidateLineCount, "number");
+    assert.equal(typeof p.layoutCandidateOrderDiverged, "boolean");
+    // As duas invariantes, separadas -- característica central desta rodada:
+    // multiconjunto NUNCA prova ordem, então são campos distintos.
+    assert.equal(p.characterMultisetInvariant, true);
+    assert.equal(p.sourceOrderInvariant, true);
+    assert.equal("nonWhitespaceInvariant" in p, false); // nome ambíguo removido -- não fica nem como alias
+    assert.equal("reconstructedText" in p, false); // campo antigo removido -- substituído pelas duas representações
+    assert.ok(["good", "review_required", "poor", "image_only"].includes(p.qualityStatus));
+  });
+});
+
 test("extractPdf: acentuação e ligadura sobrevivem à extração e à normalização (WinAnsiEncoding)", async () => {
   const buf = buildMinimalPdf({ pageTexts: ["Codificação e acentuação ok"] });
   await withTempPdf(buf, async (filePath, sha256) => {
@@ -143,6 +173,28 @@ test("extractPdf: limite de saída por página trunca e sinaliza truncated:true"
     const result = await extractPdf(filePath, { expectedSha256: sha256, maxOutputCharsPerPage: 50 });
     assert.equal(result.pages[0].truncated, true);
     assert.equal(result.pages[0].charCount, 50);
+  });
+});
+
+test("extractPdf: truncamento de sourceOrderedText invalida as duas garantias (nunca finge sucesso parcial) e a página nunca fica 'good'", async () => {
+  const longText = Array.from({ length: 30 }, (_, i) => `palavra${i}`).join(" "); // texto real, com espaços de verdade -- não é o caso degenerado de glifo único
+  const buf = buildMinimalPdf({ pageTexts: [longText] });
+  await withTempPdf(buf, async (filePath, sha256) => {
+    const resultFull = await extractPdf(filePath, { expectedSha256: sha256 });
+    assert.equal(resultFull.pages[0].sourceOrderedTruncated, false);
+
+    const resultTruncated = await extractPdf(filePath, { expectedSha256: sha256, maxOutputCharsPerPage: 20 });
+    const p = resultTruncated.pages[0];
+    assert.equal(p.sourceOrderedTruncated, true);
+    assert.equal(p.sourceOrderedText.length, 20);
+    // Corte no meio da sequência original -- as duas invariantes têm que
+    // cair, nunca permanecer true contra um texto que não é mais o texto
+    // inteiro que elas descreviam.
+    assert.equal(p.characterMultisetInvariant, false);
+    assert.equal(p.sourceOrderInvariant, false);
+    assert.equal(p.reconstructionConfidence, 0);
+    assert.notEqual(p.qualityStatus, "good");
+    assert.equal(p.qualityStatus, "poor"); // invariância quebrada é sempre "poor", regra dura, mesmo sendo truncamento e não corrupção
   });
 });
 
@@ -335,6 +387,13 @@ test("extractPdf: pdfExtractor.js (pai) nunca importa pdfjs-dist diretamente -- 
   assert.ok(!/require\(\s*["']pdfjs-dist/.test(src), "pdfExtractor.js não deveria ter nenhum require() de pdfjs-dist -- só menção em comentário é permitida");
 });
 
+test("extractPdf: pdfExtractorWorker.mjs importa textReconstruction.js (geometria real dos itens); textReconstruction.js continua puro, sem nenhum require", () => {
+  const workerSrc = fs.readFileSync(path.join(__dirname, "..", "..", "lib", "knowledgeDocuments", "pdfExtractorWorker.mjs"), "utf8");
+  assert.ok(/from\s+["']\.\/textReconstruction\.js["']/.test(workerSrc));
+  const reconstructionSrc = fs.readFileSync(path.join(__dirname, "..", "..", "lib", "knowledgeDocuments", "textReconstruction.js"), "utf8");
+  assert.ok(!/require\(/.test(reconstructionSrc.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "")));
+});
+
 test("extractPdf: pdfExtractor.js spawna o worker via fork() com execArgv de memória, serialização advanced e stdio sem herança, nunca via shell/exec/concatenação de comando", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "..", "lib", "knowledgeDocuments", "pdfExtractor.js"), "utf8");
   assert.ok(src.includes('require("child_process")') || src.includes("require('child_process')"));
@@ -349,11 +408,12 @@ test("extractPdf: pdfExtractor.js spawna o worker via fork() com execArgv de mem
 // Ausência de banco, IA, estratégia, risco e ordens
 // =====================================================================
 
-test("extractPdf: nenhuma dependência de banco/IA/AgentRouter/estratégia/risco/ordens nos 3 arquivos de produção", () => {
+test("extractPdf: nenhuma dependência de banco/IA/AgentRouter/estratégia/risco/ordens nos 4 arquivos de produção", () => {
   const files = [
     path.join(__dirname, "..", "..", "lib", "knowledgeDocuments", "pdfExtractor.js"),
     path.join(__dirname, "..", "..", "lib", "knowledgeDocuments", "pdfExtractorWorker.mjs"),
     path.join(__dirname, "..", "..", "lib", "knowledgeDocuments", "textNormalizer.js"),
+    path.join(__dirname, "..", "..", "lib", "knowledgeDocuments", "textReconstruction.js"),
   ];
   const forbidden = ["better-sqlite3", "agentrouter", "aigateway", "bybit", "risk", "tradelifecycle", "openposition", "closeposition", "knowledge_units", "market.db"];
   for (const file of files) {
