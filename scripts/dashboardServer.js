@@ -16,6 +16,7 @@ const { readFeatures } = require("../lib/webDashboard/featureReader");
 const { readCollectors } = require("../lib/webDashboard/collectorReader");
 const { readReplay } = require("../lib/webDashboard/replayReader");
 const { readEvolution } = require("../lib/webDashboard/researchReader");
+const { readDemo } = require("../lib/webDashboard/demoReader");
 const checks = require("../lib/healthChecks");
 const { readReplayStats } = require("../lib/webDashboard/replayReader");
 const { computeDashboardHealth } = require("../lib/webDashboard/dashboardHealth");
@@ -127,6 +128,14 @@ function buildRoutes({ dbPath = DEFAULT_DB_PATH } = {}) {
       method: "GET",
       pattern: /^\/api\/v1\/evolution$/,
       handler: () => envelope(readEvolution(), { source: ["registry/research-objects.json"] }),
+    },
+    {
+      method: "GET",
+      pattern: /^\/api\/v1\/demo$/,
+      // Painel do perfil demo -- 100% leitura local (state.json, kill-switch.json,
+      // connectivity/status.json, runtime/processes/state.json), nunca chama a
+      // Bybit/Telegram/AgentRouter (ver lib/webDashboard/demoReader.js).
+      handler: () => envelope(readDemo(), { source: ["data/state.json", "runtime/demo/kill-switch.json", "runtime/connectivity/status.json", "runtime/processes/state.json"] }),
     },
   ];
 }

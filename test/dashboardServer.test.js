@@ -202,3 +202,43 @@ test("porta ocupada: o segundo servidor recebe EADDRINUSE e NUNCA escolhe outra 
   assert.equal(err.code, "EADDRINUSE");
   assert.equal(serverB.listening, false); // nunca ficou escutando em porta nenhuma, muito menos outra escolhida sozinha
 });
+
+test("GET /api/v1/demo: rota nova responde 200 com envelope padrão e o formato de dado esperado do painel demo, sem lançar", async (t) => {
+  const { dir, dbPath } = makeFixtureDb("demo-route");
+  t.after(() => cleanup(dir));
+  const server = createDashboardServer({ dbPath });
+  const { baseUrl } = await listenEphemeral(server);
+  t.after(() => closeServer(server));
+
+  const res = await get(`${baseUrl}/api/v1/demo`);
+  assert.equal(res.statusCode, 200);
+  const body = JSON.parse(res.body);
+  assert.equal(body.success, true);
+  assert.ok(body.generatedAt);
+  const data = body.data;
+  assert.ok(["SAFE", "BYBIT DEMO"].includes(data.environment));
+  assert.ok(["safe", "demo", "invalid"].includes(data.mode));
+  assert.equal(typeof data.configured, "boolean");
+  assert.equal(typeof data.privateReadEnabled, "boolean");
+  assert.equal(typeof data.newExposureArmed, "boolean");
+  assert.equal(typeof data.emergencyExitAvailable, "boolean");
+  assert.equal(typeof data.dataFresh, "boolean");
+  assert.ok(data.lastSuccessfulPrivateReadAt === null || typeof data.lastSuccessfulPrivateReadAt === "string");
+  assert.ok(data.lastDecision === null || typeof data.lastDecision === "object");
+  assert.ok(data.blockReason === null || typeof data.blockReason === "string");
+  assert.equal(typeof data.tradingExecutionEnabled, "boolean");
+  assert.ok("trading" in data);
+  assert.ok(data.updatedAt);
+});
+
+test("GET /api/v1/demo: corpo da resposta nunca contém a string 'BYBIT_API_KEY'/'BYBIT_API_SECRET' nem valor de segredo, mesmo com credenciais reais no processo", async (t) => {
+  const { dir, dbPath } = makeFixtureDb("demo-route-secrets");
+  t.after(() => cleanup(dir));
+  const server = createDashboardServer({ dbPath });
+  const { baseUrl } = await listenEphemeral(server);
+  t.after(() => closeServer(server));
+
+  const res = await get(`${baseUrl}/api/v1/demo`);
+  assert.ok(!res.body.includes(process.env.BYBIT_API_KEY || "__nunca_deveria_bater_string_vazia__"));
+  assert.ok(!res.body.includes(process.env.BYBIT_API_SECRET || "__nunca_deveria_bater_string_vazia__"));
+});

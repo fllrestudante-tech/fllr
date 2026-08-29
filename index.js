@@ -1,5 +1,38 @@
+// Gate de perfil -- PRIMEIRA coisa que este arquivo faz, antes de
+// requerer config.js/lib/bybit.js (que já calcula BASE_URL no require()).
+// index.js é "o bot": o único processo capaz de chamar contas/ordens.
+// Nunca deveria rodar fora do perfil "demo" (hoje o único perfil
+// operacional) -- nem via supervisor (já filtrado por categoria +
+// isReady() em lib/supervisorProfile.js), nem invocado diretamente
+// (`node index.js`), nem esquecido rodando com SUPERVISOR_PROFILE ausente/
+// errado. Falha fechada e sai ANTES de qualquer HMAC/Axios/WebSocket --
+// mesmo padrão de scripts/autostart/Crypto10-Start.ps1 (bloqueia, nunca
+// tenta corrigir a intenção do operador).
+const { resolveSupervisorProfile } = require("./lib/supervisorProfile");
+const { DEMO_PROFILE_NAME, validateDemoBoot } = require("./lib/demoTradingGate");
+
+let bootProfile;
+try {
+  bootProfile = resolveSupervisorProfile();
+} catch (err) {
+  console.error(`🔒 BLOQUEADO: ${err.message}. Nenhuma chamada à Bybit foi feita.`);
+  process.exit(1);
+}
+if (bootProfile !== DEMO_PROFILE_NAME) {
+  console.error(`🔒 BLOQUEADO: index.js (bot) só pode rodar sob SUPERVISOR_PROFILE=${DEMO_PROFILE_NAME} -- perfil atual: "${bootProfile}". Nenhuma chamada à Bybit foi feita.`);
+  process.exit(1);
+}
+try {
+  validateDemoBoot(process.env);
+} catch (err) {
+  console.error(`🔒 BLOQUEADO: configuração do perfil demo inválida (${err.code}) -- ${err.message} Nenhuma chamada à Bybit foi feita.`);
+  process.exit(1);
+}
+
 const config = require("./config");
 const bybit = require("./lib/bybit");
+const { createOrderLinkId } = require("./lib/demoOrderGate");
+const { refreshDemoAccountSnapshot } = require("./lib/demoSnapshotRefresh");
 const state = require("./lib/state");
 const signal = require("./lib/signal");
 const risk = require("./lib/risk");
@@ -131,6 +164,21 @@ async function handlePartialClose(reducedQty, equity) {
 }
 
 async function openPosition(side, analysis, equity) {
+  // Item 3 da Rodada 4 -- ANTES de propor qualquer ordem que aumente
+  // exposição, atualiza o snapshot confiável da conta Demo (leituras
+  // privadas + metadata pública do instrumento, gravado atomicamente).
+  // Se qualquer leitura falhar/vier incompleta, aborta ESTE ciclo sem
+  // chamar bybit.placeOrder -- nunca reaproveita silenciosamente um
+  // snapshot antigo pra autorizar aumento de exposição (ver
+  // lib/demoSnapshotRefresh.js).
+  try {
+    await refreshDemoAccountSnapshot({ symbol: config.symbol });
+  } catch (err) {
+    console.error("⚠️  Snapshot da conta Demo indisponível/incompleto -- nenhuma ordem será enviada neste ciclo:", err.message);
+    logger.log({ event: "demo_snapshot_refresh_failed", error: err.message });
+    return;
+  }
+
   const plan = risk.planOrder({ side, price: analysis.price, atr: analysis.atr, equity, params: analysis.params, instrumentInfo });
 
   if (plan.qty <= 0) {
@@ -155,7 +203,9 @@ async function openPosition(side, analysis, equity) {
     res = await bybit.placeOrder({
       side: bybitSide,
       qty: plan.qty,
+      price: analysis.price, // só usado pro cálculo de notional do gate demo -- nunca enviado à Bybit (ordem Market)
       stopLoss: plan.stopLossPrice,
+      orderLinkId: createOrderLinkId(), // obrigatório no perfil demo -- garante idempotência local e do lado da Bybit
     });
   } catch (err) {
     // Envio da ordem falhou (ex: erro regulatório, saldo insuficiente) — registra
@@ -260,6 +310,7 @@ async function closePosition(reason, equity) {
   const res = await bybit.placeOrder({
     side: bybitSide,
     qty: botState.qty,
+    orderLinkId: createOrderLinkId(), // obrigatório no perfil demo mesmo em fechamento (reduceOnly) -- garante idempotência
     reduceOnly: true,
   });
 

@@ -18,8 +18,8 @@ test("ALL_CHILDREN: nenhum script duplicado na lista canônica -- dois nomes nun
   assert.equal(new Set(scripts).size, scripts.length);
 });
 
-test("VALID_PROFILES: hoje só 'safe' existe -- nenhum perfil operacional com bot foi criado ainda", () => {
-  assert.deepEqual(VALID_PROFILES, ["safe"]);
+test("VALID_PROFILES: 'safe' e 'demo' -- 'demo' é o único perfil operacional com o bot real, gated por isReady()", () => {
+  assert.deepEqual(VALID_PROFILES, ["safe", "demo"]);
 });
 
 test("resolveSupervisorProfile: SUPERVISOR_PROFILE ausente -> 'safe'", () => {
@@ -111,4 +111,70 @@ test("fluxo completo: SUPERVISOR_PROFILE inválido nunca resulta numa lista com 
 test("ALL_CHILDREN: 'bot' é a única entrada category='trading' -- todo o resto é 'safe' (garante que a lista canônica não tem uma segunda porta pro trading)", () => {
   const tradingEntries = ALL_CHILDREN.filter((c) => c.category === "trading");
   assert.deepEqual(tradingEntries.map((c) => c.name), ["bot"]);
+});
+
+// =====================================================================
+// Perfil "demo" -- bot real, gated por isReady() (lib/demoTradingGate.js).
+// =====================================================================
+
+function validDemoEnv(overrides = {}) {
+  return {
+    BYBIT_DEMO: "true",
+    BYBIT_TESTNET: "false",
+    BYBIT_API_KEY: "fake-key-not-a-real-secret",
+    BYBIT_API_SECRET: "fake-secret-not-real",
+    ...overrides,
+  };
+}
+
+test("resolveSupervisorProfile: SUPERVISOR_PROFILE='demo' explícito -> 'demo'", () => {
+  assert.equal(resolveSupervisorProfile({ SUPERVISOR_PROFILE: "demo" }), "demo");
+});
+
+test("selectSupervisedChildren('demo'): sem NENHUMA env de configuração -> 'bot' fica de fora, os 6 seguros continuam presentes", () => {
+  const { children, skipped } = selectSupervisedChildren("demo", {});
+  assert.equal(children.some((c) => c.name === "bot"), false);
+  const names = children.map((c) => c.name).sort();
+  assert.deepEqual(names, ["backup_daemon", "btc_dominance_collector", "bybit_collector", "dashboard_server", "fear_greed_collector", "metrics_sampler"]);
+  const skip = skipped.find((s) => s.name === "bot");
+  assert.ok(skip);
+  assert.equal(skip.reason, "dependência de configuração ausente");
+});
+
+test("selectSupervisedChildren('demo'): configuração completa e válida -> 'bot' entra na lista", () => {
+  const { children, skipped } = selectSupervisedChildren("demo", validDemoEnv());
+  assert.ok(children.some((c) => c.name === "bot"));
+  assert.equal(skipped.some((s) => s.name === "bot"), false);
+});
+
+test("selectSupervisedChildren('demo'): BYBIT_DEMO com capitalização errada ('True') -> 'bot' fica de fora mesmo com credenciais presentes", () => {
+  const { children } = selectSupervisedChildren("demo", validDemoEnv({ BYBIT_DEMO: "True" }));
+  assert.equal(children.some((c) => c.name === "bot"), false);
+});
+
+test("selectSupervisedChildren('demo'): BYBIT_TESTNET ausente (não é exatamente 'false') -> 'bot' fica de fora", () => {
+  const env = validDemoEnv();
+  delete env.BYBIT_TESTNET;
+  const { children } = selectSupervisedChildren("demo", env);
+  assert.equal(children.some((c) => c.name === "bot"), false);
+});
+
+test("selectSupervisedChildren('demo'): BYBIT_TESTNET='true' -> 'bot' fica de fora (testnet nunca elegível no perfil demo)", () => {
+  const { children } = selectSupervisedChildren("demo", validDemoEnv({ BYBIT_TESTNET: "true" }));
+  assert.equal(children.some((c) => c.name === "bot"), false);
+});
+
+test("selectSupervisedChildren('demo'): credenciais ausentes -> 'bot' fica de fora mesmo com BYBIT_DEMO/TESTNET corretos", () => {
+  const { children } = selectSupervisedChildren("demo", validDemoEnv({ BYBIT_API_KEY: "", BYBIT_API_SECRET: "" }));
+  assert.equal(children.some((c) => c.name === "bot"), false);
+});
+
+test("selectSupervisedChildren('demo'): knowledge_collector segue a mesma regra de dependência do perfil safe", () => {
+  const { children } = selectSupervisedChildren("demo", validDemoEnv({ FRED_API_KEY: "x", COINMARKETCAL_API_KEY: "x" }));
+  assert.ok(children.some((c) => c.name === "knowledge_collector"));
+});
+
+test("selectSupervisedChildren: perfil 'safe' NUNCA inclui 'bot' mesmo com env de demo totalmente válido presente (categoria decide primeiro, isReady nem é consultado)", () => {
+  const { children } = selectSupervisedChildren("safe", validDemoEnv());
+  assert.equal(children.some((c) => c.name === "bot"), false);
 });
