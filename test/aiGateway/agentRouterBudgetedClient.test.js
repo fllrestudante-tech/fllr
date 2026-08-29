@@ -1049,6 +1049,23 @@ async function cleanupAll(dir, namedChildren) {
   if (errors.length > 0) throw errors[0];
 }
 
+/**
+ * Extrai key/from/to da mensagem publica ESTAVEL de
+ * ledger.InvalidTransitionError (`Transicao invalida para "<key>": nao
+ * esta em <from> (destino pretendido: <to>)`, ver agentRouterLedger.js).
+ * A classe de producao nao expoe from/to como campos publicos -- este
+ * parser e' a unica forma de distinguir a transicao pretendida sem
+ * alterar a classe nesta rodada. Usado SOMENTE pelos testes desta secao
+ * (13 e 13b) para restringir o 4o desfecho de corrida a exatamente
+ * reserved->send_intent_recorded, nunca a qualquer InvalidTransitionError
+ * generico.
+ */
+function parseInvalidTransitionMessage(message) {
+  const m = /^Transicao invalida para "([^"]+)": nao esta em (\S+) \(destino pretendido: ([^)]+)\)$/.exec(message);
+  if (!m) return null;
+  return { key: m[1], from: m[2], to: m[3] };
+}
+
 function raceScript(attemptId) {
   return `
 const Database = require(${JSON.stringify(BETTER_SQLITE3_PATH)});
@@ -1073,7 +1090,13 @@ const client = budgetedClientMod.createBudgetedAgentRouterClient({
 });
 client.runAgentRouterPrompt({ system: "s", user: "u", model: "m", metadata: { assessmentKey: "race-key", attemptId: ${JSON.stringify(attemptId)}, taskClass: "triage" } })
   .then(() => process.stdout.write("OK:" + transportCalls + "\\n"))
-  .catch((e) => process.stdout.write("ERR:" + e.constructor.name + ":" + transportCalls + "\\n"));
+  .catch((e) => process.stdout.write("ERR:" + JSON.stringify({
+    errorName: e && e.constructor ? e.constructor.name : null,
+    code: e && e.code != null ? e.code : null,
+    message: e && e.message != null ? e.message : null,
+    idempotencyKey: e && e.idempotencyKey != null ? e.idempotencyKey : null,
+    transportCalls,
+  }) + "\\n"));
 `;
 }
 
@@ -1100,18 +1123,35 @@ test("concorrencia real: 2 processos disputando reserva+claim pela MESMA assessm
     const errLines = results.filter((r) => r.startsWith("ERR"));
     assert.equal(okLines.length, 1, `esperava exatamente 1 OK, veio: ${JSON.stringify(results)}`);
     assert.equal(errLines.length, 1, `esperava exatamente 1 ERR, veio: ${JSON.stringify(results)}`);
+
+    const loser = JSON.parse(errLines[0].slice("ERR:".length));
+    assert.equal(loser.transportCalls, 0, `perdedor deveria ter 0 chamadas de transporte, veio: ${JSON.stringify(loser)}`);
+
     // o perdedor pode ser AlreadyClaimedError (corrida ao vivo no claim),
     // PriorAttemptAmbiguousError (viu a intencao ja registrada antes de
-    // tentar), ou -- dado que o transporte fake resolve quase
-    // instantaneamente -- AlreadyAccountedNoResponseStoredError (o vencedor
-    // ja completou reserva+claim+transporte+worst_case_charged antes do
-    // perdedor sequer terminar seu proprio tryReserve). Os 3 sao validos
-    // dependendo do timing exato, todos com 0 chamadas de transporte e
-    // fallbackAllowed=false.
-    assert.ok(
-      /ERR:(AlreadyClaimedError|PriorAttemptAmbiguousError|AlreadyAccountedNoResponseStoredError):0/.test(errLines[0]),
-      `perdedor deveria ser um dos 3 erros esperados, com 0 chamadas de transporte, veio: ${errLines[0]}`
-    );
+    // tentar), AlreadyAccountedNoResponseStoredError (o vencedor ja
+    // completou reserva+claim+transporte+worst_case_charged antes do
+    // perdedor sequer terminar seu proprio tryReserve) -- ou, dado que o
+    // transporte fake resolve quase instantaneamente, um 4o desfecho: o
+    // proprio claimForSending() do perdedor encontra o estado JA avancado
+    // para worst_case_charged (o vencedor terminou entre o snapshot de
+    // tryReserve do perdedor e a transacao de claimForSending do
+    // perdedor) -- ledger.InvalidTransitionError. Esse 4o caso e' aceito
+    // SOMENTE na forma exata reserved->send_intent_recorded (prova
+    // deterministica da mesma forma em "claimForSending: estado ja
+    // avancado..." abaixo) -- nunca por correspondencia ampla so pelo
+    // nome da classe, o que mascararia qualquer OUTRA transicao invalida
+    // real (ex.: reconcileDown fora de worst_case_charged).
+    const KNOWN_LOSER_ERRORS = new Set(["AlreadyClaimedError", "PriorAttemptAmbiguousError", "AlreadyAccountedNoResponseStoredError"]);
+    if (!KNOWN_LOSER_ERRORS.has(loser.errorName)) {
+      assert.equal(loser.errorName, "InvalidTransitionError", `perdedor com erro nao reconhecido: ${JSON.stringify(loser)}`);
+      assert.equal(loser.code, "INVALID_TRANSITION", `code inesperado para InvalidTransitionError: ${JSON.stringify(loser)}`);
+      const parsed = parseInvalidTransitionMessage(loser.message);
+      assert.ok(parsed, `InvalidTransitionError com mensagem fora do formato publico estavel esperado: ${JSON.stringify(loser)}`);
+      assert.equal(parsed.key, "ar:race-key", `idempotencyKey inesperado na mensagem: ${JSON.stringify(loser)}`);
+      assert.equal(parsed.from, "reserved", `transicao de origem inesperada (nao e' o 4o desfecho conhecido): ${JSON.stringify(loser)}`);
+      assert.equal(parsed.to, "send_intent_recorded", `transicao de destino inesperada (nao e' o 4o desfecho conhecido): ${JSON.stringify(loser)}`);
+    }
     assert.equal(okLines[0], "OK:1");
 
     const finalDb = new Database(dbPath, { readonly: true });
@@ -1124,6 +1164,87 @@ test("concorrencia real: 2 processos disputando reserva+claim pela MESMA assessm
       ["procB", procB],
     ]);
   }
+});
+
+// =====================================================================
+// 13b) Forma exata do 4o desfecho de corrida (InvalidTransitionError) --
+// deterministico, sem subprocesso, sem depender do agendamento do SO.
+// Reproduz passo a passo, com as MESMAS funcoes de producao usadas pelo
+// wrapper real (ledger.claimForSending/markWorstCaseCharged, inalteradas
+// nesta rodada), o estado exato que o processo perdedor encontra no teste
+// de concorrencia real (secao 13) quando o vencedor ja completou TODO o
+// ciclo antes do proprio claimForSending do perdedor rodar: snapshot que
+// o perdedor teria lido em tryReserve() = reserved/send_intent_at=null;
+// estado REAL no momento em que a transacao de claimForSending do
+// perdedor roda = worst_case_charged. Prova a FORMA EXATA do erro (nome,
+// code, from/to extraidos da mensagem publica estavel) que a secao 13
+// aceita para esse 4o desfecho -- nao apenas a ocorrencia estatistica.
+// =====================================================================
+
+test("claimForSending: estado ja avancado para worst_case_charged (vencedor completo) -> InvalidTransitionError com forma exata reserved->send_intent_recorded, nunca aceito so pelo nome da classe", async () => {
+  await withTestDb("invalid-transition-shape", async (db) => {
+    const policy = createPolicy();
+
+    // Snapshot inicial que o "perdedor" teria lido em tryReserve(): reserved.
+    const created = policy.tryReserve(db, {
+      idempotencyKey: "ar:race-key",
+      correlationId: "race-key",
+      model: "m",
+      taskClass: "triage",
+      estimatedMicrosUsd: 0,
+      priceSource: null,
+      priceSourceStatus: "unknown",
+      pricingTableVersion: "unpriced-v1",
+      expiresAtMs: EXPECTED_EXPIRES_AT_MS,
+      nowMs: NOW,
+    });
+    assert.equal(created.status, "reserved");
+    assert.equal(created.send_intent_at, null);
+
+    // "Vencedor" completa TODO o ciclo -- reivindica e e' contabilizado no
+    // pior caso -- exatamente as 2 ultimas etapas que o wrapper real
+    // executaria depois do transporte fake resolver quase instantaneamente.
+    ledger.claimForSending(db, { idempotencyKey: "ar:race-key", requestId: "attempt-winner", nowMs: NOW + 1 });
+    const afterWorstCase = ledger.markWorstCaseCharged(db, { idempotencyKey: "ar:race-key", nowMs: NOW + 2 });
+    assert.equal(afterWorstCase.status, "worst_case_charged");
+
+    // "Perdedor" so chegaria a este ponto porque seu PROPRIO snapshot de
+    // tryReserve() (variavel `created` acima, lida ANTES do vencedor
+    // avancar o estado) ainda mostrava reserved/send_intent_at=null -- a
+    // condicao que faz o wrapper real decidir tentar claimForSending(). O
+    // estado lido DENTRO da propria transacao de claimForSending, porem,
+    // ja avancou para worst_case_charged.
+    let caught = null;
+    try {
+      ledger.claimForSending(db, { idempotencyKey: "ar:race-key", requestId: "attempt-loser", nowMs: NOW + 3 });
+      assert.fail("esperava InvalidTransitionError -- claimForSending do perdedor nao deveria ter sucesso");
+    } catch (err) {
+      caught = err;
+    }
+
+    // Forma exata exigida pela secao 13 para aceitar o 4o desfecho: classe
+    // E code E from/to extraidos da mensagem publica estavel -- nunca so
+    // por constructor.name === "InvalidTransitionError" (que tambem cobre
+    // outras transicoes invalidas legitimamente diferentes, ex.:
+    // reconcileDown fora de worst_case_charged/expired_worst_case).
+    assert.ok(caught instanceof ledger.InvalidTransitionError);
+    assert.equal(caught.constructor.name, "InvalidTransitionError");
+    assert.equal(caught.code, "INVALID_TRANSITION");
+    assert.ok(caught instanceof ledger.LedgerError); // mesma condicao que o wrapper usa para fixar fallbackAllowed=false neste erro
+
+    const parsed = parseInvalidTransitionMessage(caught.message);
+    assert.ok(parsed, `mensagem de InvalidTransitionError fora do formato publico estavel esperado: ${caught.message}`);
+    assert.equal(parsed.key, "ar:race-key");
+    assert.equal(parsed.from, "reserved");
+    assert.equal(parsed.to, "send_intent_recorded");
+
+    // Nenhuma segunda claim nem segunda cobranca -- so 1 linha, ainda em
+    // worst_case_charged com o request_id do vencedor (o throw do
+    // perdedor reverte sua propria transacao antes de qualquer UPDATE).
+    const finalRow = ledger.getLedgerEntry(db, { idempotencyKey: "ar:race-key" });
+    assert.equal(finalRow.status, "worst_case_charged");
+    assert.equal(finalRow.request_id, "attempt-winner");
+  });
 });
 
 // =====================================================================
