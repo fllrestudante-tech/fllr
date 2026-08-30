@@ -10,6 +10,7 @@
 // tenta corrigir a intenção do operador).
 const { resolveSupervisorProfile } = require("./lib/supervisorProfile");
 const { DEMO_PROFILE_NAME, validateDemoBoot } = require("./lib/demoTradingGate");
+const { resolveDemoExecutionMode, EXECUTION_MODES } = require("./lib/demoExecutionMode");
 
 let bootProfile;
 try {
@@ -28,11 +29,27 @@ try {
   console.error(`🔒 BLOQUEADO: configuração do perfil demo inválida (${err.code}) -- ${err.message} Nenhuma chamada à Bybit foi feita.`);
   process.exit(1);
 }
+// DEMO_EXECUTION_MODE -- terceira porta do gate de boot, depois de
+// perfil+config estrutural já confirmados. "observe" (análise/telemetria
+// só-leitura, nenhuma função mutável é chamada) ou "execution" (reservado
+// pra ativação futura -- hoje se comporta como o bot sempre se comportou,
+// ainda protegido por TRADING_EXECUTION_ENABLED/ARMED_DEMO/kill switch em
+// lib/bybit.js). Ausente/inválido -> fail-closed, mesmo padrão acima --
+// nunca assume "observe" por omissão (omitir a variável é configuração
+// incompleta, não uma intenção implícita de só observar).
+let EXECUTION_MODE;
+try {
+  EXECUTION_MODE = resolveDemoExecutionMode(process.env);
+} catch (err) {
+  console.error(`🔒 BLOQUEADO: (${err.code}) ${err.message} Nenhuma chamada à Bybit foi feita.`);
+  process.exit(1);
+}
 
 const config = require("./config");
 const bybit = require("./lib/bybit");
 const { createOrderLinkId } = require("./lib/demoOrderGate");
 const { refreshDemoAccountSnapshot } = require("./lib/demoSnapshotRefresh");
+const demoObserveState = require("./lib/demoObserveState");
 const state = require("./lib/state");
 const signal = require("./lib/signal");
 const risk = require("./lib/risk");
@@ -180,13 +197,34 @@ async function openPosition(side, analysis, equity) {
   }
 
   const plan = risk.planOrder({ side, price: analysis.price, atr: analysis.atr, equity, params: analysis.params, instrumentInfo });
+  const bybitSide = side === "buy" ? "Buy" : "Sell";
+
+  // DEMO_EXECUTION_MODE=observe -- a estratégia quis operar (chegou até
+  // aqui, com risk_.ok=true no chamador), mas NENHUMA função mutável pode
+  // ser chamada. Registra a decisão hipotética (would_open) com a
+  // quantidade normalizada já calculada por risk.planOrder e o motivo de
+  // bloqueio quando aplicável (qty zero) -- nunca grava reserva no
+  // ledger real, nunca conta como ordem enviada. Para ANTES de
+  // bybit.placeOrder/setTradingStop -- nenhum HMAC/Axios acontece.
+  if (EXECUTION_MODE === EXECUTION_MODES.OBSERVE) {
+    const wouldTrade = plan.qty > 0;
+    demoObserveState.recordHypotheticalDecision({
+      kind: demoObserveState.HYPOTHETICAL_KINDS.WOULD_OPEN,
+      wouldTrade,
+      side: bybitSide,
+      qty: wouldTrade ? String(plan.qty) : null,
+      stopLossPrice: wouldTrade ? String(plan.stopLossPrice) : null,
+      blockReason: wouldTrade ? null : "qty_zero",
+    });
+    logger.log({ event: "would_trade", side: bybitSide, wouldTrade, qty: plan.qty, stopLossPrice: plan.stopLossPrice, tpLevels: plan.tpLevels, blockReason: wouldTrade ? null : "qty_zero" });
+    console.log(`👁️  [OBSERVE] would_trade: ${bybitSide} qty=${wouldTrade ? plan.qty : 0} stop=${plan.stopLossPrice} -- execução financeira desligada, nenhuma ordem enviada.`);
+    return;
+  }
 
   if (plan.qty <= 0) {
     console.log("⚠️  Quantidade calculada é zero, ordem não enviada.");
     return;
   }
-
-  const bybitSide = side === "buy" ? "Buy" : "Sell";
   const tpLevelsDesc = plan.tpLevels.map((l) => `${(l.qtyPct * 100).toFixed(0)}%@${l.r}R`).join(" + ") || "nenhum";
   console.log(
     `${side === "buy" ? "🟢" : "🔴"} Sinal de ${side.toUpperCase()}. qty=${plan.qty} stop=${plan.stopLossPrice} TP escalonado=${tpLevelsDesc}`
@@ -265,6 +303,19 @@ async function openPosition(side, analysis, equity) {
 // placeOrder continua valendo como rede de segurança (mesmo padrão de
 // tolerância já usado em setLeverage no boot).
 async function applyBreakEven(analysis) {
+  if (EXECUTION_MODE === EXECUTION_MODES.OBSERVE) {
+    demoObserveState.recordHypotheticalDecision({
+      kind: demoObserveState.HYPOTHETICAL_KINDS.WOULD_PROTECT,
+      wouldTrade: true,
+      side: botState.side,
+      qty: botState.qty != null ? String(botState.qty) : null,
+      stopLossPrice: botState.entryPrice != null ? String(botState.entryPrice) : null,
+      blockReason: "execution_mode_observe",
+    });
+    logger.log({ event: "would_apply_break_even", entryPrice: botState.entryPrice, price: analysis.price });
+    console.log("👁️  [OBSERVE] would_apply_break_even -- execução financeira desligada, setTradingStop não chamado.");
+    return;
+  }
   try {
     const stopLoss = instrumentInfo ? risk.roundToTick(botState.entryPrice, instrumentInfo.tickSize) : botState.entryPrice;
     await bybit.setTradingStop({ stopLoss });
@@ -283,6 +334,19 @@ async function applyBreakEven(analysis) {
 // ativação, não recalculados depois (a Bybit ratcheia o resto sozinha no
 // servidor). Falha não derruba o ciclo, mesmo padrão de tolerância do break even.
 async function applyTrailingStop(distance, regime) {
+  if (EXECUTION_MODE === EXECUTION_MODES.OBSERVE) {
+    demoObserveState.recordHypotheticalDecision({
+      kind: demoObserveState.HYPOTHETICAL_KINDS.WOULD_PROTECT,
+      wouldTrade: true,
+      side: botState.side,
+      qty: botState.qty != null ? String(botState.qty) : null,
+      stopLossPrice: null,
+      blockReason: "execution_mode_observe",
+    });
+    logger.log({ event: "would_activate_trailing_stop", distance, regime });
+    console.log("👁️  [OBSERVE] would_activate_trailing_stop -- execução financeira desligada, setTradingStop não chamado.");
+    return;
+  }
   try {
     const activePrice = tradeLifecycle.computeTrailingActivePrice(botState, distance);
     const roundedDistance = instrumentInfo ? risk.roundToTick(distance, instrumentInfo.tickSize) : distance;
@@ -304,6 +368,21 @@ async function applyTrailingStop(distance, regime) {
 // mesma pra qualquer motivo decidido pelo bot (reduceOnly na Bybit).
 async function closePosition(reason, equity) {
   const bybitSide = botState.side === "Buy" ? "Sell" : "Buy"; // ordem oposta à posição atual, reduceOnly
+
+  if (EXECUTION_MODE === EXECUTION_MODES.OBSERVE) {
+    demoObserveState.recordHypotheticalDecision({
+      kind: demoObserveState.HYPOTHETICAL_KINDS.WOULD_CLOSE,
+      wouldTrade: true,
+      side: bybitSide,
+      qty: botState.qty != null ? String(botState.qty) : null,
+      stopLossPrice: null,
+      blockReason: "execution_mode_observe",
+    });
+    logger.log({ event: "would_close", reason, side: bybitSide, qty: botState.qty });
+    console.log(`👁️  [OBSERVE] would_close (${reason}) -- execução financeira desligada, nenhuma ordem enviada.`);
+    return;
+  }
+
   console.log(`🔁 Fechando posição ${botState.side} (${reason}).`);
   const holdMs = botState.openedAt ? Date.now() - botState.openedAt : null; // capturado antes do reset abaixo limpar openedAt
 
@@ -489,6 +568,21 @@ async function cycle() {
     const analysis = signal.analyze(candles);
     const time = new Date().toLocaleTimeString();
 
+    if (EXECUTION_MODE === EXECUTION_MODES.OBSERVE) {
+      // Telemetria de observação -- roda TODO ciclo, independente de haver
+      // sinal de compra/venda, pra manter o dashboard com análise e
+      // snapshot sempre atuais. refreshDemoAccountSnapshot só faz leituras
+      // privadas (nunca uma função mutável); falha aqui nunca derruba o
+      // ciclo, só deixa o snapshot stale até o próximo sucesso.
+      demoObserveState.recordAnalysis({ signal: analysis.signal, price: analysis.price, reasons: analysis.reasons, regime });
+      try {
+        await refreshDemoAccountSnapshot({ symbol: config.symbol });
+      } catch (err) {
+        console.error("⚠️  [OBSERVE] Snapshot Demo indisponível/incompleto neste ciclo:", err.message);
+        logger.log({ event: "demo_snapshot_refresh_failed_observe", error: err.message });
+      }
+    }
+
     console.log("====================================");
     console.log(`⏰ ${time} | Equity: $${totalEquity.toFixed(2)}`);
     console.log(`💰 Price: ${analysis.price}`);
@@ -518,8 +612,32 @@ async function cycle() {
     console.log(`⚖️ Risk check: ${risk_.ok ? "PASS" : "BLOCK (" + risk_.reason + ")"}`);
     console.log("====================================");
 
-    if ((analysis.signal === "buy" || analysis.signal === "sell") && risk_.ok) {
-      await openPosition(analysis.signal, analysis, totalEquity);
+    if (analysis.signal === "buy" || analysis.signal === "sell") {
+      if (risk_.ok) {
+        // openPosition() já sabe se está em EXECUTION_MODES.OBSERVE --
+        // nesse caso computa a quantidade normalizada e registra
+        // would_trade sem chamar nenhuma função mutável (ver corpo de
+        // openPosition acima).
+        await openPosition(analysis.signal, analysis, totalEquity);
+      } else if (EXECUTION_MODE === EXECUTION_MODES.OBSERVE) {
+        // A estratégia quis operar mas o risco local já bloqueou ANTES de
+        // qualquer dimensionamento -- registra a decisão hipotética
+        // mesmo assim, com o motivo do bloqueio de risco (nunca silenciado
+        // como um "wait" genérico).
+        const bybitSide = analysis.signal === "buy" ? "Buy" : "Sell";
+        demoObserveState.recordHypotheticalDecision({
+          kind: demoObserveState.HYPOTHETICAL_KINDS.WOULD_OPEN,
+          wouldTrade: false,
+          side: bybitSide,
+          qty: null,
+          stopLossPrice: null,
+          blockReason: risk_.reason || "risk_blocked",
+        });
+        logger.log({ event: "would_trade", side: bybitSide, wouldTrade: false, blockReason: risk_.reason });
+        console.log(`👁️  [OBSERVE] would_trade: bloqueado pelo risco (${risk_.reason}).`);
+      } else {
+        logger.log({ event: "wait", signal: analysis.signal, price: analysis.price, reasons: analysis.reasons, riskBlockReason: risk_.reason });
+      }
     } else {
       logger.log({ event: "wait", signal: analysis.signal, price: analysis.price, reasons: analysis.reasons, riskBlockReason: risk_.reason });
     }
@@ -555,6 +673,26 @@ async function maybeRunBacktest() {
   }
 }
 
+// Extraído de boot() pra ser testável isoladamente, sem precisar
+// executar o resto do boot (backtest, health checks, setInterval) --
+// única responsabilidade: em EXECUTION_MODES.OBSERVE, NUNCA chama
+// bybit.setLeverage (nenhuma função mutável, nunca HMAC/Axios); em
+// EXECUTION_MODES.EXECUTION, comportamento inalterado de sempre.
+async function maybeConfigureLeverageOnBoot() {
+  if (EXECUTION_MODE === EXECUTION_MODES.OBSERVE) {
+    console.log("👁️  [OBSERVE] setLeverage não chamado no boot -- modo de observação (execução financeira desligada).");
+    return;
+  }
+  try {
+    await bybit.setLeverage(config.symbol, config.leverageMax);
+  } catch (err) {
+    // 110043 = "leverage not modified" — não é erro real, só significa que já estava configurada
+    if (!/110043/.test(err.message)) {
+      console.error("⚠️  Falha ao configurar alavancagem:", err.message);
+    }
+  }
+}
+
 async function boot() {
   const envLabel = config.bybit.demo ? "DEMO TRADING (dinheiro fictício)" : config.bybit.testnet ? "TESTNET" : "⚠️  MAINNET (dinheiro real)";
   console.log(`🤖 Bot iniciando — ${envLabel} | símbolo ${config.symbol}`);
@@ -565,14 +703,7 @@ async function boot() {
   instrumentInfo = await bybit.getInstrumentInfo(config.symbol);
   console.log(`ℹ️  Regras do símbolo: qtyStep=${instrumentInfo.qtyStep} tickSize=${instrumentInfo.tickSize} minOrderQty=${instrumentInfo.minOrderQty}`);
 
-  try {
-    await bybit.setLeverage(config.symbol, config.leverageMax);
-  } catch (err) {
-    // 110043 = "leverage not modified" — não é erro real, só significa que já estava configurada
-    if (!/110043/.test(err.message)) {
-      console.error("⚠️  Falha ao configurar alavancagem:", err.message);
-    }
-  }
+  await maybeConfigureLeverageOnBoot();
 
   try {
     const { state: reconciled } = await state.reconcile(botState);
@@ -600,4 +731,38 @@ async function loop() {
   setTimeout(loop, delay);
 }
 
-boot();
+// require.main===module -- só chama boot() (que já faz leitura/escrita
+// real e agenda o loop) quando este arquivo é o ENTRYPOINT do processo
+// (`node index.js`, exatamente como scripts/supervisor.js sobe o filho
+// "bot"). Um `require("../index.js")` a partir de um teste NUNCA dispara
+// boot() sozinho -- o teste importa as funções abaixo e as chama
+// manualmente, DEPOIS de mockar bybit.* via t.mock.method, com controle
+// total sobre quando cada chamada acontece (mesmo padrão de todo teste
+// deste projeto -- nunca uma rede real, nunca um timer de produção
+// disparando por conta própria).
+if (require.main === module) {
+  boot();
+}
+
+module.exports = {
+  EXECUTION_MODE,
+  EXECUTION_MODES,
+  boot,
+  cycle,
+  loop,
+  maybeConfigureLeverageOnBoot,
+  openPosition,
+  closePosition,
+  applyBreakEven,
+  applyTrailingStop,
+  handleExternalClose,
+  handlePartialClose,
+  getBotState: () => botState,
+  setBotState: (next) => {
+    botState = next;
+  },
+  getInstrumentInfo: () => instrumentInfo,
+  setInstrumentInfo: (next) => {
+    instrumentInfo = next;
+  },
+};

@@ -293,7 +293,14 @@ function Invoke-Crypto10HealthCheck {
         [Parameter(Mandatory = $true)][int]$Port,
         [Parameter(Mandatory = $true)][string]$NodeExe,
         [Parameter(Mandatory = $true)][string]$RepoRoot,
-        [Parameter(Mandatory = $false)][int]$TimeoutSec = 3
+        [Parameter(Mandatory = $false)][int]$TimeoutSec = 3,
+        # "safe" (default, retrocompativel) ou "demo_observe" -- selecionado
+        # pelo chamador de acordo com o -SupervisorProfile/-DemoExecutionMode
+        # que este MESMO wrapper pediu pro supervisor. Repassado como
+        # `expectedMode` no payload JSON pra lib/autostart/healthReadinessCli.js,
+        # que usa lib/autostart/healthReadiness.js::isHealthResponseReady --
+        # nunca reimplementa o criterio aqui.
+        [Parameter(Mandatory = $false)][string]$ExpectedMode = "safe"
     )
     $url = "http://127.0.0.1:$Port/api/v1/health"
     $statusCode = $null
@@ -328,7 +335,7 @@ function Invoke-Crypto10HealthCheck {
         try { $bodyObject = $bodyText | ConvertFrom-Json -ErrorAction Stop } catch { $bodyObject = $null }
     }
 
-    $payloadObject = @{ statusCode = $statusCode; body = $bodyObject }
+    $payloadObject = @{ statusCode = $statusCode; body = $bodyObject; expectedMode = $ExpectedMode }
     $payloadJson = $payloadObject | ConvertTo-Json -Compress -Depth 6
     $cliPath = Join-Path $RepoRoot "lib\autostart\healthReadinessCli.js"
     $cliResult = Invoke-Crypto10NodeScript -NodeExe $NodeExe -ScriptPath $cliPath -StdinText $payloadJson -WorkingDirectory $RepoRoot

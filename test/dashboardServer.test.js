@@ -71,13 +71,24 @@ test("GET /api/v1/health: banco fixture com estrutura mínima, gate desligado ->
   const res = await get(`${baseUrl}/api/v1/health`);
   assert.equal(res.statusCode, 200);
   const body = JSON.parse(res.body);
-  assert.deepEqual(body, {
-    status: "ok",
-    service: "crypto10-dashboard",
-    mode: "safe",
-    tradingExecutionEnabled: false,
-    database: "ok",
-  });
+  assert.deepEqual(Object.keys(body).sort(), ["blockReason", "database", "executionMode", "mode", "newExposureAllowed", "privateReadReady", "service", "snapshotFresh", "status", "systemReady", "tradingExecutionEnabled"].sort());
+  assert.equal(body.status, "ok");
+  assert.equal(body.service, "crypto10-dashboard");
+  assert.equal(body.mode, "safe");
+  assert.equal(body.executionMode, null);
+  assert.equal(body.tradingExecutionEnabled, false);
+  assert.equal(body.database, "ok");
+  assert.equal(body.newExposureAllowed, false);
+  assert.equal(body.privateReadReady, false);
+  assert.equal(body.snapshotFresh, false);
+  assert.equal(body.blockReason, "profile_safe");
+  // systemReady depende dos processos "safe" reais estarem de pé neste
+  // ambiente (lib/webDashboard/dashboardHealth.js::checkRequiredProcessesAlive
+  // lê runtime/processes/state.json de verdade aqui, já que este teste
+  // sobe o servidor real sem injetar readSupervisorState) -- só checa o
+  // TIPO, nunca assume um valor fixo (evita acoplar este teste de
+  // integração ao estado do supervisor de quem roda a suíte).
+  assert.equal(typeof body.systemReady, "boolean");
 });
 
 test("GET /api/v1/health: banco fixture ausente -> não é 200, resposta sanitizada sem caminho/stack", async (t) => {

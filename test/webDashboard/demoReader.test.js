@@ -233,3 +233,120 @@ test("readDemo: erro sem code reconhecido -> 'unavailable' por padrão, nunca la
   const result = readDemo(baseArgs({ readTrustedSnapshot: () => { throw new Error("algo genérico"); } }));
   assert.equal(result.snapshotStatus.status, "unavailable");
 });
+
+// =====================================================================
+// executionMode / environment / instrumentInfo / symbolState /
+// lastAnalysis / lastHypotheticalDecision / agentRouterStatus -- fase
+// "observação" (perfil demo operacional + dashboard em tempo real).
+// =====================================================================
+
+function fakeObserveState(state) {
+  return () => state;
+}
+
+test("readDemo: perfil safe -> executionMode=null (conceito nem se aplica fora do perfil demo)", () => {
+  const result = readDemo(baseArgs({ env: { SUPERVISOR_PROFILE: "safe" } }));
+  assert.equal(result.executionMode, null);
+  assert.equal(result.environment, "SAFE");
+});
+
+test("readDemo: perfil demo + DEMO_EXECUTION_MODE=observe -> executionMode='observe', environment com sufixo OBSERVAÇÃO", () => {
+  const result = readDemo(baseArgs({ env: { ...VALID_DEMO_ENV, DEMO_EXECUTION_MODE: "observe" } }));
+  assert.equal(result.executionMode, "observe");
+  assert.equal(result.environment, "BYBIT DEMO — OBSERVAÇÃO");
+});
+
+test("readDemo: perfil demo + DEMO_EXECUTION_MODE ausente/inválido -> executionMode=null, environment sem sufixo, nunca lança", () => {
+  const result = readDemo(baseArgs({ env: VALID_DEMO_ENV }));
+  assert.equal(result.executionMode, null);
+  assert.equal(result.environment, "BYBIT DEMO");
+});
+
+test("readDemo: perfil demo + snapshot fresco -> instrumentInfo/symbolState refletidos com rótulos estáveis (cross/one-way)", () => {
+  const fakeSnapshot = {
+    capturedAtMs: NOW - 1000,
+    exposureUsd: "0",
+    equityUsd: "1000",
+    positions: [],
+    openOrders: [],
+    instrumentInfo: { symbol: "SOLUSDT", qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "96000.0", maxMktOrderQty: "12000.0", tickSize: "0.01", minPrice: "0.01", maxPrice: "199999.98", minNotionalValue: "5" },
+    symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "2", tradeMode: 0, positionIdx: 0 },
+  };
+  const result = readDemo(baseArgs({ env: VALID_DEMO_ENV, readTrustedSnapshot: () => fakeSnapshot }));
+  assert.equal(result.instrumentInfo.symbol, "SOLUSDT");
+  assert.equal(result.symbolState.effectiveLeverage, "2");
+  assert.equal(result.symbolState.tradeModeLabel, "cross");
+  assert.equal(result.symbolState.positionModeLabel, "one-way");
+});
+
+test("readDemo: symbolState.tradeMode=1 -> tradeModeLabel='isolated'; positionIdx!=0 -> positionModeLabel='hedge'", () => {
+  const fakeSnapshot = {
+    capturedAtMs: NOW - 1000,
+    exposureUsd: "0",
+    equityUsd: "1000",
+    positions: [],
+    openOrders: [],
+    instrumentInfo: { symbol: "SOLUSDT" },
+    symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "2", tradeMode: 1, positionIdx: 1 },
+  };
+  const result = readDemo(baseArgs({ env: VALID_DEMO_ENV, readTrustedSnapshot: () => fakeSnapshot }));
+  assert.equal(result.symbolState.tradeModeLabel, "isolated");
+  assert.equal(result.symbolState.positionModeLabel, "hedge");
+});
+
+test("readDemo: perfil demo + snapshot indisponível -> instrumentInfo=null, symbolState=null, nunca lança", () => {
+  const result = readDemo(baseArgs({ env: VALID_DEMO_ENV, readTrustedSnapshot: () => { throw new Error("ausente"); } }));
+  assert.equal(result.instrumentInfo, null);
+  assert.equal(result.symbolState, null);
+});
+
+test("readDemo: perfil safe -> instrumentInfo/symbolState sempre null (conceito não se aplica)", () => {
+  const result = readDemo(baseArgs({ env: { SUPERVISOR_PROFILE: "safe" } }));
+  assert.equal(result.instrumentInfo, null);
+  assert.equal(result.symbolState, null);
+});
+
+test("readDemo: symbolState.hasOpenPosition=true (size>0) refletido corretamente, nunca reclassificado", () => {
+  const fakeSnapshot = {
+    capturedAtMs: NOW - 1000,
+    exposureUsd: "40",
+    equityUsd: "1000",
+    positions: [{}],
+    openOrders: [],
+    instrumentInfo: { symbol: "SOLUSDT" },
+    symbolState: { hasOpenPosition: true, side: "Buy", qty: "1", entryPrice: "40", stopLossPrice: "38", effectiveLeverage: "2", tradeMode: 0, positionIdx: 0 },
+  };
+  const result = readDemo(baseArgs({ env: VALID_DEMO_ENV, readTrustedSnapshot: () => fakeSnapshot }));
+  assert.equal(result.symbolState.hasOpenPosition, true);
+  assert.equal(result.symbolState.qty, "1");
+});
+
+test("readDemo: lastAnalysis/lastHypotheticalDecision refletidos quando presentes no observe-state", () => {
+  const result = readDemo(
+    baseArgs({
+      env: VALID_DEMO_ENV,
+      readObserveState: fakeObserveState({
+        lastAnalysis: { signal: "wait", price: 41, reasons: ["ema_flat"], regime: "normal", at: "2026-08-30T10:00:00.000Z" },
+        lastHypotheticalDecision: { kind: "would_open", wouldTrade: false, side: "Buy", qty: null, stopLossPrice: null, blockReason: "qty_zero", at: "2026-08-30T10:00:00.000Z" },
+      }),
+    })
+  );
+  assert.equal(result.lastAnalysis.signal, "wait");
+  assert.equal(result.lastHypotheticalDecision.blockReason, "qty_zero");
+});
+
+test("readDemo: lastAnalysis/lastHypotheticalDecision ausentes -> null, nunca inventa", () => {
+  const result = readDemo(baseArgs({ env: VALID_DEMO_ENV, readObserveState: fakeObserveState({ lastAnalysis: null, lastHypotheticalDecision: null }) }));
+  assert.equal(result.lastAnalysis, null);
+  assert.equal(result.lastHypotheticalDecision, null);
+});
+
+test("readDemo: agentRouterStatus='shadow' quando já existe lastAiAssessment; 'offline' quando nunca rodou", () => {
+  const withAssessment = readDemo(
+    baseArgs({ env: VALID_DEMO_ENV, loadState: fakeLoadState({ lastAiAssessment: { at: "2026-08-30T10:00:00.000Z", recommendation: "hold", marketRegime: "normal", riskLevel: "low" } }) })
+  );
+  assert.equal(withAssessment.agentRouterStatus, "shadow");
+
+  const withoutAssessment = readDemo(baseArgs({ env: VALID_DEMO_ENV, loadState: fakeLoadState({ lastAiAssessment: null }) }));
+  assert.equal(withoutAssessment.agentRouterStatus, "offline");
+});

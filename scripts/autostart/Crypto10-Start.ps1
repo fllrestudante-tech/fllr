@@ -10,7 +10,17 @@
 param(
     [Parameter(Mandatory = $false)][int]$HealthTimeoutSec = 90,
     [Parameter(Mandatory = $false)][int]$PortDiscoveryTimeoutSec = 30,
-    [Parameter(Mandatory = $false)][switch]$NoBrowser
+    [Parameter(Mandatory = $false)][switch]$NoBrowser,
+    # Ausente -> "safe" (comportamento IDENTICO a antes desta rodada -- a
+    # tarefa agendada real, que chama este script sem parametros, continua
+    # subindo "safe" sem nenhuma mudanca). "demo" precisa ser selecao
+    # EXPLICITA (nunca inferida) e exige -DemoExecutionMode junto.
+    [Parameter(Mandatory = $false)][ValidateSet("safe", "demo")][string]$SupervisorProfile = "safe",
+    # Só relevante com -SupervisorProfile demo. "execution" ainda nao e
+    # aceito por este wrapper (reservado pra ativacao futura, mesmo
+    # contrato de lib/demoExecutionMode.js) -- só "observe" e um valor
+    # valido aqui hoje.
+    [Parameter(Mandatory = $false)][ValidateSet("observe")][string]$DemoExecutionMode
 )
 
 Set-StrictMode -Version Latest
@@ -29,6 +39,16 @@ function Exit-Crypto10Start {
 }
 
 $RepoRootForLog = $null
+
+# 0. Selecao explicita do perfil/modo -- ausente = "safe" (default seguro,
+# identico ao comportamento de sempre). "demo" SEM -DemoExecutionMode e
+# rejeitado imediatamente, antes de qualquer log/identidade/spawn --
+# nunca assume "observe" por omissao (mesmo espirito fail-closed de
+# lib/demoExecutionMode.js::resolveDemoExecutionMode).
+if ($SupervisorProfile -eq "demo" -and [string]::IsNullOrEmpty($DemoExecutionMode)) {
+    Write-Host "BLOQUEADO: -SupervisorProfile demo exige -DemoExecutionMode explicito (hoje só 'observe' e aceito). Nada foi iniciado."
+    exit 1
+}
 
 try {
     # 1. Identidade do repositorio -- pelo caminho do PROPRIO script, nunca
@@ -77,9 +97,13 @@ try {
     if (-not $alreadyRunning) {
         # 5/6/7/8/9/10. Sobe scripts/supervisor.js DIRETAMENTE (nunca via
         # npm run, que passa por um wrapper .cmd adicional no Windows) com
-        # SUPERVISOR_PROFILE=safe e TRADING_EXECUTION_ENABLED=false
+        # SUPERVISOR_PROFILE/DEMO_EXECUTION_MODE/TRADING_EXECUTION_ENABLED
         # sobrescritos no AMBIENTE DESTE PROCESSO antes do spawn -- o
-        # filho herda exatamente esses dois valores, nunca os do usuario.
+        # filho herda exatamente esses valores, nunca os do usuario.
+        # TRADING_EXECUTION_ENABLED e SEMPRE "false" aqui, incondicionalmente
+        # -- nenhum parametro deste script consegue mudar isso (nunca
+        # habilitar execucao financeira automaticamente no login, mesmo
+        # pedindo -SupervisorProfile demo -DemoExecutionMode observe).
         # Os valores ORIGINAIS (mesmo se ausentes) sao salvos e restaurados
         # logo apos o spawn -- o filho ja herdou sua propria copia do
         # ambiente no momento da criacao (Start-Process/CreateProcess),
@@ -88,8 +112,10 @@ try {
         # mesma sessao PowerShell (ex.: se este script for dot-sourced em
         # vez de invocado standalone).
         $previousSupervisorProfile = $env:SUPERVISOR_PROFILE
+        $previousDemoExecutionMode = $env:DEMO_EXECUTION_MODE
         $previousTradingExecutionEnabled = $env:TRADING_EXECUTION_ENABLED
-        $env:SUPERVISOR_PROFILE = "safe"
+        $env:SUPERVISOR_PROFILE = $SupervisorProfile
+        if ($SupervisorProfile -eq "demo") { $env:DEMO_EXECUTION_MODE = $DemoExecutionMode } else { Remove-Item Env:\DEMO_EXECUTION_MODE -ErrorAction SilentlyContinue }
         $env:TRADING_EXECUTION_ENABLED = "false"
 
         $today = Get-Date -Format "yyyy-MM-dd"
@@ -103,7 +129,8 @@ try {
         $outLog = Join-Path $logDir "supervisor.out.log"
         $errLog = Join-Path $logDir "supervisor.err.log"
 
-        Write-Crypto10AutostartLog -RepoRoot $RepoRoot -Message "Iniciando scripts\supervisor.js (perfil safe, gate desligado) -- stdout/stderr em '$outLog' / '$errLog'."
+        $profileLabel = if ($SupervisorProfile -eq "demo") { "demo, modo $DemoExecutionMode" } else { "safe" }
+        Write-Crypto10AutostartLog -RepoRoot $RepoRoot -Message "Iniciando scripts\supervisor.js (perfil $profileLabel, gate financeiro desligado) -- stdout/stderr em '$outLog' / '$errLog'."
         try {
             $started = Start-Process -FilePath $NodeExe -ArgumentList @("`"$($paths.SupervisorScript)`"") -WorkingDirectory $RepoRoot -WindowStyle Hidden -RedirectStandardOutput $outLog -RedirectStandardError $errLog -PassThru
             Write-Crypto10AutostartLog -RepoRoot $RepoRoot -Message "Supervisor iniciado (PID $($started.Id)). Independente deste wrapper -- continua rodando mesmo depois que este script terminar."
@@ -111,6 +138,7 @@ try {
             # Restaura SEMPRE, mesmo se o spawn falhar -- nunca deixa o
             # ambiente deste processo com os valores forcados.
             if ($null -eq $previousSupervisorProfile) { Remove-Item Env:\SUPERVISOR_PROFILE -ErrorAction SilentlyContinue } else { $env:SUPERVISOR_PROFILE = $previousSupervisorProfile }
+            if ($null -eq $previousDemoExecutionMode) { Remove-Item Env:\DEMO_EXECUTION_MODE -ErrorAction SilentlyContinue } else { $env:DEMO_EXECUTION_MODE = $previousDemoExecutionMode }
             if ($null -eq $previousTradingExecutionEnabled) { Remove-Item Env:\TRADING_EXECUTION_ENABLED -ErrorAction SilentlyContinue } else { $env:TRADING_EXECUTION_ENABLED = $previousTradingExecutionEnabled }
         }
     }
@@ -124,6 +152,7 @@ try {
     }
     Write-Crypto10AutostartLog -RepoRoot $RepoRoot -Message "Porta do dashboard: $port. Aguardando health ficar pronto (timeout ${HealthTimeoutSec}s)..."
 
+    $expectedHealthMode = if ($SupervisorProfile -eq "demo") { "demo_observe" } else { "safe" }
     $deadline = (Get-Date).AddSeconds($HealthTimeoutSec)
     $delayMs = 500
     $maxDelayMs = 5000
@@ -131,7 +160,7 @@ try {
     $lastStatusCode = $null
     $lastReached = $false
     while ((Get-Date) -lt $deadline) {
-        $health = Invoke-Crypto10HealthCheck -Port $port -NodeExe $NodeExe -RepoRoot $RepoRoot -TimeoutSec 3
+        $health = Invoke-Crypto10HealthCheck -Port $port -NodeExe $NodeExe -RepoRoot $RepoRoot -TimeoutSec 3 -ExpectedMode $expectedHealthMode
         $lastStatusCode = $health.StatusCode
         $lastReached = $health.Reached
         if ($health.Ready) {
@@ -145,7 +174,7 @@ try {
     if (-not $ready) {
         Exit-Crypto10Start -Code 1 -Message "FALHA: health nunca ficou pronto dentro de ${HealthTimeoutSec}s (ultimo statusCode=$lastStatusCode, alcancado=$lastReached). Navegador NAO sera aberto. Diagnostico: rode Crypto10-Diagnose.ps1."
     }
-    Write-Crypto10AutostartLog -RepoRoot $RepoRoot -Message "Health pronto (200, status=ok, mode=safe, tradingExecutionEnabled=false, database=ok)."
+    Write-Crypto10AutostartLog -RepoRoot $RepoRoot -Message "Health pronto (200, expectedMode=$expectedHealthMode, tradingExecutionEnabled=false, database=ok)."
 
     # 14/15. Abre uma unica vez -- so depois de pronto, e so se ainda nao
     # tiver aberto pra esta MESMA instancia do supervisor (pid+startedAt do

@@ -47,3 +47,21 @@ test("healthReadinessCli: nunca imprime nada além de 'true'/'false' -- sem eco 
   assert.equal(result.stdout, "true"); // campo extra não derruba, mas também não é ecoado
   assert.ok(!result.stdout.includes("segredo-fake-nao-deve-aparecer"));
 });
+
+const READY_DEMO_OBSERVE_BODY = { status: "ok", mode: "demo", executionMode: "observe", tradingExecutionEnabled: false, newExposureAllowed: false, database: "ok" };
+
+test("healthReadinessCli: expectedMode='demo_observe' via stdin + corpo demo_observe perfeito -> 'true'", () => {
+  const result = runCli(JSON.stringify({ statusCode: 200, body: READY_DEMO_OBSERVE_BODY, expectedMode: "demo_observe" }));
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, "true");
+});
+
+test("healthReadinessCli: expectedMode='demo_observe' via stdin mas corpo é 'safe' -> 'false'", () => {
+  const result = runCli(JSON.stringify({ statusCode: 200, body: READY_BODY, expectedMode: "demo_observe" }));
+  assert.equal(result.stdout, "false");
+});
+
+test("healthReadinessCli: corpo demo_observe perfeito SEM expectedMode no stdin -> 'false' (default continua 'safe', retrocompatível)", () => {
+  const result = runCli(JSON.stringify({ statusCode: 200, body: READY_DEMO_OBSERVE_BODY }));
+  assert.equal(result.stdout, "false");
+});

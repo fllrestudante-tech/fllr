@@ -124,6 +124,37 @@ test("index.js: perfil totalmente desconhecido -> bloqueia com SUPERVISOR_PROFIL
   assert.ok(result.stderr.includes("BLOQUEADO"));
 });
 
+// =====================================================================
+// DEMO_EXECUTION_MODE -- item 1 da fase "observação" (perfil demo +
+// dashboard tempo real + autostart preparado). Terceira porta do gate,
+// checada só DEPOIS de perfil+config estrutural já terem passado --
+// todos os casos abaixo usam um env demo estruturalmente válido.
+// =====================================================================
+
+function validDemoEnvOverrides(overrides = {}) {
+  return {
+    SUPERVISOR_PROFILE: "demo",
+    BYBIT_DEMO: "true",
+    BYBIT_TESTNET: "false",
+    BYBIT_API_KEY: "fake-key-not-a-real-secret",
+    BYBIT_API_SECRET: "fake-secret-not-real",
+    ...overrides,
+  };
+}
+
+test("index.js: perfil demo válido mas DEMO_EXECUTION_MODE ausente -> bloqueia com DEMO_EXECUTION_MODE_INVALID, nunca assume observe por omissão", async () => {
+  const result = await runIndexJs(baseBlockedEnv(validDemoEnvOverrides()));
+  assert.equal(result.code, 1);
+  assert.ok(result.stderr.includes("DEMO_EXECUTION_MODE_INVALID"), `stderr deveria mencionar DEMO_EXECUTION_MODE_INVALID: ${result.stderr}`);
+  assert.ok(result.elapsedMs < MAX_BLOCKED_EXIT_MS);
+});
+
+test("index.js: perfil demo válido mas DEMO_EXECUTION_MODE com valor desconhecido -> bloqueia com DEMO_EXECUTION_MODE_INVALID", async () => {
+  const result = await runIndexJs(baseBlockedEnv(validDemoEnvOverrides({ DEMO_EXECUTION_MODE: "trade-tudo" })));
+  assert.equal(result.code, 1);
+  assert.ok(result.stderr.includes("DEMO_EXECUTION_MODE_INVALID"));
+});
+
 test("index.js: nenhum dos casos acima produz stdout/stderr contendo o valor das credenciais fake usadas no teste", async () => {
   const secretKey = "segredo-fake-key-index-nao-deve-aparecer";
   const result = await runIndexJs(

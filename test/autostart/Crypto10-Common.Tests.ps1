@@ -333,10 +333,29 @@ Test-Case "varredura: nenhum arquivo define TRADING_EXECUTION_ENABLED='true' (so
     }
 }
 
-Test-Case "varredura: Crypto10-Start.ps1 forca SUPERVISOR_PROFILE=safe e TRADING_EXECUTION_ENABLED=false" {
+Test-Case "varredura: Crypto10-Start.ps1 -- SUPERVISOR_PROFILE default 'safe' (parametro explicito), TRADING_EXECUTION_ENABLED SEMPRE 'false' hardcoded (nenhum parametro consegue mudar isso)" {
     $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
-    Assert-True ($content -match '\$env:SUPERVISOR_PROFILE\s*=\s*"safe"')
+    # SUPERVISOR_PROFILE agora e parametrizavel (-SupervisorProfile demo,
+    # selecao explicita) -- o que importa pra seguranca e o DEFAULT
+    # continuar "safe" quando ninguem passa o parametro (config ausente =
+    # tarefa agendada real, sem args, continua subindo safe).
+    Assert-True ($content -match '\[string\]\$SupervisorProfile\s*=\s*"safe"') "o parametro -SupervisorProfile precisa ter default 'safe'"
+    Assert-True ($content -match '\$env:SUPERVISOR_PROFILE\s*=\s*\$SupervisorProfile') "o env do filho precisa vir do parametro, nunca hardcoded pra outro valor"
+    # TRADING_EXECUTION_ENABLED continua um LITERAL "false" hardcoded --
+    # isto NUNCA pode virar um parametro (nunca habilitar execucao
+    # financeira automaticamente no login, mesmo com -SupervisorProfile
+    # demo -DemoExecutionMode observe).
     Assert-True ($content -match '\$env:TRADING_EXECUTION_ENABLED\s*=\s*"false"')
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 -- -SupervisorProfile demo SEM -DemoExecutionMode e rejeitado explicitamente no codigo (nunca assume 'observe' por omissao)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    Assert-True ($content -match '\$SupervisorProfile\s*-eq\s*"demo"\s*-and\s*\[string\]::IsNullOrEmpty\(\$DemoExecutionMode\)') "falta a checagem fail-closed de demo sem modo explicito"
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 -- -DemoExecutionMode so aceita 'observe' (ValidateSet), nunca 'execution' nesta rodada" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    Assert-True ($content -match '\[ValidateSet\("observe"\)\]\[string\]\$DemoExecutionMode')
 }
 
 Test-Case "varredura: Crypto10-Start.ps1 salva os valores originais de SUPERVISOR_PROFILE/TRADING_EXECUTION_ENABLED ANTES de sobrescrever e os restaura num 'finally' apos o spawn (nao executa o script real -- so confirma a estrutura de save/restore no codigo)" {

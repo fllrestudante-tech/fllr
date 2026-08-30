@@ -473,8 +473,24 @@ function buildNav(activeId, onSelect) {
   }
 }
 
+// `activeSectionCleanup` -- devolvido opcionalmente por section.render()
+// (só demo-panel.js usa isto hoje, pro polling automático do painel Demo;
+// as outras 7 seções não retornam nada, `typeof cleanup === "function"`
+// fica false pra elas, ZERO mudança de comportamento). Chamado SEMPRE antes
+// de montar a próxima seção -- limpeza determinística de timer/fetch em
+// voo, nunca dependente só de uma checagem de DOM no próximo tick.
+let activeSectionCleanup = null;
+
 async function showSection(id) {
   const main = document.getElementById("app-main");
+  if (activeSectionCleanup) {
+    try {
+      activeSectionCleanup();
+    } catch {
+      // limpeza nunca deveria lançar, mas nunca impede a troca de seção
+    }
+    activeSectionCleanup = null;
+  }
   main.innerHTML = "";
   main.appendChild(el("div", { class: "section-loading" }, "carregando..."));
   buildNav(id, showSection);
@@ -482,7 +498,8 @@ async function showSection(id) {
   const section = SECTIONS.find((s) => s.id === id);
   try {
     main.innerHTML = "";
-    await section.render(main);
+    const cleanup = await section.render(main);
+    if (typeof cleanup === "function") activeSectionCleanup = cleanup;
   } catch (err) {
     main.innerHTML = "";
     main.appendChild(el("div", { class: "section-error" }, `Erro ao carregar ${section.label}: ${err.message}`));
