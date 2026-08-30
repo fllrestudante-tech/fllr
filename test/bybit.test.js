@@ -533,17 +533,74 @@ test("integração REAL via bybit.placeOrder(): mesmo orderLinkId reutilizado nu
   assert.equal(postCalls, 1, "segunda tentativa com o mesmo orderLinkId nunca deveria ter tocado a rede de novo");
 });
 
-test("integração REAL via bybit.setLeverage(): SEM ARMED_DEMO bloqueia -- leverage é tratado como aumento de exposição", async (t) => {
+// =====================================================================
+// setLeverage -- item 4 da Rodada 6. Só autorizado hoje como redução
+// segura de leverage com conta flat (SAFE_LEVERAGE_REDUCTION) -- nunca
+// mais tratado como aumento de exposição/ARMED_DEMO.
+// =====================================================================
+
+test("integração REAL via bybit.setLeverage(): 10 -> 2, conta flat, sem ordens -> PERMITIDO mesmo SEM ARMED_DEMO (BLOCK_NEW_EXPOSURE), alcança axios.post mockado", async (t) => {
   withEnv(t, validDemoEnv());
   enableTradingExecutionForTest(t);
-  mockDemoAuth(t, { armed: false });
+  mockDemoAuth(t, { armed: false, snapshot: { symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "10", tradeMode: 0, positionIdx: 0 } } });
+  let postCalls = 0;
+  let capturedBody;
+  t.mock.method(axios, "post", async (url, body) => {
+    postCalls++;
+    capturedBody = JSON.parse(body);
+    return { data: { retCode: 0, result: {} } };
+  });
+  await bybit.setLeverage("SOLUSDT", 2);
+  assert.equal(postCalls, 1);
+  assert.equal(capturedBody.buyLeverage, "2");
+  assert.equal(capturedBody.sellLeverage, "2");
+});
+
+test("integração REAL via bybit.setLeverage(): 2 -> 10 (aumento) -> bloqueado ANTES de qualquer axios.post, mesmo com ARMED_DEMO", async (t) => {
+  withEnv(t, validDemoEnv());
+  enableTradingExecutionForTest(t);
+  mockDemoAuth(t, { armed: true, snapshot: {} }); // default: effectiveLeverage="2"
+  let postCalls = 0;
+  t.mock.method(axios, "post", async () => {
+    postCalls++;
+    return { data: { retCode: 0, result: {} } };
+  });
+  await assert.rejects(() => bybit.setLeverage("SOLUSDT", 10), (err) => {
+    assert.equal(err.code, "DEMO_SAFE_LEVERAGE_REDUCTION_BLOCKED");
+    assert.equal(err.reason, "leverage_reduction_exceeds_demo_ceiling");
+    return true;
+  });
+  assert.equal(postCalls, 0);
+});
+
+test("integração REAL via bybit.setLeverage(): 2 -> 2 (valor igual) -> bloqueado como desnecessário, ANTES de qualquer axios.post", async (t) => {
+  withEnv(t, validDemoEnv());
+  enableTradingExecutionForTest(t);
+  mockDemoAuth(t, { armed: false, snapshot: {} }); // default: effectiveLeverage="2"
   let postCalls = 0;
   t.mock.method(axios, "post", async () => {
     postCalls++;
     return { data: { retCode: 0, result: {} } };
   });
   await assert.rejects(() => bybit.setLeverage("SOLUSDT", 2), (err) => {
-    assert.equal(err.code, "NEW_EXPOSURE_BLOCKED");
+    assert.equal(err.code, "DEMO_SAFE_LEVERAGE_REDUCTION_BLOCKED");
+    assert.equal(err.reason, "leverage_reduction_unnecessary");
+    return true;
+  });
+  assert.equal(postCalls, 0);
+});
+
+test("integração REAL via bybit.setLeverage(): posição real aberta -> bloqueado ANTES de qualquer axios.post", async (t) => {
+  withEnv(t, validDemoEnv());
+  enableTradingExecutionForTest(t);
+  mockDemoAuth(t, { armed: false, snapshot: { symbolState: { hasOpenPosition: true, side: "Buy", qty: "1", entryPrice: "40", stopLossPrice: "38", effectiveLeverage: "10", tradeMode: 0, positionIdx: 0 } } });
+  let postCalls = 0;
+  t.mock.method(axios, "post", async () => {
+    postCalls++;
+    return { data: { retCode: 0, result: {} } };
+  });
+  await assert.rejects(() => bybit.setLeverage("SOLUSDT", 2), (err) => {
+    assert.equal(err.reason, "leverage_reduction_position_open");
     return true;
   });
   assert.equal(postCalls, 0);

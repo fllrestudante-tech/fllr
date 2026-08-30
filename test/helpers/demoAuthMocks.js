@@ -44,7 +44,17 @@ function fakeSnapshot(overrides = {}) {
 /**
  * Mocka killSwitch/ledger/snapshot/state pro cenário indicado por `t`
  * (restaurado automaticamente ao fim do teste pelo node:test). Devolve
- * `{ recorded, usedIds }` pra inspeção de quais reservas foram gravadas.
+ * `{ recorded, usedIds, readTrustedSnapshotMock }` pra inspeção de quais
+ * reservas foram gravadas e pra quem precisar TROCAR o retorno de
+ * readTrustedSnapshot depois (ex.: pra devolver o snapshot REAL recém-
+ * capturado, ver test/demoSnapshotRefresh.test.js). Trocar via
+ * `readTrustedSnapshotMock.mock.mockImplementation(novoRetorno)` --
+ * NUNCA chamando `t.mock.method(snapshotModule, "readTrustedSnapshot", ...)`
+ * de novo: mockar o MESMO método duas vezes dentro do mesmo teste faz o
+ * node:test restaurar só a última camada ao fim do teste, deixando a
+ * PRIMEIRA mock (o fakeSnapshot() default, com leverage "2") vazando pros
+ * testes seguintes do mesmo arquivo -- bug real do node:test já pisado
+ * nesta rodada, nunca mais reproduzido por engano.
  */
 function mockDemoAuth(t, { localState = {}, armed = false, killSwitchState = killSwitch.STATES.BLOCK_NEW_EXPOSURE, snapshot, snapshotError, ledgerCounters = {} } = {}) {
   t.mock.method(stateModule, "load", () => ({ ...DEFAULT_STATE, ...localState }));
@@ -74,16 +84,17 @@ function mockDemoAuth(t, { localState = {}, armed = false, killSwitchState = kil
     });
   }
 
+  let readTrustedSnapshotMock;
   if (snapshotError) {
-    t.mock.method(snapshotModule, "readTrustedSnapshot", () => {
+    readTrustedSnapshotMock = t.mock.method(snapshotModule, "readTrustedSnapshot", () => {
       throw snapshotError;
     });
   } else {
     const snap = fakeSnapshot(snapshot);
-    t.mock.method(snapshotModule, "readTrustedSnapshot", () => snap);
+    readTrustedSnapshotMock = t.mock.method(snapshotModule, "readTrustedSnapshot", () => snap);
   }
 
-  return { recorded, usedIds };
+  return { recorded, usedIds, readTrustedSnapshotMock };
 }
 
 module.exports = { mockDemoAuth, fakeSnapshot };

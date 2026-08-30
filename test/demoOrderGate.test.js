@@ -197,13 +197,13 @@ test("classifyStopChange: side=Sell, novo stop SOBE (afrouxa) -> AMBIGUOUS", () 
   assert.equal(classifyStopChange({ stopLoss: 105 }, { isOpened: true, side: "Sell", stopLossPrice: 100 }), OPERATION_KIND.AMBIGUOUS);
 });
 
-test("classifyBybitOperation: leituras -> READ; applyDemoFunds -> ADMINISTRATION; setLeverage -> INCREASE_EXPOSURE; cancel* -> CANCEL; função desconhecida -> AMBIGUOUS", () => {
+test("classifyBybitOperation: leituras -> READ; applyDemoFunds -> ADMINISTRATION; setLeverage -> SAFE_LEVERAGE_REDUCTION; cancel* -> CANCEL; função desconhecida -> AMBIGUOUS", () => {
   assert.equal(classifyBybitOperation("getWalletBalance"), OPERATION_KIND.READ);
   assert.equal(classifyBybitOperation("getPositions"), OPERATION_KIND.READ);
   assert.equal(classifyBybitOperation("getClosedPnl"), OPERATION_KIND.READ);
   assert.equal(classifyBybitOperation("getOpenOrders"), OPERATION_KIND.READ);
   assert.equal(classifyBybitOperation("applyDemoFunds"), OPERATION_KIND.ADMINISTRATION);
-  assert.equal(classifyBybitOperation("setLeverage", { leverage: 2 }), OPERATION_KIND.INCREASE_EXPOSURE);
+  assert.equal(classifyBybitOperation("setLeverage", { leverage: 2 }), OPERATION_KIND.SAFE_LEVERAGE_REDUCTION);
   assert.equal(classifyBybitOperation("cancelOrder"), OPERATION_KIND.CANCEL);
   assert.equal(classifyBybitOperation("cancelAllOrders"), OPERATION_KIND.CANCEL);
   assert.equal(classifyBybitOperation("umaFuncaoQueNaoExiste"), OPERATION_KIND.AMBIGUOUS);
@@ -548,21 +548,188 @@ test("assertDemoOrderAllowed: orderLinkId reutilizado -> DEMO_ORDER_LINK_ID_REUS
   );
 });
 
-test("assertDemoOrderAllowed: setLeverage acima do teto -> bloqueado mesmo com ARMED_DEMO", (t) => {
-  setupMocks(t, { armed: true, snapshot: {} });
+// =====================================================================
+// SAFE_LEVERAGE_REDUCTION -- item 4 da Rodada 6. setLeverage nunca mais
+// é tratado como aumento de exposição: só é autorizado como redução
+// segura com conta flat, e funciona mesmo com o kill switch em
+// BLOCK_NEW_EXPOSURE (armed:false abaixo, em TODOS estes testes) --
+// nunca exige nem cria ARMED_DEMO.
+// =====================================================================
+
+test("assertDemoOrderAllowed: setLeverage acima do teto Demo -> bloqueado mesmo sem ARMED_DEMO/mesmo em BLOCK_NEW_EXPOSURE", (t) => {
+  setupMocks(t, { armed: false, snapshot: {} }); // default: effectiveLeverage="2"
   assert.throws(
     () =>
       assertDemoOrderAllowed({
         env: validDemoEnv(),
         opName: "setLeverage",
-        params: { symbol: "SOLUSDT", leverage: "10" }, // default max=2
+        params: { symbol: "SOLUSDT", leverage: "10", buyLeverage: "10", sellLeverage: "10" }, // default max=2
         now: NOW,
       }),
     (err) => {
-      assert.equal(err.code, "DEMO_RISK_LIMIT_BLOCKED");
-      assert.equal(err.reason, "leverage_exceeds_limit");
+      assert.equal(err.code, "DEMO_SAFE_LEVERAGE_REDUCTION_BLOCKED");
+      assert.equal(err.reason, "leverage_reduction_exceeds_demo_ceiling");
+      assert.equal(err.kind, OPERATION_KIND.SAFE_LEVERAGE_REDUCTION);
       return true;
     }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage 10 -> 2, conta flat, sem ordens -> PERMITIDO mesmo em BLOCK_NEW_EXPOSURE, sem exigir/criar ARMED_DEMO", (t) => {
+  setupMocks(t, { armed: false, snapshot: { symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "10", tradeMode: 0, positionIdx: 0 } } });
+  const result = assertDemoOrderAllowed({
+    env: validDemoEnv(),
+    opName: "setLeverage",
+    params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" },
+    now: NOW,
+  });
+  assert.equal(result.kind, OPERATION_KIND.SAFE_LEVERAGE_REDUCTION);
+});
+
+test("assertDemoOrderAllowed: setLeverage 2 -> 10 (aumento) -> bloqueado, nunca tratado como redução", (t) => {
+  setupMocks(t, { armed: true, snapshot: {} }); // default effectiveLeverage="2" -- mesmo ARMED_DEMO não ajuda, esse caminho nunca olha o kill switch
+  assert.throws(
+    () =>
+      assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "10", buyLeverage: "10", sellLeverage: "10" }, now: NOW }),
+    (err) => {
+      assert.equal(err.code, "DEMO_SAFE_LEVERAGE_REDUCTION_BLOCKED");
+      assert.equal(err.reason, "leverage_reduction_exceeds_demo_ceiling"); // "10" já estoura o teto Demo "2" -- bloqueia antes mesmo de comparar com a efetiva
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage 2 -> 2 (valor igual) -> bloqueado como desnecessário/ambíguo", (t) => {
+  setupMocks(t, { armed: false, snapshot: {} }); // default effectiveLeverage="2"
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" }, now: NOW }),
+    (err) => {
+      assert.equal(err.code, "DEMO_SAFE_LEVERAGE_REDUCTION_BLOCKED");
+      assert.equal(err.reason, "leverage_reduction_unnecessary");
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage com posição real aberta (size>0) -> bloqueado", (t) => {
+  setupMocks(t, {
+    armed: false,
+    snapshot: { symbolState: { hasOpenPosition: true, side: "Buy", qty: "1", entryPrice: "40", stopLossPrice: "38", effectiveLeverage: "10", tradeMode: 0, positionIdx: 0 } },
+  });
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" }, now: NOW }),
+    (err) => {
+      assert.equal(err.reason, "leverage_reduction_position_open");
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage com QUALQUER ordem aberta (mesmo posição flat) -> bloqueado", (t) => {
+  setupMocks(t, { armed: false, snapshot: { openOrders: [{ orderId: "1", symbol: "SOLUSDT", side: "Buy", orderType: "Limit", qty: "1", price: "40", reduceOnly: false }] } });
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" }, now: NOW }),
+    (err) => {
+      assert.equal(err.reason, "leverage_reduction_open_orders_present");
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage com snapshot ausente/velho/corrompido -> bloqueado", (t) => {
+  setupMocks(t, { armed: false, snapshotError: new snapshotModule.SnapshotMissingError() });
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" }, now: NOW }),
+    (err) => {
+      // Bloqueio de snapshot passa por blockedFromCaughtError -- vira
+      // DemoOrderBlockedError com o code/reason ORIGINAIS do erro de
+      // snapshot preservados (nunca perdido/genérico), nunca a classe
+      // SnapshotMissingError diretamente (essa é interna do módulo de
+      // snapshot, o gate sempre normaliza pra DemoOrderBlockedError).
+      assert.equal(err.code, "SNAPSHOT_MISSING");
+      assert.equal(err.kind, OPERATION_KIND.SAFE_LEVERAGE_REDUCTION);
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage com symbolState desconhecido (null) -> bloqueado, nunca assume flat", (t) => {
+  setupMocks(t, { armed: false, snapshot: { symbolState: null } });
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" }, now: NOW }),
+    (err) => {
+      assert.equal(err.reason, "leverage_reduction_state_unknown");
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage com leverage efetiva desconhecida (null) -> bloqueado", (t) => {
+  setupMocks(t, { armed: false, snapshot: { symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: null, tradeMode: 0, positionIdx: 0 } } });
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" }, now: NOW }),
+    (err) => {
+      assert.equal(err.reason, "leverage_reduction_current_unknown");
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage com positionIdx incompatível -> bloqueado", (t) => {
+  setupMocks(t, { armed: false, snapshot: { symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "10", tradeMode: 0, positionIdx: 1 } } });
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" }, now: NOW }),
+    (err) => {
+      assert.equal(err.reason, "leverage_reduction_position_mode_incompatible");
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage com tradeMode inesperado -> bloqueado", (t) => {
+  setupMocks(t, { armed: false, snapshot: { symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "10", tradeMode: 1, positionIdx: 0 } } });
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" }, now: NOW }),
+    (err) => {
+      assert.equal(err.reason, "leverage_reduction_trade_mode_unexpected");
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage com buyLeverage/sellLeverage divergentes -> bloqueado", (t) => {
+  setupMocks(t, { armed: false, snapshot: {} });
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "SOLUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "1.5" }, now: NOW }),
+    (err) => {
+      assert.equal(err.reason, "leverage_reduction_buy_sell_mismatch");
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: setLeverage com metadata de OUTRO símbolo no snapshot -> bloqueado", (t) => {
+  setupMocks(t, { armed: false, snapshot: {} }); // instrumentInfo.symbol default = "SOLUSDT"
+  assert.throws(
+    () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "setLeverage", params: { symbol: "BTCUSDT", leverage: "2", buyLeverage: "2", sellLeverage: "2" }, now: NOW }),
+    (err) => {
+      assert.equal(err.reason, "leverage_reduction_symbol_mismatch");
+      return true;
+    }
+  );
+});
+
+test("assertDemoOrderAllowed: SAFE_LEVERAGE_REDUCTION nunca libera outra mutação -- placeOrder continua exigindo ARMED_DEMO normalmente", (t) => {
+  setupMocks(t, { armed: false, snapshot: {} });
+  assert.throws(
+    () =>
+      assertDemoOrderAllowed({
+        env: validDemoEnv(),
+        opName: "placeOrder",
+        params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", orderLinkId: "demo-safe-lev-isolamento" },
+        now: NOW,
+      }),
+    killSwitch.NewExposureBlockedError
   );
 });
 
