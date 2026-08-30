@@ -22,9 +22,9 @@ async function main() {
     await snapshotModule.captureDemoAccountSnapshot({
       symbol: "SOLUSDT",
       getWalletBalance: async () => ({ totalEquity: "1000" }),
-      getPositions: async () => [],
+      getPositions: async () => [{ symbol: "SOLUSDT", side: "", size: "0", leverage: "2", tradeMode: 0, positionIdx: 0 }],
       getOpenOrders: async () => [],
-      getInstrumentInfo: async () => ({ qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "10", tickSize: "0.01" }),
+      getInstrumentInfo: async () => ({ qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "96000.0", maxMktOrderQty: "12000.0", tickSize: "0.01", minPrice: "0.01", maxPrice: "199999.98", minNotionalValue: "5" }),
     });
     process.stdout.write(JSON.stringify({ ok: true, setup: true }) + "\n");
     return;
@@ -35,7 +35,7 @@ async function main() {
   try {
     const result = gate.assertDemoOrderAllowed({
       opName: "placeOrder",
-      params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "20", stopLoss: "19", reduceOnly: false, orderLinkId },
+      params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "20", leverage: "2", stopLoss: "19", reduceOnly: false, orderLinkId },
       now: Date.now(),
     });
     process.stdout.write(JSON.stringify({ ok: true, kind: result.kind }) + "\n");

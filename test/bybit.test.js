@@ -219,10 +219,69 @@ test("chamadas privadas (placeOrder/getWalletBalance/getPositions/getClosedPnl/s
 test("getInstrumentInfo (pública) continua funcionando sem o gate -- o bloqueio é só pras chamadas privadas", async (t) => {
   withGateDisabledForTest(t);
   t.mock.method(axios, "get", async () => ({
-    data: { retCode: 0, result: { list: [{ lotSizeFilter: { qtyStep: "0.001", minOrderQty: "0.001" }, priceFilter: { tickSize: "0.01" } }] } },
+    data: {
+      retCode: 0,
+      result: {
+        list: [
+          {
+            symbol: "ETHUSDT_TESTE_GATE",
+            lotSizeFilter: { qtyStep: "0.001", minOrderQty: "0.001", maxOrderQty: "1000", maxMktOrderQty: "100", minNotionalValue: "5" },
+            priceFilter: { tickSize: "0.01", minPrice: "0.01", maxPrice: "999999" },
+          },
+        ],
+      },
+    },
   }));
   const info = await bybit.getInstrumentInfo("ETHUSDT_TESTE_GATE"); // símbolo só pra não colidir com o cache de outro teste
   assert.equal(info.tickSize, "0.01");
+});
+
+test("getInstrumentInfo: campo obrigatório ausente (maxOrderQty) -> InstrumentInfoError, nunca null silencioso (item 1 da Rodada 5)", async (t) => {
+  withGateDisabledForTest(t);
+  t.mock.method(axios, "get", async () => ({
+    data: {
+      retCode: 0,
+      result: {
+        list: [
+          {
+            symbol: "ETHUSDT_TESTE_INCOMPLETO",
+            lotSizeFilter: { qtyStep: "0.001", minOrderQty: "0.001", maxMktOrderQty: "100" }, // maxOrderQty ausente
+            priceFilter: { tickSize: "0.01", minPrice: "0.01", maxPrice: "999999" },
+          },
+        ],
+      },
+    },
+  }));
+  await assert.rejects(
+    () => bybit.getInstrumentInfo("ETHUSDT_TESTE_INCOMPLETO"),
+    (err) => {
+      assert.equal(err.code, "INSTRUMENT_INFO_INVALID");
+      assert.equal(err.field, "maxOrderQty");
+      return true;
+    }
+  );
+});
+
+test("getInstrumentInfo: todos os campos devolvidos são string, nunca Number/parseFloat", async (t) => {
+  withGateDisabledForTest(t);
+  t.mock.method(axios, "get", async () => ({
+    data: {
+      retCode: 0,
+      result: {
+        list: [
+          {
+            symbol: "ETHUSDT_TESTE_TIPOS",
+            lotSizeFilter: { qtyStep: "0.001", minOrderQty: "0.001", maxOrderQty: "1000", maxMktOrderQty: "100", minNotionalValue: "5" },
+            priceFilter: { tickSize: "0.01", minPrice: "0.01", maxPrice: "999999" },
+          },
+        ],
+      },
+    },
+  }));
+  const info = await bybit.getInstrumentInfo("ETHUSDT_TESTE_TIPOS");
+  for (const field of ["symbol", "qtyStep", "minOrderQty", "maxOrderQty", "maxMktOrderQty", "tickSize", "minPrice", "maxPrice", "minNotionalValue"]) {
+    assert.equal(typeof info[field], "string", `${field} deveria ser string, veio ${typeof info[field]}`);
+  }
 });
 
 // =====================================================================
@@ -340,6 +399,117 @@ test("integração REAL via bybit.placeOrder(): perfil demo válido + ARMED_DEMO
   assert.equal(capturedBody.orderLinkId, "test-order-link-004");
   assert.equal(capturedBody.qty, "1"); // decimal-safe -- string exata, nunca reconstruída via Number (Bloqueador 1)
   assert.equal(res.orderId, "fake-order-id");
+});
+
+// =====================================================================
+// Rodada 5 -- leverage efetiva da conta, orderType, e limites de
+// preço/notional do instrumento, todos provados via bybit.placeOrder()
+// REAL, sempre confirmando ZERO chamada a axios.post quando bloqueado
+// (falha ocorre antes de HMAC/Axios).
+// =====================================================================
+
+test("integração REAL via bybit.placeOrder(): leverage efetiva da conta '10' com teto '2' -> bloqueado ANTES de qualquer axios.post, mesmo a ordem propondo leverage dentro do teto", async (t) => {
+  withEnv(t, validDemoEnv());
+  enableTradingExecutionForTest(t);
+  mockDemoAuth(t, { armed: true, snapshot: { symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "10", tradeMode: 0, positionIdx: 0 } } });
+
+  let postCalls = 0;
+  t.mock.method(axios, "post", async () => {
+    postCalls++;
+    return { data: { retCode: 0, result: {} } };
+  });
+
+  await assert.rejects(
+    () => bybit.placeOrder({ symbol: "SOLUSDT", side: "Buy", qty: 1, price: 40, stopLoss: 38, orderLinkId: "test-order-link-leverage-1" }),
+    (err) => {
+      assert.equal(err.code, "DEMO_RISK_LIMIT_BLOCKED");
+      assert.equal(err.reason, "effective_leverage_exceeds_limit");
+      return true;
+    }
+  );
+  assert.equal(postCalls, 0, "leverage efetiva acima do teto deveria bloquear ANTES de qualquer axios.post");
+});
+
+test("integração REAL via bybit.placeOrder(): positionIdx efetivo diferente de 0 (hedge mode) -> bloqueado ANTES de qualquer axios.post", async (t) => {
+  withEnv(t, validDemoEnv());
+  enableTradingExecutionForTest(t);
+  mockDemoAuth(t, { armed: true, snapshot: { symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "2", tradeMode: 0, positionIdx: 1 } } });
+
+  let postCalls = 0;
+  t.mock.method(axios, "post", async () => {
+    postCalls++;
+    return { data: { retCode: 0, result: {} } };
+  });
+
+  await assert.rejects(
+    () => bybit.placeOrder({ symbol: "SOLUSDT", side: "Buy", qty: 1, price: 40, stopLoss: 38, orderLinkId: "test-order-link-posidx-1" }),
+    (err) => {
+      assert.equal(err.code, "DEMO_RISK_LIMIT_BLOCKED");
+      assert.equal(err.reason, "position_mode_incompatible");
+      return true;
+    }
+  );
+  assert.equal(postCalls, 0);
+});
+
+test("integração REAL via bybit.placeOrder(): metadata do instrumento incompleta no snapshot -> bloqueado ANTES de qualquer axios.post", async (t) => {
+  withEnv(t, validDemoEnv());
+  enableTradingExecutionForTest(t);
+  mockDemoAuth(t, { armed: true, snapshot: { instrumentInfo: { symbol: "SOLUSDT", qtyStep: "0.1", minOrderQty: "0.1", tickSize: "0.01" } } }); // sem maxOrderQty/maxMktOrderQty/minPrice/maxPrice/minNotionalValue
+
+  let postCalls = 0;
+  t.mock.method(axios, "post", async () => {
+    postCalls++;
+    return { data: { retCode: 0, result: {} } };
+  });
+
+  await assert.rejects(
+    () => bybit.placeOrder({ symbol: "SOLUSDT", side: "Buy", qty: 1, price: 40, stopLoss: 38, orderLinkId: "test-order-link-instrument-1" }),
+    (err) => {
+      assert.equal(err.code, "DEMO_RISK_LIMIT_BLOCKED");
+      assert.equal(err.reason, "instrument_metadata_incomplete");
+      return true;
+    }
+  );
+  assert.equal(postCalls, 0);
+});
+
+test("integração REAL via bybit.placeOrder(): notional abaixo de minNotionalValue -> bloqueado ANTES de qualquer axios.post", async (t) => {
+  withEnv(t, validDemoEnv());
+  enableTradingExecutionForTest(t);
+  mockDemoAuth(t, { armed: true, snapshot: { instrumentInfo: { symbol: "SOLUSDT", qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "96000.0", maxMktOrderQty: "12000.0", tickSize: "0.01", minPrice: "0.01", maxPrice: "199999.98", minNotionalValue: "100" } } });
+
+  let postCalls = 0;
+  t.mock.method(axios, "post", async () => {
+    postCalls++;
+    return { data: { retCode: 0, result: {} } };
+  });
+
+  await assert.rejects(
+    () => bybit.placeOrder({ symbol: "SOLUSDT", side: "Buy", qty: 1, price: 40, stopLoss: 38, orderLinkId: "test-order-link-minnotional-1" }), // notional=40 < minNotionalValue=100
+    (err) => {
+      assert.equal(err.code, "DEMO_RISK_LIMIT_BLOCKED");
+      assert.equal(err.reason, "notional_below_instrument_minimum");
+      return true;
+    }
+  );
+  assert.equal(postCalls, 0);
+});
+
+test("integração REAL via bybit.placeOrder(): leverage efetiva '2' == teto '2' == proposta -> permitido, alcança a rede exatamente 1 vez", async (t) => {
+  withEnv(t, validDemoEnv());
+  enableTradingExecutionForTest(t);
+  mockDemoAuth(t, { armed: true, snapshot: {} }); // default de fakeSnapshot já tem effectiveLeverage:"2", tradeMode:0, positionIdx:0
+
+  let postCalls = 0;
+  t.mock.method(axios, "post", async () => {
+    postCalls++;
+    return { data: { retCode: 0, result: {} } };
+  });
+
+  const res = await bybit.placeOrder({ symbol: "SOLUSDT", side: "Buy", qty: 1, price: 40, stopLoss: 38, orderLinkId: "test-order-link-leverage-ok-1" });
+  assert.equal(postCalls, 1);
+  assert.ok(res);
 });
 
 test("integração REAL via bybit.placeOrder(): mesmo orderLinkId reutilizado numa segunda chamada -> bloqueado, sem segunda chamada de rede (idempotência)", async (t) => {

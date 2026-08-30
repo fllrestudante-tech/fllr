@@ -61,9 +61,14 @@ function enableTradingExecutionForTest(t) {
 
 const GOOD_READS = {
   getWalletBalance: async () => ({ totalEquity: "1000", totalAvailableBalance: "1000", raw: {} }),
-  getPositions: async () => [],
+  // Linha com size="0" pro símbolo (slot inativo) -- ainda assim carrega
+  // leverage/tradeMode/positionIdx efetivos, que o gate exige pra
+  // autorizar aumento de exposição (item 4 da Rodada 5). leverage "2"
+  // bate com o teto default (DEMO_MAX_LEVERAGE) e com o que a ordem de
+  // teste abaixo efetivamente propõe.
+  getPositions: async () => [{ symbol: "SOLUSDT", side: "", size: "0", leverage: "2", tradeMode: 0, positionIdx: 0 }],
   getOpenOrders: async () => [],
-  getInstrumentInfo: async () => ({ qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "10", tickSize: "0.01" }),
+  getInstrumentInfo: async () => ({ qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "96000.0", maxMktOrderQty: "12000.0", tickSize: "0.01", minPrice: "0.01", maxPrice: "199999.98", minNotionalValue: "5" }),
 };
 
 test("refresh -> decisão -> gate -> privatePost mockado: ciclo completo autoriza e alcança a rede mockada", async (t) => {

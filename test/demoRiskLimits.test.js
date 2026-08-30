@@ -114,13 +114,27 @@ test("loadDemoRiskLimitsConfig: config devolvida é congelada (Object.freeze) --
 // teste, não no arredondamento em si (esse é testado à parte).
 // =====================================================================
 
-const INSTRUMENT_INFO = { symbol: "SOLUSDT", qtyStep: "1", minOrderQty: "1", maxOrderQty: "1000", tickSize: "1" };
+const INSTRUMENT_INFO = {
+  symbol: "SOLUSDT",
+  qtyStep: "1",
+  minOrderQty: "1",
+  maxOrderQty: "1000",
+  maxMktOrderQty: "1000",
+  tickSize: "1",
+  minPrice: "0.01",
+  maxPrice: "1000000",
+  minNotionalValue: "0.01",
+};
 
 function baseOrder(overrides = {}) {
-  return { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", leverage: "1", stopLossPrice: "38", orderLinkId: "test-order-link-0001", ...overrides }; // notional = 40 < default 50, qty 1 <= default maxQtyPerOrder(5)
+  return { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", leverage: "1", stopLossPrice: "38", orderLinkId: "test-order-link-0001", ...overrides }; // notional = 40 < default 50, qty 1 <= default maxQtyPerOrder(5)
 }
 function baseState(overrides = {}) {
-  return { openPositionsCount: 0, currentExposureUsd: "0", recentOrderTimestamps: [], lastOrderAt: null, consecutiveErrors: 0, consecutiveLosses: 0, dailyLossPct: 0, ...overrides };
+  // effectiveLeverage default = "1" (bate com baseOrder().leverage) --
+  // tradeMode/positionIdx = one-way/cross, combinação que PASSA pelas
+  // checagens de leverage efetiva/modo de posição da Rodada 5 sem
+  // precisar de override na maioria dos testes que não são sobre isso.
+  return { openPositionsCount: 0, currentExposureUsd: "0", recentOrderTimestamps: [], lastOrderAt: null, consecutiveErrors: 0, consecutiveLosses: 0, dailyLossPct: 0, effectiveLeverage: "1", tradeMode: 0, positionIdx: 0, ...overrides };
 }
 function validate(order, state = baseState(), limits = DEFAULTS, now = NOW, instrumentInfo = INSTRUMENT_INFO) {
   return validateDemoOrder(order, state, limits, now, instrumentInfo);
@@ -132,7 +146,7 @@ test("validateDemoOrder: ordem válida dentro de todos os limites -> allowed=tru
   const result = validate(baseOrder());
   assert.equal(result.allowed, true);
   assert.equal(result.reason, null);
-  assert.deepEqual(result.normalized, { qty: "1", price: "40", leverage: "1", stopLossPrice: "38", notionalUsd: "40", projectedExposureUsd: "40" });
+  assert.deepEqual(result.normalized, { orderType: "Market", qty: "1", price: "40", leverage: "1", stopLossPrice: "38", notionalUsd: "40", projectedExposureUsd: "40" });
 });
 
 test("validateDemoOrder: símbolo fora da allowlist -> bloqueado", () => {
@@ -169,14 +183,118 @@ test("validateDemoOrder: instrumentInfo de OUTRO símbolo -> bloqueado, nunca re
   assert.equal(result.reason, "instrument_metadata_symbol_mismatch");
 });
 
-test("validateDemoOrder: instrumentInfo incompleto (qtyStep/minOrderQty/tickSize ausente) -> bloqueado", () => {
-  for (const field of ["qtyStep", "minOrderQty", "tickSize"]) {
+test("validateDemoOrder: instrumentInfo incompleto (qualquer um dos 8 campos obrigatórios ausente) -> bloqueado (item 1 da Rodada 5)", () => {
+  for (const field of ["qtyStep", "minOrderQty", "maxOrderQty", "maxMktOrderQty", "tickSize", "minPrice", "maxPrice", "minNotionalValue"]) {
     const incomplete = { ...INSTRUMENT_INFO };
     delete incomplete[field];
     const result = validate(baseOrder(), baseState(), LIMITS, NOW, incomplete);
     assert.equal(result.allowed, false, `sem ${field} deveria bloquear`);
     assert.equal(result.reason, "instrument_metadata_incomplete");
   }
+});
+
+// =====================================================================
+// orderType (item 2 da Rodada 5) -- Market usa maxMktOrderQty, Limit usa
+// maxOrderQty, tipo desconhecido bloqueia.
+// =====================================================================
+
+test("validateDemoOrder: orderType ausente/desconhecido -> bloqueado, nunca assume Market/Limit por padrão", () => {
+  for (const orderType of [undefined, "", "Stop", "market", "limit"]) {
+    const result = validate(baseOrder({ orderType }));
+    assert.equal(result.allowed, false, `orderType=${JSON.stringify(orderType)} deveria bloquear`);
+    assert.equal(result.reason, "order_type_unknown");
+  }
+});
+
+test("validateDemoOrder: Market respeita maxMktOrderQty (mais restrito que maxOrderQty)", () => {
+  const instrumentInfo = { ...INSTRUMENT_INFO, maxOrderQty: "1000", maxMktOrderQty: "5" };
+  const overLimit = validate(baseOrder({ orderType: "Market", qty: "6", price: "1" }), baseState(), LIMITS, NOW, instrumentInfo);
+  assert.equal(overLimit.allowed, false);
+  assert.equal(overLimit.reason, "qty_above_instrument_maximum");
+
+  const withinMktLimit = validate(baseOrder({ orderType: "Market", qty: "5", price: "1" }), baseState(), LIMITS, NOW, instrumentInfo);
+  // qty=5 <= maxMktOrderQty(5) -- passa a checagem de teto do instrumento
+  // (pode ainda bloquear por outro limite, mas nunca por
+  // qty_above_instrument_maximum aqui).
+  assert.notEqual(withinMktLimit.reason, "qty_above_instrument_maximum");
+});
+
+test("validateDemoOrder: Limit respeita maxOrderQty (não maxMktOrderQty)", () => {
+  const instrumentInfo = { ...INSTRUMENT_INFO, maxOrderQty: "6", maxMktOrderQty: "1" };
+  // qty=6 excederia maxMktOrderQty(1) se fosse tratado como Market, mas é
+  // Limit -- deve respeitar maxOrderQty(6), nunca bloquear por
+  // qty_above_instrument_maximum aqui.
+  const result = validate(baseOrder({ orderType: "Limit", qty: "6", price: "1" }), baseState(), LIMITS, NOW, instrumentInfo);
+  assert.notEqual(result.reason, "qty_above_instrument_maximum");
+});
+
+// =====================================================================
+// minNotionalValue e min/maxPrice do instrumento (item 3 da Rodada 5)
+// =====================================================================
+
+test("validateDemoOrder: notional abaixo de minNotionalValue -> bloqueado", () => {
+  const instrumentInfo = { ...INSTRUMENT_INFO, minNotionalValue: "10" };
+  const result = validate(baseOrder({ qty: "1", price: "5" }), baseState(), LIMITS, NOW, instrumentInfo); // notional=5 < minNotionalValue=10
+  assert.equal(result.allowed, false);
+  assert.equal(result.reason, "notional_below_instrument_minimum");
+});
+
+test("validateDemoOrder: preço de referência fora de [minPrice, maxPrice] -> bloqueado", () => {
+  const instrumentInfo = { ...INSTRUMENT_INFO, minPrice: "10", maxPrice: "100" };
+  const belowMin = validate(baseOrder({ price: "5", stopLossPrice: "1" }), baseState(), LIMITS, NOW, instrumentInfo);
+  assert.equal(belowMin.allowed, false);
+  assert.equal(belowMin.reason, "price_out_of_instrument_bounds");
+
+  const aboveMax = validate(baseOrder({ price: "500", stopLossPrice: "1" }), baseState(), LIMITS, NOW, instrumentInfo);
+  assert.equal(aboveMax.allowed, false);
+  assert.equal(aboveMax.reason, "price_out_of_instrument_bounds");
+});
+
+test("validateDemoOrder: stop-loss normalizado fora de [minPrice, maxPrice] -> bloqueado", () => {
+  const instrumentInfo = { ...INSTRUMENT_INFO, minPrice: "10", maxPrice: "100" };
+  const result = validate(baseOrder({ side: "Sell", price: "50", stopLossPrice: "5" }), baseState(), LIMITS, NOW, instrumentInfo); // stop=5 < minPrice=10
+  assert.equal(result.allowed, false);
+  assert.equal(result.reason, "stop_loss_out_of_instrument_bounds");
+});
+
+// =====================================================================
+// Leverage efetiva da conta e modo de posição (item 4 da Rodada 5) --
+// NUNCA chama setLeverage, só detecta e bloqueia.
+// =====================================================================
+
+test("validateDemoOrder: leverage efetiva desconhecida (null) -> bloqueado, nunca presume que está ok", () => {
+  const result = validate(baseOrder(), baseState({ effectiveLeverage: null }));
+  assert.equal(result.allowed, false);
+  assert.equal(result.reason, "effective_leverage_unknown");
+});
+
+test("validateDemoOrder: leverage efetiva '10' com teto '2' -> bloqueado com motivo explícito, mesmo a ordem propondo leverage '2'", () => {
+  const result = validate(baseOrder({ leverage: "2" }), baseState({ effectiveLeverage: "10" }));
+  assert.equal(result.allowed, false);
+  assert.equal(result.reason, "effective_leverage_exceeds_limit");
+});
+
+test("validateDemoOrder: leverage efetiva '2' com teto '2' -> passa a checagem de leverage, segue pros demais gates", () => {
+  const result = validate(baseOrder({ leverage: "2" }), baseState({ effectiveLeverage: "2" }));
+  assert.equal(result.allowed, true);
+});
+
+test("validateDemoOrder: leverage proposta diverge da efetiva (mesmo ambas dentro do teto) -> bloqueado", () => {
+  const result = validate(baseOrder({ leverage: "1" }), baseState({ effectiveLeverage: "2" }));
+  assert.equal(result.allowed, false);
+  assert.equal(result.reason, "leverage_mismatch_with_effective");
+});
+
+test("validateDemoOrder: positionIdx desconhecido (null) -> bloqueado", () => {
+  const result = validate(baseOrder(), baseState({ positionIdx: null }));
+  assert.equal(result.allowed, false);
+  assert.equal(result.reason, "position_mode_unknown");
+});
+
+test("validateDemoOrder: positionIdx diferente de 0 (hedge mode) -> bloqueado, bot só monta ordens one-way", () => {
+  const result = validate(baseOrder(), baseState({ positionIdx: 1 }));
+  assert.equal(result.allowed, false);
+  assert.equal(result.reason, "position_mode_incompatible");
 });
 
 test("validateDemoOrder: side desconhecido/inválido -> bloqueado (nunca assume uma direção de arredondamento)", () => {

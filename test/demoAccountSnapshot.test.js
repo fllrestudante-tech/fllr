@@ -26,7 +26,8 @@ function cleanup(dir) {
 
 const NOW = 1_756_000_000_000;
 const ENV = { BYBIT_API_KEY: "fake-key-not-a-real-secret", BYBIT_DEMO: "true" };
-const GOOD_INSTRUMENT_INFO = async () => ({ qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "10", tickSize: "0.01" });
+const FULL_INSTRUMENT = { qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "96000.0", maxMktOrderQty: "12000.0", tickSize: "0.01", minPrice: "0.01", maxPrice: "199999.98", minNotionalValue: "5" };
+const GOOD_INSTRUMENT_INFO = async () => FULL_INSTRUMENT;
 
 // =====================================================================
 // computeCredentialFingerprint -- não-secreto, estável, nunca reversível
@@ -80,7 +81,7 @@ test("captureDemoAccountSnapshot: grava snapshot com exposureUsd conservador, fi
     now: NOW,
     getWalletBalance: async () => ({ totalEquity: "1000" }),
     getPositions: async () => [
-      { symbol: "SOLUSDT", side: "Buy", size: "1", avgPrice: "40", stopLoss: "38" },
+      { symbol: "SOLUSDT", side: "Buy", size: "1", avgPrice: "40", stopLoss: "38", leverage: "2", tradeMode: 0, positionIdx: 0 },
       { symbol: "BTCUSDT", side: "Buy", size: "0", avgPrice: "0" }, // posição zerada -- deve ser filtrada
     ],
     getOpenOrders: async () => [{ symbol: "SOLUSDT", side: "Buy", qty: "1", price: "20", reduceOnly: false, orderLinkId: "x" }],
@@ -91,8 +92,83 @@ test("captureDemoAccountSnapshot: grava snapshot com exposureUsd conservador, fi
   assert.equal(snapshot.exposureUsd, "60"); // 40 (posição) + 20 (ordem aberta não-reduceOnly)
   assert.equal(snapshot.endpoint, "demo");
   assert.equal(snapshot.capturedAtMs, NOW);
-  assert.deepEqual(snapshot.instrumentInfo, { symbol: "SOLUSDT", qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "10", tickSize: "0.01" });
+  assert.deepEqual(snapshot.instrumentInfo, { symbol: "SOLUSDT", ...FULL_INSTRUMENT });
+  assert.deepEqual(snapshot.symbolState, { hasOpenPosition: true, side: "Buy", qty: "1", entryPrice: "40", stopLossPrice: "38", effectiveLeverage: "2", tradeMode: 0, positionIdx: 0 });
   assert.ok(fs.existsSync(snapshotPath));
+});
+
+// =====================================================================
+// symbolState (item 4/5 da Rodada 5) -- leverage efetiva/tradeMode/
+// positionIdx capturados MESMO com size="0" (slot inativo); size="0"
+// NUNCA conta como posição aberta.
+// =====================================================================
+
+test("captureDemoAccountSnapshot: slot com size='0' -- leverage efetiva/tradeMode/positionIdx capturados, hasOpenPosition=false", async (t) => {
+  const { dir, snapshotPath } = tempPath("symbolstate-zero-size");
+  t.after(() => cleanup(dir));
+  const snapshot = await captureDemoAccountSnapshot({
+    env: ENV,
+    snapshotPath,
+    symbol: "SOLUSDT",
+    now: NOW,
+    getWalletBalance: async () => ({ totalEquity: "1000" }),
+    getPositions: async () => [{ symbol: "SOLUSDT", side: "", size: "0", avgPrice: "", leverage: "10", tradeMode: 0, positionIdx: 0 }],
+    getOpenOrders: async () => [],
+    getInstrumentInfo: GOOD_INSTRUMENT_INFO,
+  });
+  assert.equal(snapshot.positions.length, 0, "size=0 nunca conta como posição aberta pra exposição");
+  assert.deepEqual(snapshot.symbolState, { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "10", tradeMode: 0, positionIdx: 0 });
+});
+
+test("captureDemoAccountSnapshot: nenhuma linha pro símbolo -> symbolState null (desconhecido, nunca um palpite)", async (t) => {
+  const { dir, snapshotPath } = tempPath("symbolstate-missing");
+  t.after(() => cleanup(dir));
+  const snapshot = await captureDemoAccountSnapshot({
+    env: ENV,
+    snapshotPath,
+    symbol: "SOLUSDT",
+    now: NOW,
+    getWalletBalance: async () => ({ totalEquity: "1000" }),
+    getPositions: async () => [],
+    getOpenOrders: async () => [],
+    getInstrumentInfo: GOOD_INSTRUMENT_INFO,
+  });
+  assert.equal(snapshot.symbolState, null);
+});
+
+test("captureDemoAccountSnapshot: múltiplas linhas pro símbolo (hedge mode) -> symbolState null (ambíguo, nunca um palpite)", async (t) => {
+  const { dir, snapshotPath } = tempPath("symbolstate-hedge");
+  t.after(() => cleanup(dir));
+  const snapshot = await captureDemoAccountSnapshot({
+    env: ENV,
+    snapshotPath,
+    symbol: "SOLUSDT",
+    now: NOW,
+    getWalletBalance: async () => ({ totalEquity: "1000" }),
+    getPositions: async () => [
+      { symbol: "SOLUSDT", side: "Buy", size: "0", leverage: "2", tradeMode: 1, positionIdx: 1 },
+      { symbol: "SOLUSDT", side: "Sell", size: "0", leverage: "2", tradeMode: 1, positionIdx: 2 },
+    ],
+    getOpenOrders: async () => [],
+    getInstrumentInfo: GOOD_INSTRUMENT_INFO,
+  });
+  assert.equal(snapshot.symbolState, null);
+});
+
+test("captureDemoAccountSnapshot: leverage efetiva ilegível -> effectiveLeverage null dentro de symbolState (nunca um valor inventado)", async (t) => {
+  const { dir, snapshotPath } = tempPath("symbolstate-bad-leverage");
+  t.after(() => cleanup(dir));
+  const snapshot = await captureDemoAccountSnapshot({
+    env: ENV,
+    snapshotPath,
+    symbol: "SOLUSDT",
+    now: NOW,
+    getWalletBalance: async () => ({ totalEquity: "1000" }),
+    getPositions: async () => [{ symbol: "SOLUSDT", side: "", size: "0", leverage: "", tradeMode: 0, positionIdx: 0 }],
+    getOpenOrders: async () => [],
+    getInstrumentInfo: GOOD_INSTRUMENT_INFO,
+  });
+  assert.equal(snapshot.symbolState.effectiveLeverage, null);
 });
 
 test("captureDemoAccountSnapshot: getInstrumentInfo incompleto (sem qtyStep/minOrderQty/tickSize) -> lança IncompleteInstrumentInfoError, nunca grava snapshot parcial", async (t) => {
@@ -162,7 +238,7 @@ test("readTrustedSnapshot: schemaVersion inesperado -> SnapshotCorruptError", (t
 test("readTrustedSnapshot: campos essenciais ausentes (positions/openOrders/exposureUsd) -> SnapshotCorruptError", (t) => {
   const { dir, snapshotPath } = tempPath("read-corrupt-fields");
   t.after(() => cleanup(dir));
-  fs.writeFileSync(snapshotPath, JSON.stringify({ schemaVersion: 2, capturedAtMs: NOW, credentialFingerprint: "sha256:x" }));
+  fs.writeFileSync(snapshotPath, JSON.stringify({ schemaVersion: 3, capturedAtMs: NOW, credentialFingerprint: "sha256:x" }));
   assert.throws(() => readTrustedSnapshot({ env: ENV, snapshotPath, now: NOW }), SnapshotCorruptError);
 });
 
@@ -219,7 +295,7 @@ test("readTrustedSnapshot: instrumentInfo presente mas incompleto no arquivo bru
   fs.writeFileSync(
     snapshotPath,
     JSON.stringify({
-      schemaVersion: 2,
+      schemaVersion: 3,
       capturedAtMs: NOW,
       credentialFingerprint: computeCredentialFingerprint(ENV.BYBIT_API_KEY),
       endpoint: "demo",

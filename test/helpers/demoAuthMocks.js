@@ -12,7 +12,7 @@ const { DEFAULT_STATE } = stateModule;
 
 function fakeSnapshot(overrides = {}) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     credentialFingerprint: "sha256:fake",
     capturedAtMs: Date.now(),
     endpoint: "demo",
@@ -20,7 +20,23 @@ function fakeSnapshot(overrides = {}) {
     positions: [],
     openOrders: [],
     exposureUsd: "0",
-    instrumentInfo: { symbol: "SOLUSDT", qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "10", tickSize: "0.01" },
+    instrumentInfo: {
+      symbol: "SOLUSDT",
+      qtyStep: "0.1",
+      minOrderQty: "0.1",
+      maxOrderQty: "96000.0",
+      maxMktOrderQty: "12000.0",
+      tickSize: "0.01",
+      minPrice: "0.01",
+      maxPrice: "199999.98",
+      minNotionalValue: "5",
+    },
+    // Default: leverage efetiva "2" == teto default (DEMO_MAX_LEVERAGE),
+    // tradeMode cross, positionIdx one-way -- combinação que PASSA pelas
+    // checagens da Rodada 5 sem precisar de override na maioria dos
+    // testes; testes que querem provar bloqueio sobrescrevem via
+    // `snapshot: { symbolState: {...} }`.
+    symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "2", tradeMode: 0, positionIdx: 0 },
     ...overrides,
   };
 }

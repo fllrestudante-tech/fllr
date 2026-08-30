@@ -35,7 +35,7 @@ function validDemoEnv(overrides = {}) {
 
 function fakeSnapshot(overrides = {}) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     credentialFingerprint: "sha256:fake",
     capturedAtMs: NOW,
     endpoint: "demo",
@@ -43,7 +43,18 @@ function fakeSnapshot(overrides = {}) {
     positions: [],
     openOrders: [],
     exposureUsd: "0",
-    instrumentInfo: { symbol: "SOLUSDT", qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "10", tickSize: "0.01" },
+    instrumentInfo: {
+      symbol: "SOLUSDT",
+      qtyStep: "0.1",
+      minOrderQty: "0.1",
+      maxOrderQty: "96000.0",
+      maxMktOrderQty: "12000.0",
+      tickSize: "0.01",
+      minPrice: "0.01",
+      maxPrice: "199999.98",
+      minNotionalValue: "5",
+    },
+    symbolState: { hasOpenPosition: false, side: null, qty: null, entryPrice: null, stopLossPrice: null, effectiveLeverage: "2", tradeMode: 0, positionIdx: 0 },
     ...overrides,
   };
 }
@@ -101,54 +112,54 @@ function setupMocks(t, { localState = {}, armed = false, killSwitchState = killS
 // =====================================================================
 
 test("classifyPlaceOrder: sem posição aberta, reduceOnly ausente -> INCREASE_EXPOSURE", () => {
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: 1 }, { isOpened: false }), OPERATION_KIND.INCREASE_EXPOSURE);
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: 1 }, { isOpened: false }), OPERATION_KIND.INCREASE_EXPOSURE);
 });
 
 test("classifyPlaceOrder: sem posição aberta, reduceOnly=true -> AMBIGUOUS (nada a reduzir)", () => {
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: 1, reduceOnly: true }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: 1, reduceOnly: true }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
 });
 
 test("classifyPlaceOrder: mesmo lado da posição aberta -> INCREASE_EXPOSURE (adicionando)", () => {
-  const pos = { isOpened: true, side: "Buy", qty: 2 };
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: 1 }, pos), OPERATION_KIND.INCREASE_EXPOSURE);
+  const pos = { isOpened: true, side: "Buy", orderType: "Market", qty: 2 };
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: 1 }, pos), OPERATION_KIND.INCREASE_EXPOSURE);
 });
 
 test("classifyPlaceOrder: mesmo lado + reduceOnly=true -> AMBIGUOUS (incoerente, nunca reduz)", () => {
-  const pos = { isOpened: true, side: "Buy", qty: 2 };
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: 1, reduceOnly: true }, pos), OPERATION_KIND.AMBIGUOUS);
+  const pos = { isOpened: true, side: "Buy", orderType: "Market", qty: 2 };
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: 1, reduceOnly: true }, pos), OPERATION_KIND.AMBIGUOUS);
 });
 
 test("classifyPlaceOrder: lado oposto + reduceOnly!=true -> AMBIGUOUS (exige explicitação, nunca infere)", () => {
-  const pos = { isOpened: true, side: "Buy", qty: 2 };
+  const pos = { isOpened: true, side: "Buy", orderType: "Market", qty: 2 };
   assert.equal(classifyPlaceOrder({ side: "Sell", qty: 1 }, pos), OPERATION_KIND.AMBIGUOUS);
 });
 
 test("classifyPlaceOrder: lado oposto + reduceOnly=true + qty <= posição -> REDUCE_EXPOSURE", () => {
-  const pos = { isOpened: true, side: "Buy", qty: 2 };
+  const pos = { isOpened: true, side: "Buy", orderType: "Market", qty: 2 };
   assert.equal(classifyPlaceOrder({ side: "Sell", qty: 1, reduceOnly: true }, pos), OPERATION_KIND.REDUCE_EXPOSURE);
 });
 
 test("classifyPlaceOrder: lado oposto + reduceOnly=true + qty EXATAMENTE igual à posição -> REDUCE_EXPOSURE (fechamento total)", () => {
-  const pos = { isOpened: true, side: "Buy", qty: 2 };
+  const pos = { isOpened: true, side: "Buy", orderType: "Market", qty: 2 };
   assert.equal(classifyPlaceOrder({ side: "Sell", qty: 2, reduceOnly: true }, pos), OPERATION_KIND.REDUCE_EXPOSURE);
 });
 
 test("classifyPlaceOrder: lado oposto + reduceOnly=true + qty MAIOR que a posição -> AMBIGUOUS (reverteria pro lado oposto)", () => {
-  const pos = { isOpened: true, side: "Buy", qty: 2 };
+  const pos = { isOpened: true, side: "Buy", orderType: "Market", qty: 2 };
   assert.equal(classifyPlaceOrder({ side: "Sell", qty: 3, reduceOnly: true }, pos), OPERATION_KIND.AMBIGUOUS);
 });
 
 test("classifyPlaceOrder: side inválido ou qty inválida -> AMBIGUOUS", () => {
   assert.equal(classifyPlaceOrder({ side: "Long", qty: 1 }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: 0 }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: -1 }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: NaN }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: 0 }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: -1 }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: NaN }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
 });
 
 test("classifyPlaceOrder: qty como STRING decimal (formato real do body Bybit) -- mesmo comportamento que number", () => {
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: "1.5" }, { isOpened: false }), OPERATION_KIND.INCREASE_EXPOSURE);
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: "0" }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
-  assert.equal(classifyPlaceOrder({ side: "Buy", qty: "1e10" }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS); // notação científica rejeitada
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: "1.5" }, { isOpened: false }), OPERATION_KIND.INCREASE_EXPOSURE);
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: "0" }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS);
+  assert.equal(classifyPlaceOrder({ side: "Buy", orderType: "Market", qty: "1e10" }, { isOpened: false }), OPERATION_KIND.AMBIGUOUS); // notação científica rejeitada
 });
 
 test("classifyStopChange: stopLoss ausente do payload (só trailing/TP parcial) -> PROTECTIVE_STOP", () => {
@@ -239,12 +250,12 @@ test("assertDemoOrderAllowed: assinatura pública ignora QUALQUER campo extra qu
   const result = assertDemoOrderAllowed({
     env: validDemoEnv(),
     opName: "placeOrder",
-    params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId },
+    params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId },
     now: NOW,
     killSwitchPath: "/tmp/nao-existe/nada.json",
     ledgerPath: "/tmp/nao-existe/nada2.json",
     outcomesPath: "/tmp/nao-existe/nada3.json",
-    loadState: () => ({ isOpened: true, side: "Buy", qty: 999, entryPrice: 999 }), // tentativa de spoof via parâmetro -- deve ser ignorada
+    loadState: () => ({ isOpened: true, side: "Buy", orderType: "Market", qty: 999, entryPrice: 999 }), // tentativa de spoof via parâmetro -- deve ser ignorada
     lockPath: "/tmp/nao-existe/nada4.lock",
     snapshotPath: "/tmp/nao-existe/nada5.json",
   });
@@ -268,7 +279,7 @@ test("assertDemoOrderAllowed: fora do perfil demo -> DEMO_ORDER_WRONG_PROFILE", 
       assertDemoOrderAllowed({
         env: { SUPERVISOR_PROFILE: "safe" },
         opName: "placeOrder",
-        params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", reduceOnly: false, orderLinkId: createOrderLinkId() },
+        params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", reduceOnly: false, orderLinkId: createOrderLinkId() },
         now: NOW,
       }),
     (err) => {
@@ -285,7 +296,7 @@ test("assertDemoOrderAllowed: INCREASE_EXPOSURE sem ARMED_DEMO -> NewExposureBlo
       assertDemoOrderAllowed({
         env: validDemoEnv(),
         opName: "placeOrder",
-        params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", reduceOnly: false, orderLinkId: createOrderLinkId() },
+        params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", reduceOnly: false, orderLinkId: createOrderLinkId() },
         now: NOW,
       }),
     killSwitch.NewExposureBlockedError
@@ -299,7 +310,7 @@ test("assertDemoOrderAllowed: INCREASE_EXPOSURE armado mas SEM snapshot confiáv
       assertDemoOrderAllowed({
         env: validDemoEnv(),
         opName: "placeOrder",
-        params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
+        params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
         now: NOW,
       }),
     (err) => {
@@ -321,7 +332,7 @@ for (const [label, ErrorClass, ctorArgs] of [
       assertDemoOrderAllowed({
         env: validDemoEnv(),
         opName: "placeOrder",
-        params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
+        params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
         now: NOW,
       })
     );
@@ -335,7 +346,7 @@ test("assertDemoOrderAllowed: erros consecutivos ilegíveis (outcomes corrompido
       assertDemoOrderAllowed({
         env: validDemoEnv(),
         opName: "placeOrder",
-        params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
+        params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
         now: NOW,
       }),
     (err) => {
@@ -351,12 +362,12 @@ test("assertDemoOrderAllowed: INCREASE_EXPOSURE com ARMED_DEMO + snapshot fresco
   const result = assertDemoOrderAllowed({
     env: validDemoEnv(),
     opName: "placeOrder",
-    params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId },
+    params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId },
     now: NOW,
   });
   assert.equal(result.kind, "INCREASE_EXPOSURE");
   assert.equal(result.orderLinkId, orderLinkId);
-  assert.deepEqual(result.normalized, { qty: "1", price: "40", leverage: "2", stopLossPrice: "38", notionalUsd: "40", projectedExposureUsd: "40" });
+  assert.deepEqual(result.normalized, { orderType: "Market", qty: "1", price: "40", leverage: "2", stopLossPrice: "38", notionalUsd: "40", projectedExposureUsd: "40" });
   assert.equal(recorded.length, 1);
   assert.equal(recorded[0].orderLinkId, orderLinkId);
 });
@@ -366,13 +377,13 @@ test("assertDemoOrderAllowed: exposição do SNAPSHOT (posição + ordens aberta
   // não-reduceOnly (exposição adicional já contabilizada em exposureUsd
   // pelo próprio snapshot, ver lib/demoAccountSnapshot.js::computeConservativeExposureUsd) --
   // a nova ordem de 40 USD projetada por cima disso estoura o teto default (50).
-  setupMocks(t, { armed: true, snapshot: { positions: [{ symbol: "SOLUSDT", side: "Buy", qty: "1", entryPrice: "45" }], exposureUsd: "45" } });
+  setupMocks(t, { armed: true, snapshot: { positions: [{ symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", entryPrice: "45" }], exposureUsd: "45" } });
   assert.throws(
     () =>
       assertDemoOrderAllowed({
         env: validDemoEnv(),
         opName: "placeOrder",
-        params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
+        params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
         now: NOW,
       }),
     (err) => {
@@ -392,7 +403,7 @@ test("assertDemoOrderAllowed: qty com casas decimais além do qtyStep do instrum
   const result = assertDemoOrderAllowed({
     env: validDemoEnv(),
     opName: "placeOrder",
-    params: { symbol: "SOLUSDT", side: "Buy", qty: "1.999", price: "20", stopLoss: "19", reduceOnly: false, orderLinkId },
+    params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1.999", price: "20", stopLoss: "19", reduceOnly: false, orderLinkId },
     now: NOW,
   });
   assert.equal(result.normalized.qty, "1.9"); // NUNCA 2.0 -- floor, nunca round
@@ -407,7 +418,7 @@ test("assertDemoOrderAllowed: instrumentInfo passado em params é IGNORADO -- nu
   const result = assertDemoOrderAllowed({
     env: validDemoEnv(),
     opName: "placeOrder",
-    params: { symbol: "SOLUSDT", side: "Buy", qty: "1.999", price: "20", stopLoss: "19", reduceOnly: false, orderLinkId, instrumentInfo: { symbol: "SOLUSDT", qtyStep: "1", minOrderQty: "1", maxOrderQty: "100", tickSize: "1" } },
+    params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1.999", price: "20", stopLoss: "19", reduceOnly: false, orderLinkId, instrumentInfo: { symbol: "SOLUSDT", qtyStep: "1", minOrderQty: "1", maxOrderQty: "100", tickSize: "1" } },
     now: NOW,
   });
   assert.equal(result.normalized.qty, "1.9", "instrumentInfo forjado em params nunca deveria ter sido usado");
@@ -420,7 +431,7 @@ test("assertDemoOrderAllowed: instrumentInfo do snapshot de OUTRO símbolo -> bl
       assertDemoOrderAllowed({
         env: validDemoEnv(),
         opName: "placeOrder",
-        params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
+        params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId: createOrderLinkId() },
         now: NOW,
       }),
     (err) => {
@@ -431,11 +442,11 @@ test("assertDemoOrderAllowed: instrumentInfo do snapshot de OUTRO símbolo -> bl
 });
 
 test("assertDemoOrderAllowed: notional usado pelo gate NUNCA é subestimado -- preço de referência sempre arredondado pra cima (item 2 da Rodada 4)", (t) => {
-  setupMocks(t, { armed: true, snapshot: { instrumentInfo: { symbol: "SOLUSDT", qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "10", tickSize: "0.01" } } });
+  setupMocks(t, { armed: true, snapshot: { instrumentInfo: { symbol: "SOLUSDT", qtyStep: "0.1", minOrderQty: "0.1", maxOrderQty: "10", maxMktOrderQty: "10", tickSize: "0.01", minPrice: "0.01", maxPrice: "199999.98", minNotionalValue: "5" } } });
   const result = assertDemoOrderAllowed({
     env: validDemoEnv(),
     opName: "placeOrder",
-    params: { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "20.001", stopLoss: "19", reduceOnly: false, orderLinkId: createOrderLinkId() },
+    params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "20.001", stopLoss: "19", reduceOnly: false, orderLinkId: createOrderLinkId() },
     now: NOW,
   });
   assert.equal(result.normalized.price, "20.01"); // nunca 20.00
@@ -450,7 +461,7 @@ test("assertDemoOrderAllowed: INCREASE_EXPOSURE com ARMED_DEMO mas violando limi
       assertDemoOrderAllowed({
         env: validDemoEnv(),
         opName: "placeOrder",
-        params: { symbol: "SOLUSDT", side: "Buy", qty: "2", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId }, // notional=80 > default maxNotionalUsdPerOrder(50)
+        params: { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "2", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId }, // notional=80 > default maxNotionalUsdPerOrder(50)
         now: NOW,
       }),
     (err) => {
@@ -463,7 +474,7 @@ test("assertDemoOrderAllowed: INCREASE_EXPOSURE com ARMED_DEMO mas violando limi
 });
 
 test("assertDemoOrderAllowed: REDUCE_EXPOSURE permitido MESMO com kill switch em BLOCK_NEW_EXPOSURE e SEM snapshot (usa melhor informação disponível)", (t) => {
-  setupMocks(t, { localState: { isOpened: true, side: "Buy", qty: 2, entryPrice: 40 }, armed: false, snapshotError: new snapshotModule.SnapshotMissingError() });
+  setupMocks(t, { localState: { isOpened: true, side: "Buy", orderType: "Market", qty: 2, entryPrice: 40 }, armed: false, snapshotError: new snapshotModule.SnapshotMissingError() });
   const result = assertDemoOrderAllowed({
     env: validDemoEnv(),
     opName: "placeOrder",
@@ -474,7 +485,7 @@ test("assertDemoOrderAllowed: REDUCE_EXPOSURE permitido MESMO com kill switch em
 });
 
 test("assertDemoOrderAllowed: PROTECTIVE_STOP permitido MESMO com kill switch em BLOCK_NEW_EXPOSURE e SEM snapshot", (t) => {
-  setupMocks(t, { localState: { isOpened: true, side: "Buy", qty: 2, entryPrice: 40, stopLossPrice: 38 }, armed: false, snapshotError: new snapshotModule.SnapshotMissingError() });
+  setupMocks(t, { localState: { isOpened: true, side: "Buy", orderType: "Market", qty: 2, entryPrice: 40, stopLossPrice: 38 }, armed: false, snapshotError: new snapshotModule.SnapshotMissingError() });
   const result = assertDemoOrderAllowed({
     env: validDemoEnv(),
     opName: "setTradingStop",
@@ -493,7 +504,7 @@ test("assertDemoOrderAllowed: CANCEL (cancelOrder/cancelAllOrders) permitido MES
 });
 
 test("assertDemoOrderAllowed: ação AMBÍGUA nunca é permitida, mesmo com ARMED_DEMO", (t) => {
-  setupMocks(t, { localState: { isOpened: true, side: "Buy", qty: 2, entryPrice: 40 }, armed: true, snapshot: {} });
+  setupMocks(t, { localState: { isOpened: true, side: "Buy", orderType: "Market", qty: 2, entryPrice: 40 }, armed: true, snapshot: {} });
   assert.throws(
     () =>
       assertDemoOrderAllowed({
@@ -513,7 +524,7 @@ test("assertDemoOrderAllowed: orderLinkId ausente em INCREASE_EXPOSURE -> bloque
       assertDemoOrderAllowed({
         env: validDemoEnv(),
         opName: "placeOrder",
-        params: { side: "Buy", qty: "1", price: "40", reduceOnly: false },
+        params: { side: "Buy", orderType: "Market", qty: "1", price: "40", reduceOnly: false },
         now: NOW,
       }),
     (err) => {
@@ -526,7 +537,7 @@ test("assertDemoOrderAllowed: orderLinkId ausente em INCREASE_EXPOSURE -> bloque
 test("assertDemoOrderAllowed: orderLinkId reutilizado -> DEMO_ORDER_LINK_ID_REUSED, segunda tentativa idêntica nunca reprocessada", (t) => {
   setupMocks(t, { armed: true, snapshot: {} });
   const orderLinkId = createOrderLinkId();
-  const params = { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId };
+  const params = { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId };
   assertDemoOrderAllowed({ env: validDemoEnv(), opName: "placeOrder", params, now: NOW });
   assert.throws(
     () => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "placeOrder", params, now: NOW + 1000 }),
@@ -571,10 +582,11 @@ test("assertDemoOrderAllowed: campos de risco INVENTADOS no `params` (simulando 
   // SNAPSHOT AUTENTICADO (única fonte aceita pra autorizar aumento,
   // Bloqueador 3) mostra 1 posição já aberta -- o snapshot sempre
   // prevalece, nunca os campos soltos em params.
-  setupMocks(t, { armed: true, snapshot: { positions: [{ symbol: "SOLUSDT", side: "Buy", qty: "1", entryPrice: "40" }], exposureUsd: "40" } });
+  setupMocks(t, { armed: true, snapshot: { positions: [{ symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", entryPrice: "40" }], exposureUsd: "40" } });
   const spoofedParams = {
     symbol: "SOLUSDT",
     side: "Buy",
+    orderType: "Market",
     qty: "1",
     price: "40",
     reduceOnly: false,
@@ -622,7 +634,7 @@ test("buildTrustedDemoRiskState: função interna de classificação/telemetria 
 test("intra-processo: duas tentativas com o MESMO orderLinkId disparadas via Promise.all -- só uma é gravada, a outra é rejeitada por reuso", async (t) => {
   setupMocks(t, { armed: true, snapshot: {} });
   const orderLinkId = createOrderLinkId();
-  const params = { symbol: "SOLUSDT", side: "Buy", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId };
+  const params = { symbol: "SOLUSDT", side: "Buy", orderType: "Market", qty: "1", price: "40", stopLoss: "38", reduceOnly: false, orderLinkId };
   const run = () => Promise.resolve().then(() => assertDemoOrderAllowed({ env: validDemoEnv(), opName: "placeOrder", params, now: NOW }));
   const results = await Promise.allSettled([run(), run()]);
   const fulfilled = results.filter((r) => r.status === "fulfilled");
