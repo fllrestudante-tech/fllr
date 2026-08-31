@@ -403,6 +403,113 @@ Test-Case "varredura: Crypto10-Start.ps1 -- log do perfil demo cita o symbol, nu
     Assert-False ($content -match "BYBIT_API_KEY|BYBIT_API_SECRET") "o script nunca deveria referenciar credenciais"
 }
 
+# =======================================================================
+# DEMO_PRIVATE_READ_ENABLED -- item 3 desta rodada (falta identificada na
+# auditoria de crash-loop: sem isto, o dashboard nunca reporta
+# privateReadReady=true no perfil demo, mesmo com o clock preflight ok).
+# =======================================================================
+
+Test-Case "varredura: Crypto10-Start.ps1 -- perfil demo injeta DEMO_PRIVATE_READ_ENABLED=true explicitamente (exatamente 1 atribuicao no arquivo inteiro, dentro do ramo demo)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    $assignments = [regex]::Matches($content, '\$env:DEMO_PRIVATE_READ_ENABLED\s*=\s*"true"')
+    Assert-Equal -Expected 1 -Actual $assignments.Count "deveria haver exatamente 1 atribuicao de DEMO_PRIVATE_READ_ENABLED=true no arquivo, dentro do ramo demo"
+    Assert-True ($content -match 'if\s*\(\$SupervisorProfile\s*-eq\s*"demo"\)\s*\{[\s\S]*?\$env:DEMO_PRIVATE_READ_ENABLED\s*=\s*"true"[\s\S]*?\}\s*else\s*\{') "a atribuicao precisa estar dentro do ramo demo, nunca incondicional"
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 -- perfil safe REMOVE DEMO_PRIVATE_READ_ENABLED explicitamente (nunca recebe leitura privada demo)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    Assert-True ($content -match 'Remove-Item\s+Env:\\DEMO_PRIVATE_READ_ENABLED') "o ramo safe precisa remover DEMO_PRIVATE_READ_ENABLED explicitamente"
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 -- DEMO_PRIVATE_READ_ENABLED so e setado DEPOIS de -DemoExecutionMode e -Symbol ja validados (mesmo bloco 'if demo', nunca antes das checagens fail-closed do topo do arquivo)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    $checkModeIdx = $content.IndexOf('IsNullOrEmpty($DemoExecutionMode)')
+    $checkSymbolIdx = $content.IndexOf('IsNullOrEmpty($Symbol)')
+    $grantIdx = $content.IndexOf('$env:DEMO_PRIVATE_READ_ENABLED = "true"')
+    Assert-True ($checkModeIdx -ge 0 -and $checkSymbolIdx -ge 0 -and $grantIdx -ge 0) "nao encontrou um dos tres marcadores esperados"
+    Assert-True ($checkModeIdx -lt $grantIdx -and $checkSymbolIdx -lt $grantIdx) "DEMO_PRIVATE_READ_ENABLED precisa ser setado DEPOIS das duas checagens fail-closed, nunca antes"
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 salva e restaura DEMO_PRIVATE_READ_ENABLED no mesmo padrao ja usado pros outros vars (previousDemoPrivateReadEnabled / finally)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    Assert-True ($content -match '\$previousDemoPrivateReadEnabled\s*=\s*\$env:DEMO_PRIVATE_READ_ENABLED') "nao salva o valor original antes de sobrescrever"
+    Assert-True ($content -match 'finally\s*\{[\s\S]*?previousDemoPrivateReadEnabled[\s\S]*?\}') "nao restaura DEMO_PRIVATE_READ_ENABLED num bloco finally"
+}
+
+Test-Case "varredura: TRADING_EXECUTION_ENABLED continua SEMPRE 'false' mesmo com DEMO_PRIVATE_READ_ENABLED=true -- leitura privada nunca implica autorizacao de mutacao" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    # A MESMA linha incondicional de sempre, fora de qualquer ramo --
+    # confirma que adicionar DEMO_PRIVATE_READ_ENABLED nao criou nenhum
+    # caminho novo que também habilite TRADING_EXECUTION_ENABLED.
+    $assignments = [regex]::Matches($content, '\$env:TRADING_EXECUTION_ENABLED\s*=\s*"(true|false)"')
+    Assert-Equal -Expected 1 -Actual $assignments.Count "deveria haver exatamente 1 atribuicao de TRADING_EXECUTION_ENABLED no arquivo inteiro"
+    Assert-True ($assignments[0].Value.Contains('"false"')) "a unica atribuicao precisa ser 'false'"
+}
+
+# =======================================================================
+# Get-Crypto10SupervisorRunLogPaths -- item 4 desta rodada (achado real:
+# nomes fixos "supervisor.out.log"/"supervisor.err.log" eram RECRIADOS a
+# cada Start-Process, apagando o log da execucao anterior -- foi assim que
+# a causa exata do crash-loop do "bot" ficou irrecuperavel numa auditoria
+# real).
+# =======================================================================
+
+Test-Case "Get-Crypto10SupervisorRunLogPaths: duas chamadas seguidas devolvem caminhos DIFERENTES (nunca sobrescreve a execucao anterior)" {
+    $fakeLogDir = Join-Path ([System.IO.Path]::GetTempPath()) ("crypto10-test-logpaths-" + [Guid]::NewGuid().ToString("N"))
+    try {
+        $first = Get-Crypto10SupervisorRunLogPaths -LogDir $fakeLogDir
+        Set-Content -LiteralPath $first.OutLog -Value "execucao 1 -- erro X aqui"
+        Start-Sleep -Milliseconds 5
+        $second = Get-Crypto10SupervisorRunLogPaths -LogDir $fakeLogDir
+        Assert-True ($first.OutLog -ne $second.OutLog) "duas chamadas nao deveriam gerar o mesmo nome de arquivo"
+        Assert-True ($first.ErrLog -ne $second.ErrLog)
+        Assert-True (Test-Path -LiteralPath $first.OutLog) "o log da execucao anterior precisa continuar existindo (nunca apagado silenciosamente por uma nova chamada)"
+        Assert-Equal -Expected "execucao 1 -- erro X aqui" -Actual (Get-Content -LiteralPath $first.OutLog -Raw).TrimEnd()
+    } finally {
+        Remove-Item -LiteralPath $fakeLogDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Test-Case "Get-Crypto10SupervisorRunLogPaths: retencao limitada -- nao deixa a pasta crescer sem limite, mas preserva as execucoes mais recentes" {
+    $fakeLogDir = Join-Path ([System.IO.Path]::GetTempPath()) ("crypto10-test-retention-" + [Guid]::NewGuid().ToString("N"))
+    try {
+        $generated = @()
+        for ($i = 0; $i -lt 12; $i++) {
+            $paths = Get-Crypto10SupervisorRunLogPaths -LogDir $fakeLogDir -RetentionCount 3
+            Set-Content -LiteralPath $paths.OutLog -Value "execucao $i"
+            Set-Content -LiteralPath $paths.ErrLog -Value ""
+            $generated += $paths
+            Start-Sleep -Milliseconds 5
+        }
+        $remainingOut = @(Get-ChildItem -LiteralPath $fakeLogDir -Filter "supervisor.out.*.log" -File)
+        Assert-True ($remainingOut.Count -le 3) "retencao deveria limitar a no maximo 3 arquivos out (achou $($remainingOut.Count))"
+        # A ULTIMA execucao gerada precisa ter sobrevivido -- retencao
+        # remove os mais ANTIGOS, nunca os mais recentes.
+        Assert-True (Test-Path -LiteralPath $generated[-1].OutLog) "a execucao mais recente precisa ter sobrevivido a retencao"
+        Assert-False (Test-Path -LiteralPath $generated[0].OutLog) "a execucao mais antiga deveria ter sido removida pela retencao"
+    } finally {
+        Remove-Item -LiteralPath $fakeLogDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Test-Case "Get-Crypto10SupervisorRunLogPaths: nomes de arquivo nunca contem nada alem de timestamp/sufixo seguro (sem espaco, sem caractere de path traversal)" {
+    $fakeLogDir = Join-Path ([System.IO.Path]::GetTempPath()) ("crypto10-test-safename-" + [Guid]::NewGuid().ToString("N"))
+    try {
+        $paths = Get-Crypto10SupervisorRunLogPaths -LogDir $fakeLogDir
+        $outName = [System.IO.Path]::GetFileName($paths.OutLog)
+        Assert-True ($outName -match '^supervisor\.out\.\d{8}-\d{9}-[a-z0-9]{4}\.log$') "nome de arquivo fora do padrao esperado: $outName"
+    } finally {
+        Remove-Item -LiteralPath $fakeLogDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 usa Get-Crypto10SupervisorRunLogPaths (nunca mais o nome fixo 'supervisor.out.log'/'supervisor.err.log')" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    Assert-True ($content -match 'Get-Crypto10SupervisorRunLogPaths') "Crypto10-Start.ps1 precisa usar a funcao de logs por-execucao"
+    Assert-False ($content -match '"supervisor\.out\.log"') "nome fixo antigo nao deveria mais aparecer no codigo"
+    Assert-False ($content -match '"supervisor\.err\.log"') "nome fixo antigo nao deveria mais aparecer no codigo"
+}
+
 Test-Case "varredura: Crypto10-Start.ps1 salva os valores originais de SUPERVISOR_PROFILE/TRADING_EXECUTION_ENABLED ANTES de sobrescrever e os restaura num 'finally' apos o spawn (nao executa o script real -- so confirma a estrutura de save/restore no codigo)" {
     $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
     Assert-True ($content -match '\$previousSupervisorProfile\s*=\s*\$env:SUPERVISOR_PROFILE') "nao salva o valor original de SUPERVISOR_PROFILE antes de sobrescrever"

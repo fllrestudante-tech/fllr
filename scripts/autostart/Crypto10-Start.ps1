@@ -129,6 +129,7 @@ try {
         $previousSupervisorProfile = $env:SUPERVISOR_PROFILE
         $previousDemoExecutionMode = $env:DEMO_EXECUTION_MODE
         $previousSymbol = $env:SYMBOL
+        $previousDemoPrivateReadEnabled = $env:DEMO_PRIVATE_READ_ENABLED
         $previousTradingExecutionEnabled = $env:TRADING_EXECUTION_ENABLED
         $env:SUPERVISOR_PROFILE = $SupervisorProfile
         if ($SupervisorProfile -eq "demo") {
@@ -139,24 +140,48 @@ try {
             # process.env -- com isto ja setado aqui, o SYMBOL do .env e
             # ignorado pelo filho, exatamente a garantia exigida.
             $env:SYMBOL = $Symbol
+            # DEMO_PRIVATE_READ_ENABLED="true" -- SOMENTE aqui, dentro do
+            # ramo demo, e SOMENTE porque -DemoExecutionMode ja foi
+            # validado como exatamente "observe" (ValidateSet, checagem no
+            # topo do arquivo) e -Symbol ja foi validado como exatamente
+            # "SOLUSDT" (idem) ANTES deste ponto -- nenhum dos tres nunca
+            # chega aqui com valor diferente. Habilita SOMENTE leitura
+            # privada demo (lib/demoOrderGate.js::assertDemoPrivateReadAllowed);
+            # NUNCA autoriza mutacao por si so -- isso continua exigindo
+            # TRADING_EXECUTION_ENABLED=true (linha abaixo, sempre "false"
+            # aqui) E o gate canonico de ordem. Sem isto, o dashboard nunca
+            # reporta privateReadReady=true e a leitura de snapshot do bot
+            # nunca teria como funcionar mesmo com o clock preflight ok
+            # (achado real desta auditoria).
+            $env:DEMO_PRIVATE_READ_ENABLED = "true"
         } else {
             Remove-Item Env:\DEMO_EXECUTION_MODE -ErrorAction SilentlyContinue
+            Remove-Item Env:\DEMO_PRIVATE_READ_ENABLED -ErrorAction SilentlyContinue
             # Perfil safe nunca roda o "bot" (unico consumidor de SYMBOL) --
             # nao toca em $env:SYMBOL de proposito aqui, pra preservar
-            # EXATAMENTE o comportamento de antes desta rodada.
+            # EXATAMENTE o comportamento de antes desta rodada. Perfil
+            # safe tambem NUNCA recebe leitura privada demo -- removido
+            # explicitamente, nunca herdado do .env (que tambem nao o
+            # define hoje, mas a remocao aqui e a garantia real, nao a
+            # ausencia no .env).
         }
         $env:TRADING_EXECUTION_ENABLED = "false"
 
         $today = Get-Date -Format "yyyy-MM-dd"
         $logDir = Join-Path $paths.LogsDir $today
         if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
-        # Nomeado "supervisor.out/err.log" (nao "supervisor.log") pra nunca
-        # colidir com o log por-componente que scripts/supervisor.js ja
-        # escreve pros FILHOS dele (lib/logRotation.js) -- isto aqui e so a
-        # saida de topo do PROPRIO processo supervisor, que hoje so vai pro
-        # terminal quando rodado interativamente.
-        $outLog = Join-Path $logDir "supervisor.out.log"
-        $errLog = Join-Path $logDir "supervisor.err.log"
+        # Nomeado "supervisor.out/err.<timestamp>.log" (nao "supervisor.log"
+        # nem um nome fixo) pra nunca colidir com o log por-componente que
+        # scripts/supervisor.js ja escreve pros FILHOS dele (lib/
+        # logRotation.js), E pra nunca sobrescrever silenciosamente o log
+        # da execucao ANTERIOR -- Start-Process -RedirectStandardOutput/
+        # -Error RECRIA (trunca) o arquivo a cada lancamento; um nome fixo
+        # apagaria a evidencia de uma falha assim que o wrapper rodasse de
+        # novo (achado real desta auditoria). Retencao limitada embutida
+        # em Get-Crypto10SupervisorRunLogPaths -- nunca cresce sem limite.
+        $logPaths = Get-Crypto10SupervisorRunLogPaths -LogDir $logDir
+        $outLog = $logPaths.OutLog
+        $errLog = $logPaths.ErrLog
 
         # Log so cita o SIMBOLO -- nunca credenciais/chaves, mesma
         # disciplina de todo log deste projeto.
@@ -171,6 +196,7 @@ try {
             if ($null -eq $previousSupervisorProfile) { Remove-Item Env:\SUPERVISOR_PROFILE -ErrorAction SilentlyContinue } else { $env:SUPERVISOR_PROFILE = $previousSupervisorProfile }
             if ($null -eq $previousDemoExecutionMode) { Remove-Item Env:\DEMO_EXECUTION_MODE -ErrorAction SilentlyContinue } else { $env:DEMO_EXECUTION_MODE = $previousDemoExecutionMode }
             if ($null -eq $previousSymbol) { Remove-Item Env:\SYMBOL -ErrorAction SilentlyContinue } else { $env:SYMBOL = $previousSymbol }
+            if ($null -eq $previousDemoPrivateReadEnabled) { Remove-Item Env:\DEMO_PRIVATE_READ_ENABLED -ErrorAction SilentlyContinue } else { $env:DEMO_PRIVATE_READ_ENABLED = $previousDemoPrivateReadEnabled }
             if ($null -eq $previousTradingExecutionEnabled) { Remove-Item Env:\TRADING_EXECUTION_ENABLED -ErrorAction SilentlyContinue } else { $env:TRADING_EXECUTION_ENABLED = $previousTradingExecutionEnabled }
         }
     }

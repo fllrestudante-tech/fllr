@@ -408,6 +408,56 @@ function Write-Crypto10AutostartLog {
     }
 }
 
+function Get-Crypto10SupervisorRunLogPaths {
+    <#
+    .SYNOPSIS
+    Devolve caminhos de log POR EXECUCAO pro stdout/stderr do processo
+    supervisor.js de topo (Start-Process -RedirectStandardOutput/-Error) --
+    nunca o nome fixo "supervisor.out.log"/"supervisor.err.log" de antes
+    desta rodada, que Start-Process RECRIA (trunca) a cada novo lancamento,
+    apagando silenciosamente o erro da execucao anterior (achado real de
+    uma auditoria de crash-loop: o log que teria a causa exata da falha do
+    "bot" foi perdido assim). Nome inclui timestamp com milissegundos
+    (nunca colide entre execucoes na mesma sessao) + um sufixo aleatorio
+    curto (nunca colide mesmo se duas execucoes comecarem no mesmo
+    milissegundo, ex.: duas instancias do wrapper disparadas quase juntas).
+    Retencao: mantem só as `$RetentionCount` execucoes mais recentes (par
+    out+err junto) NESTE diretorio de log do dia -- apaga o excedente MAIS
+    ANTIGO antes de devolver os caminhos novos, nunca depois (nunca deixa
+    a pasta crescer sem limite, mas sempre preserva o suficiente pra
+    diagnosticar a execucao anterior antes de qualquer limpeza).
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$LogDir,
+        [Parameter(Mandatory = $false)][int]$RetentionCount = 8
+    )
+    if (-not (Test-Path -LiteralPath $LogDir)) {
+        New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+    }
+
+    # @(...) forca array mesmo com 0/1 resultado -- sem isto, Get-ChildItem
+    # com exatamente 1 arquivo devolve um FileInfo solto (sem propriedade
+    # .Count), o que quebra sob Set-StrictMode (achado real rodando os
+    # testes desta rodada).
+    $existingOut = @(Get-ChildItem -LiteralPath $LogDir -Filter "supervisor.out.*.log" -File -ErrorAction SilentlyContinue | Sort-Object Name)
+    if ($existingOut.Count -ge $RetentionCount) {
+        $excess = $existingOut.Count - $RetentionCount + 1
+        $toRemove = $existingOut | Select-Object -First $excess
+        foreach ($old in $toRemove) {
+            $errCounterpart = Join-Path $LogDir ($old.Name -replace '^supervisor\.out\.', 'supervisor.err.')
+            Remove-Item -LiteralPath $old.FullName -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $errCounterpart -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    $stamp = (Get-Date).ToString("yyyyMMdd-HHmmssfff")
+    $suffix = -join ((48..57 + 97..122) | Get-Random -Count 4 | ForEach-Object { [char]$_ })
+    return [PSCustomObject]@{
+        OutLog = Join-Path $LogDir "supervisor.out.$stamp-$suffix.log"
+        ErrLog = Join-Path $LogDir "supervisor.err.$stamp-$suffix.log"
+    }
+}
+
 function Get-Crypto10PortOccupant {
     <#
     .SYNOPSIS
