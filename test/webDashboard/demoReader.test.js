@@ -341,12 +341,32 @@ test("readDemo: lastAnalysis/lastHypotheticalDecision ausentes -> null, nunca in
   assert.equal(result.lastHypotheticalDecision, null);
 });
 
-test("readDemo: agentRouterStatus='shadow' quando já existe lastAiAssessment; 'offline' quando nunca rodou", () => {
+test("readDemo: agentRouterStatus='shadow' quando já existe lastAiAssessment; 'offline' quando nunca rodou (com AGENTROUTER_BUDGET_ENABLED=true)", () => {
+  const envBudgetOn = { ...VALID_DEMO_ENV, AGENTROUTER_BUDGET_ENABLED: "true" };
   const withAssessment = readDemo(
-    baseArgs({ env: VALID_DEMO_ENV, loadState: fakeLoadState({ lastAiAssessment: { at: "2026-08-30T10:00:00.000Z", recommendation: "hold", marketRegime: "normal", riskLevel: "low" } }) })
+    baseArgs({ env: envBudgetOn, loadState: fakeLoadState({ lastAiAssessment: { at: "2026-08-30T10:00:00.000Z", recommendation: "hold", marketRegime: "normal", riskLevel: "low" } }) })
   );
   assert.equal(withAssessment.agentRouterStatus, "shadow");
 
-  const withoutAssessment = readDemo(baseArgs({ env: VALID_DEMO_ENV, loadState: fakeLoadState({ lastAiAssessment: null }) }));
+  const withoutAssessment = readDemo(baseArgs({ env: envBudgetOn, loadState: fakeLoadState({ lastAiAssessment: null }) }));
   assert.equal(withoutAssessment.agentRouterStatus, "offline");
+});
+
+test("readDemo: agentRouterStatus='budget_disabled' quando AGENTROUTER_BUDGET_ENABLED ausente ou != 'true' -- nunca finge avaliação recente nem omite o campo", () => {
+  const withAssessmentButFlagAbsent = readDemo(
+    baseArgs({ env: VALID_DEMO_ENV, loadState: fakeLoadState({ lastAiAssessment: { at: "2026-08-30T10:00:00.000Z", recommendation: "hold", marketRegime: "normal", riskLevel: "low" } }) })
+  );
+  assert.equal(withAssessmentButFlagAbsent.agentRouterStatus, "budget_disabled");
+  assert.ok("agentRouterStatus" in withAssessmentButFlagAbsent);
+
+  const flagFalse = readDemo(
+    baseArgs({
+      env: { ...VALID_DEMO_ENV, AGENTROUTER_BUDGET_ENABLED: "false" },
+      loadState: fakeLoadState({ lastAiAssessment: { at: "2026-08-30T10:00:00.000Z", recommendation: "hold", marketRegime: "normal", riskLevel: "low" } }),
+    })
+  );
+  assert.equal(flagFalse.agentRouterStatus, "budget_disabled");
+
+  const flagGarbage = readDemo(baseArgs({ env: { ...VALID_DEMO_ENV, AGENTROUTER_BUDGET_ENABLED: "yes" } }));
+  assert.equal(flagGarbage.agentRouterStatus, "budget_disabled");
 });

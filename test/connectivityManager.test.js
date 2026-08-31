@@ -3,6 +3,8 @@ const assert = require("node:assert/strict");
 const {
   checkInternetReachable,
   checkProviderHealth,
+  checkTelegramHealth,
+  __resetTelegramHealthThrottleForTests,
   classifyConnectivity,
   severityForReason,
   createConnectivityMonitor,
@@ -156,4 +158,64 @@ test("formatIncidentMessage: inclui resumo de resync quando fornecido", () => {
   const incident = { reason: "internet_down", startedAt: 0, endedAt: 60000, durationMs: 60000 };
   const msg = formatIncidentMessage(incident, { resyncSummary: "candles: 1/1 recuperados" });
   assert.match(msg, /candles: 1\/1 recuperados/);
+});
+
+// =====================================================================
+// checkTelegramHealth -- getMe é health check puro (nunca fonte de
+// entrada/comando), com throttle pra evitar sondar toda hora.
+// =====================================================================
+
+test("checkTelegramHealth: sem token -> ok:true, skipped:true, ZERO chamada de rede", async () => {
+  let getCalls = 0;
+  const result = await checkTelegramHealth({ botToken: "", get: async () => { getCalls++; return { data: { ok: true } }; } });
+  assert.deepEqual(result, { ok: true, error: null, skipped: true });
+  assert.equal(getCalls, 0);
+});
+
+test("checkTelegramHealth: chama getMe (só GET, nunca getUpdates/webhook) com a URL correta", async () => {
+  __resetTelegramHealthThrottleForTests();
+  const urls = [];
+  const result = await checkTelegramHealth({ botToken: "TOKEN123", get: async (url) => { urls.push(url); return { data: { ok: true } }; }, now: () => 1000 });
+  assert.equal(result.ok, true);
+  assert.equal(urls.length, 1);
+  assert.equal(urls[0], "https://api.telegram.org/botTOKEN123/getMe");
+});
+
+test("checkTelegramHealth: throttle -- 2ª chamada dentro de throttleMs devolve o resultado CACHEADO, ZERO chamada de rede nova, marcado throttled:true", async (t) => {
+  __resetTelegramHealthThrottleForTests();
+  let getCalls = 0;
+  const opts = { botToken: "TOKEN123", get: async () => { getCalls++; return { data: { ok: true } }; }, now: () => 1000, throttleMs: 300000 };
+
+  const first = await checkTelegramHealth(opts);
+  const second = await checkTelegramHealth({ ...opts, now: () => 1000 + 60000 }); // 1min depois, dentro da janela de 5min
+
+  assert.equal(getCalls, 1);
+  assert.equal(first.throttled, undefined);
+  assert.equal(second.ok, true);
+  assert.equal(second.throttled, true);
+});
+
+test("checkTelegramHealth: após throttleMs expirar, sonda de novo (não fica preso no cache pra sempre)", async () => {
+  __resetTelegramHealthThrottleForTests();
+  let getCalls = 0;
+  const opts = { botToken: "TOKEN123", get: async () => { getCalls++; return { data: { ok: true } }; }, throttleMs: 1000 };
+
+  await checkTelegramHealth({ ...opts, now: () => 1000 });
+  await checkTelegramHealth({ ...opts, now: () => 1000 + 2000 }); // além da janela de 1000ms
+
+  assert.equal(getCalls, 2);
+});
+
+test("checkTelegramHealth: uma FALHA também é cacheada pelo throttle (nunca martela retry automático dentro da janela)", async () => {
+  __resetTelegramHealthThrottleForTests();
+  let getCalls = 0;
+  const opts = { botToken: "TOKEN123", get: async () => { getCalls++; throw new Error("timeout simulado"); }, throttleMs: 300000 };
+
+  const first = await checkTelegramHealth({ ...opts, now: () => 1000 });
+  const second = await checkTelegramHealth({ ...opts, now: () => 1000 + 1000 });
+
+  assert.equal(getCalls, 1);
+  assert.equal(first.ok, false);
+  assert.equal(second.ok, false);
+  assert.equal(second.throttled, true);
 });

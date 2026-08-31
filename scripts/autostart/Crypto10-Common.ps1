@@ -365,7 +365,12 @@ function Get-Crypto10DashboardPortFromLog {
     $pattern = [regex]"Dashboard Operacional em http://127\.0\.0\.1:(\d+)"
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     while ((Get-Date) -lt $deadline) {
-        $today = Get-Date -Format "yyyy-MM-dd"
+        # UTC explicito -- MESMA convencao de lib/logRotation.js:13
+        # (toISOString().slice(0,10), tambem UTC). Antes desta rodada isto
+        # usava hora LOCAL, o que fazia esta funcao procurar na pasta ERRADA
+        # durante a janela em que data local != data UTC (ex.: ~21h-24h em
+        # UTC-3) -- bug real, nao so estetico.
+        $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
         $logPath = Join-Path $paths.LogsDir (Join-Path $today "dashboard_server.log")
         if (Test-Path -LiteralPath $logPath -PathType Leaf) {
             $content = $null
@@ -395,13 +400,18 @@ function Write-Crypto10AutostartLog {
         [Parameter(Mandatory = $false)][string]$Component = "autostart",
         [Parameter(Mandatory = $false)][switch]$NoConsole
     )
-    $today = Get-Date -Format "yyyy-MM-dd"
+    # UTC explicito com "Z" em pasta E timestamp -- MESMA convencao de
+    # lib/logRotation.js (ver comentario daquele arquivo). Nunca hora local
+    # (antes desta rodada, autostart.log usava local+offset enquanto os logs
+    # por-componente do Node ja usavam UTC -- mistura silenciosa de fuso
+    # entre arquivos do mesmo dia).
+    $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
     $dir = Join-Path (Join-Path $RepoRoot "logs") $today
     if (-not (Test-Path -LiteralPath $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
     }
     $logPath = Join-Path $dir "$Component.log"
-    $timestamp = (Get-Date).ToString("o")
+    $timestamp = (Get-Date).ToUniversalTime().ToString("o")
     Add-Content -LiteralPath $logPath -Value "[$timestamp] $Message"
     if (-not $NoConsole) {
         Write-Host $Message
@@ -450,7 +460,9 @@ function Get-Crypto10SupervisorRunLogPaths {
         }
     }
 
-    $stamp = (Get-Date).ToString("yyyyMMdd-HHmmssfff")
+    # UTC explicito -- "Z" anexado como sufixo literal (nao ha specifier de
+    # formato custom nativo do .NET pra isso fora do formato round-trip "o").
+    $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssfff") + "Z"
     $suffix = -join ((48..57 + 97..122) | Get-Random -Count 4 | ForEach-Object { [char]$_ })
     return [PSCustomObject]@{
         OutLog = Join-Path $LogDir "supervisor.out.$stamp-$suffix.log"
@@ -519,6 +531,6 @@ function Set-Crypto10BrowserOpenedMarker {
     if (-not (Test-Path -LiteralPath $paths.AutostartDir)) {
         New-Item -ItemType Directory -Path $paths.AutostartDir -Force | Out-Null
     }
-    $marker = @{ pid = $SupervisorProcessId; startedAt = $StartedAt; openedAt = (Get-Date).ToString("o") }
+    $marker = @{ pid = $SupervisorProcessId; startedAt = $StartedAt; openedAt = (Get-Date).ToUniversalTime().ToString("o") }
     $marker | ConvertTo-Json | Set-Content -LiteralPath $paths.BrowserMarkerFile
 }

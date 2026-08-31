@@ -1,6 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { getAssessment, computeContextCompleteness, hashContext, sanitizeErrorCode } = require("../../lib/aiGateway/aiGateway");
+const fs = require("fs");
+const { getAssessment, computeContextCompleteness, hashContext, sanitizeErrorCode, DEFAULT_PROVIDERS, isAgentRouterConfigured } = require("../../lib/aiGateway/aiGateway");
+const config = require("../../config");
 // Provider real (produção) -- usado só no teste de lifecycle/prompt legado
 // do gate (mais abaixo) pra capturar o prompt de verdade construído por
 // lib/aiGateway/promptBuilder.js, em vez de inventar uma estrutura de
@@ -392,15 +394,29 @@ function validAssessmentMeta(overrides = {}) {
   return { triggerReason: "quant_signal", lastClosedCandleTimestampMs: 1_756_000_000_000, ...overrides };
 }
 
-/** dbProvider fake -- nunca abre nada de verdade, só conta chamadas a closeDb() (fechamento determinístico). */
+/** dbProvider fake -- nunca abre nada de verdade, só conta chamadas a closeDb() (fechamento determinístico).
+ * getDb() expõe um `.prepare().get()` mínimo (gasto mensal sempre 0) só pra
+ * satisfazer a checagem de teto mensal (agentRouterEnvBudget.js) que roda
+ * ANTES da policy fake entrar em cena -- nunca toca SQLite de verdade. */
 function fakeDbProvider() {
-  const provider = { getDb: () => ({ marker: "fake-db-never-real" }), closeDb: () => {}, closeDbCalls: 0 };
+  const provider = {
+    getDb: () => ({ marker: "fake-db-never-real", prepare: () => ({ get: () => ({ total: 0 }) }) }),
+    closeDb: () => {},
+    closeDbCalls: 0,
+  };
   const realClose = provider.closeDb;
   provider.closeDb = () => {
     provider.closeDbCalls += 1;
     realClose();
   };
   return provider;
+}
+
+/** env de orçamento fake, válido e coerente (5 USD/dia, 100 USD/mês) -- satisfaz
+ * a nova checagem fail-closed de agentRouterEnvBudget.js sem depender de
+ * process.env real nem escolher limites de produção. */
+function fakeEnvBudget(overrides = {}) {
+  return { env: { AGENTROUTER_DAILY_BUDGET_USD: "5", AGENTROUTER_MONTHLY_BUDGET_USD: "100", ...overrides } };
 }
 
 /** transporte fake que FALHA IMEDIATAMENTE se chamado -- prova de "zero rede" por construção, não por inspeção. */
@@ -417,6 +433,7 @@ function fakeAgentRouterGate({ runAgentRouterPromptImpl } = {}) {
   return {
     dbProvider,
     policy: { marker: "fake-policy-never-real" },
+    envBudget: fakeEnvBudget(),
     createBudgetedClient: (args) => {
       createBudgetedClientCalls.push(args);
       return { runAgentRouterPrompt: runAgentRouterPromptImpl || (async () => ({ text: "{}", usage: null })) };
@@ -480,6 +497,81 @@ test("gate desligado: erro do agentrouter mantém status:\"error\" e o fallback 
   // como sempre foi -- a sanitização nova (fix pós-4c2) só se aplica a
   // isAgentRouterGated && fallbackAllowed===true, nunca aqui.
   assert.equal(logs[0].providerAttempts[0].error, "agentrouter indisponível");
+});
+
+// =====================================================================
+// CRÍTICO -- achado da re-verificação pós-implementação (round de auditoria
+// do coordenador): isAgentRouterGated (usado no loop mais abaixo) SÓ
+// controlava se o WRAPPER de orçamento era aplicado -- nunca controlava se
+// "agentrouter" era sequer TENTADO. Com AI_PROVIDER_ORDER incluindo
+// "agentrouter" (que é exatamente o .env real deste projeto hoje) e
+// ~/.codex/config.toml presente, DEFAULT_PROVIDERS.agentrouter.hasKey()
+// retornava true mesmo com a flag de orçamento desligada -- o loop de
+// getAssessment() chamaria o provider pelo caminho LEGADO/NÃO-GATEADO
+// (client cru, sem orçamento), alcançando de verdade
+// agentrouterClientWithConfig.runAgentRouterPrompt -> processo Codex CLI
+// real. Corrigido em DEFAULT_PROVIDERS.agentrouter.hasKey (agora exige
+// config.ai.agentRouterBudgetEnabled). Os testes abaixo traçam a cadeia
+// COMPLETA até isAgentRouterConfigured() (a função que checa
+// ~/.codex/config.toml, o único portão antes do processo Codex CLI em si),
+// não só até o "gate" lógico -- exatamente o cenário real de produção
+// (AI_PROVIDER_ORDER=agentrouter,anthropic,openai, config.toml presente).
+// =====================================================================
+
+// config.ai.agentRouterBudgetEnabled é uma propriedade de DADO (não
+// getter/setter) -- t.mock.method exige uma função de implementação e não
+// se aplica aqui; save/restore manual do valor original é o padrão correto
+// pra este caso (mesmo efeito de mock, sem a API de mock).
+function withAgentRouterBudgetEnabled(value, fn) {
+  const original = config.ai.agentRouterBudgetEnabled;
+  config.ai.agentRouterBudgetEnabled = value;
+  try {
+    return fn();
+  } finally {
+    config.ai.agentRouterBudgetEnabled = original;
+  }
+}
+
+test("DEFAULT_PROVIDERS.agentrouter.hasKey(): flag de orçamento OFF -> false SEMPRE, mesmo com ~/.codex/config.toml presente (isAgentRouterConfigured()=true simulado)", (t) => {
+  t.mock.method(fs, "existsSync", () => true); // simula ~/.codex/config.toml presente
+  withAgentRouterBudgetEnabled(false, () => {
+    assert.equal(isAgentRouterConfigured(), true, "precondição: config.toml simulado como presente");
+    assert.equal(DEFAULT_PROVIDERS.agentrouter.hasKey(), false, "hasKey() deveria ser false com a flag de orçamento desligada, independente de isAgentRouterConfigured()");
+  });
+});
+
+test("DEFAULT_PROVIDERS.agentrouter.hasKey(): flag de orçamento ON + config.toml presente -> true (comportamento inalterado quando a flag está ligada)", (t) => {
+  t.mock.method(fs, "existsSync", () => true);
+  withAgentRouterBudgetEnabled(true, () => {
+    assert.equal(DEFAULT_PROVIDERS.agentrouter.hasKey(), true);
+  });
+});
+
+test("getAssessment (produção real, DEFAULT_PROVIDERS, SEM providers/agentRouterGate injetados): providerOrder com agentrouter primeiro + config.toml presente + flag OFF -> ZERO tentativa de agentrouter, prova ATIVA até isAgentRouterConfigured() -- cenário real de produção (.env deste projeto tem AI_PROVIDER_ORDER=agentrouter,anthropic,openai)", async (t) => {
+  t.mock.method(fs, "existsSync", () => true); // ~/.codex/config.toml "presente"
+
+  // providerOrder restrito a SÓ "agentrouter" de propósito -- prova exatamente
+  // o que precisa ser provado (agentrouter nunca é tentado) sem depender de
+  // anthropic/openai não terem chave real configurada no .env deste projeto
+  // (que TÊM -- ver .env real), o que arriscaria alcançar callProvider() de
+  // um client de rede de verdade se o providerOrder incluísse esses nomes
+  // aqui. DEFAULT_PROVIDERS.agentrouter continua sendo o objeto de produção
+  // real e não-mockado (só isAgentRouterConfigured()/fs.existsSync acima).
+  await withAgentRouterBudgetEnabled(false, async () => {
+    const logs = [];
+    const result = await getAssessment(
+      { symbol: "SOLUSDT", interval: "1", riskState: {}, position: {}, quant: { signal: "wait", price: 1, indicators: {} } },
+      {
+        providerOrder: ["agentrouter"],
+        // providers OMITIDO -- usa DEFAULT_PROVIDERS de verdade (produção real)
+        logAssessment: (record) => logs.push(record),
+      }
+    );
+
+    assert.equal(result.ai.provider, null);
+    assert.equal(logs[0].status, "no_provider_available");
+    assert.deepEqual(logs[0].attempted, [], "agentrouter não deveria ter sido tentado -- hasKey() teria que ser false");
+  });
 });
 
 test("gate ligado: assessmentMeta ausente -> agentrouter_fatal, nenhum provider seguinte tentado, status superior provider_error", async () => {
@@ -927,6 +1019,196 @@ test("gate ligado: caminho feliz -- providerAttempts carrega taskClass/assessmen
   assert.ok(!logs[0].prompt.user.includes("taskClass"));
   assert.ok(!(logs[0].rawResponseText || "").includes("assessmentKey"));
   assert.equal(gate.dbProvider.closeDbCalls, 1);
+});
+
+// =====================================================================
+// gate ligado + agentRouterEnvBudget.js -- camada fail-closed adicional
+// (AGENTROUTER_DAILY_BUDGET_USD/AGENTROUTER_MONTHLY_BUDGET_USD), roda ANTES
+// de qualquer chamada ao AgentRouter, mesmo com policy/dbProvider fakes
+// válidos injetados pelo teste.
+// =====================================================================
+
+test("gate ligado: AGENTROUTER_DAILY_BUDGET_USD/AGENTROUTER_MONTHLY_BUDGET_USD ausentes do env -> ZERO chamadas a createBudgetedClient, agentrouter_fatal, fallback não tentado", async () => {
+  const logs = [];
+  const openaiCalls = [];
+  const gate = fakeAgentRouterGate();
+  gate.envBudget = { env: {} }; // nenhuma das duas variáveis setada
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: {
+        agentrouter: fakeAgentRouterProviderEntry(),
+        openai: { provider: { name: "openai", callProvider: async () => { openaiCalls.push(1); return {}; }, normalize: () => bullishAssessment }, client: {}, hasKey: () => true },
+      },
+      providerOrder: ["agentrouter", "openai"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, null);
+  assert.equal(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+  assert.equal(gate.createBudgetedClientCalls.length, 0);
+  assert.equal(openaiCalls.length, 0); // caminho fatal PARA o loop, nunca degrada pro próximo provider
+});
+
+test("gate ligado: AGENTROUTER_MONTHLY_BUDGET_USD < AGENTROUTER_DAILY_BUDGET_USD (incoerente) -> ZERO chamadas a createBudgetedClient, agentrouter_fatal", async () => {
+  const gate = fakeAgentRouterGate();
+  gate.envBudget = { env: { AGENTROUTER_DAILY_BUDGET_USD: "10", AGENTROUTER_MONTHLY_BUDGET_USD: "5" } };
+  const logs = [];
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry() },
+      providerOrder: ["agentrouter"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, null);
+  assert.equal(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+  assert.equal(gate.createBudgetedClientCalls.length, 0);
+});
+
+test("gate ligado: gasto mensal já esgotado (SUM do ledger >= teto) -> ZERO chamadas a createBudgetedClient, agentrouter_fatal, mesmo com policy/ledger diário fake válidos", async () => {
+  const gate = fakeAgentRouterGate();
+  gate.dbProvider = {
+    getDb: () => ({ prepare: () => ({ get: () => ({ total: 100_000_000 }) }) }), // gasto mensal já no teto
+    closeDb: () => {},
+    closeDbCalls: 0,
+  };
+  gate.envBudget = fakeEnvBudget(); // 5 USD/dia, 100 USD/mês -- 100 já gasto = esgotado
+  const logs = [];
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry() },
+      providerOrder: ["agentrouter"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, null);
+  assert.equal(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+  assert.equal(gate.createBudgetedClientCalls.length, 0);
+});
+
+// Prova end-to-end com SQLite REAL (não mock de db) -- responde diretamente
+// à dúvida "o teto mensal é só validado na config e depois ignorado na
+// prática, ou impede de verdade uma reserva?". Usa o MESMO
+// runMigrations/schema real do ledger de produção (agentRouterLedger.js),
+// insere uma linha 'confirmed' real que já esgota o teto mensal, e confirma
+// que getAssessment() nunca chega em createBudgetedClient -- sem nenhum
+// stub de `prepare`/`get`.
+test("gate ligado: teto mensal REALMENTE aplicado contra um ledger SQLite real (schema de produção, sem nenhum mock de db) -- reserva é impedida de verdade quando o mês já gastou o suficiente", async (t) => {
+  const fsReal = require("fs");
+  const os = require("os");
+  const path = require("path");
+  const Database = require("better-sqlite3");
+  const { runMigrations, MIGRATIONS_DIR } = require("../../lib/infra/db");
+
+  const dir = fsReal.mkdtempSync(path.join(os.tmpdir(), "bot-cripto10-aigw-monthlyreal-"));
+  const db = new Database(path.join(dir, "test.db"));
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
+  runMigrations(db, MIGRATIONS_DIR);
+
+  const monthStartMs = Date.UTC(2026, 7, 1, 0, 0, 0, 0); // agosto/2026 UTC
+  db.prepare(
+    `INSERT INTO agentrouter_budget_ledger
+      (idempotency_key, correlation_id, model, task_class, status,
+       estimated_micros_usd, reserved_micros_usd, confirmed_micros_usd,
+       price_source_status, pricing_table_version,
+       budget_window_start_ms, budget_window_end_ms, budget_window_timezone,
+       created_at, created_at_ms, expires_at_ms)
+     VALUES ('real-e2e-key-1', 'real-e2e-corr-1', 'gpt-5.6-sol', 'triage', 'confirmed',
+       100000000, 100000000, 100000000,
+       'observed', 'v1',
+       ?, ?, 'America/Sao_Paulo',
+       ?, ?, ?)`
+  ).run(monthStartMs, monthStartMs + 86400000, new Date(monthStartMs).toISOString(), monthStartMs, monthStartMs + 300000);
+
+  const gate = fakeAgentRouterGate();
+  gate.dbProvider = { getDb: () => db, closeDb: () => db.close(), closeDbCalls: 0 };
+  gate.envBudget = { env: { AGENTROUTER_DAILY_BUDGET_USD: "5", AGENTROUTER_MONTHLY_BUDGET_USD: "100" }, nowFn: () => monthStartMs + 5 * 86400000 }; // meio do mesmo mês, mês já gastou 100/100
+
+  try {
+    const logs = [];
+    const result = await getAssessment(
+      validGatedContext(),
+      {
+        providers: { agentrouter: fakeAgentRouterProviderEntry() },
+        providerOrder: ["agentrouter"],
+        agentRouterBudgetEnabled: true,
+        agentRouterGate: gate,
+        assessmentMeta: validAssessmentMeta(),
+        logAssessment: (record) => logs.push(record),
+      }
+    );
+    assert.equal(result.ai.provider, null);
+    assert.equal(logs[0].providerAttempts[0].status, "agentrouter_fatal");
+    assert.equal(gate.createBudgetedClientCalls.length, 0, "reserva não deveria ter sido tentada -- ledger real já mostra o mês esgotado");
+  } finally {
+    db.close();
+    fsReal.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("gate ligado: env de orçamento válido e coerente, gasto mensal abaixo do teto -> checagem passa, createBudgetedClient É chamado normalmente (fail-closed não bloqueia o caminho são)", async () => {
+  const gate = fakeAgentRouterGate({ runAgentRouterPromptImpl: async () => ({ text: JSON.stringify(bullishAssessment), usage: null }) });
+  const logs = [];
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry({ provider: { name: "agentrouter", callProvider: async (client) => client.runAgentRouterPrompt({}), normalize: (raw) => ({ ...bullishAssessment, rawResponseText: raw.text }) } }) },
+      providerOrder: ["agentrouter"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, "agentrouter");
+  assert.equal(gate.createBudgetedClientCalls.length, 1);
+  assert.equal(logs[0].providerAttempts[0].status, "success");
+});
+
+test("gate ligado: dailyMicrosUsd validado é usado pra CONSTRUIR a policy real via createAgentRouterBudgetPolicy quando gateOverrides.policy NÃO é injetado (sem mock de policy, só de db/env)", async () => {
+  const dbProvider = fakeDbProvider();
+  const createBudgetedClientCalls = [];
+  const gate = {
+    dbProvider,
+    // policy OMITIDA de propósito -- força o código real de
+    // buildDailyPolicyOptionsFromMicros + createAgentRouterBudgetPolicy a rodar.
+    envBudget: fakeEnvBudget({ AGENTROUTER_DAILY_BUDGET_USD: "1", AGENTROUTER_MONTHLY_BUDGET_USD: "20" }),
+    createBudgetedClient: (args) => {
+      createBudgetedClientCalls.push(args);
+      return { runAgentRouterPrompt: async () => ({ text: JSON.stringify(bullishAssessment), usage: null }) };
+    },
+    realRunAgentRouterPrompt: neverCallTransport(),
+  };
+  const logs = [];
+  const result = await getAssessment(
+    validGatedContext(),
+    {
+      providers: { agentrouter: fakeAgentRouterProviderEntry({ provider: { name: "agentrouter", callProvider: async (client) => client.runAgentRouterPrompt({}), normalize: (raw) => ({ ...bullishAssessment, rawResponseText: raw.text }) } }) },
+      providerOrder: ["agentrouter"],
+      agentRouterBudgetEnabled: true,
+      agentRouterGate: gate,
+      assessmentMeta: validAssessmentMeta(),
+      logAssessment: (record) => logs.push(record),
+    }
+  );
+  assert.equal(result.ai.provider, "agentrouter");
+  assert.equal(createBudgetedClientCalls.length, 1);
+  const policyArg = createBudgetedClientCalls[0].policy;
+  assert.equal(typeof policyArg, "object");
+  assert.notEqual(policyArg.marker, "fake-policy-never-real"); // é a policy REAL, não um fake injetado
 });
 
 // =====================================================================

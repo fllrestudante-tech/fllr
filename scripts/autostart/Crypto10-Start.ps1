@@ -167,7 +167,12 @@ try {
         }
         $env:TRADING_EXECUTION_ENABLED = "false"
 
-        $today = Get-Date -Format "yyyy-MM-dd"
+        # UTC explicito -- MESMA convencao de lib/logRotation.js (ver
+        # comentario daquele arquivo). Precisa bater com a pasta que
+        # scripts/supervisor.js/seus filhos escrevem via Node, senao os logs
+        # do wrapper (out/err) e os logs por-componente do dia ficam em
+        # pastas diferentes.
+        $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
         $logDir = Join-Path $paths.LogsDir $today
         if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
         # Nomeado "supervisor.out/err.<timestamp>.log" (nao "supervisor.log"

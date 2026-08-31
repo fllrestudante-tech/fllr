@@ -180,6 +180,76 @@ Test-Case "Browser marker: ausente -> Test-Crypto10BrowserAlreadyOpened=False; d
 }
 
 # ---------------------------------------------------------------------
+# Convencao de log UTC explicito (rodada de hardening AgentRouter/Telegram/
+# Logging) -- MESMA convencao de lib/logRotation.js: ISO-8601 com "Z", nunca
+# hora local+offset, inclusive em nomes de pasta/arquivo derivados de data.
+# ---------------------------------------------------------------------
+$Crypto10UtcIsoPattern = '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z$'
+
+Test-Case "Set-Crypto10BrowserOpenedMarker: openedAt gravado e UTC explicito (sufixo Z, nunca offset local tipo -03:00)" {
+    $fakeRepo = Join-Path ([System.IO.Path]::GetTempPath()) ("crypto10-test-browserutc-" + [Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $fakeRepo -Force | Out-Null
+    try {
+        Set-Crypto10BrowserOpenedMarker -RepoRoot $fakeRepo -SupervisorProcessId 333 -StartedAt "2026-01-01T00:00:00.000Z"
+        $paths = Get-Crypto10RuntimePaths -RepoRoot $fakeRepo
+        $marker = Get-Content -LiteralPath $paths.BrowserMarkerFile -Raw | ConvertFrom-Json
+        Assert-True ([string]$marker.openedAt -match $Crypto10UtcIsoPattern) "openedAt='$($marker.openedAt)' deveria ser UTC ISO-8601 com Z"
+    } finally {
+        Remove-Item -LiteralPath $fakeRepo -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Test-Case "Write-Crypto10AutostartLog: pasta do dia e o timestamp da linha sao ambos UTC explicito (bate com a convencao de data UTC de lib/logRotation.js)" {
+    $fakeRepo = Join-Path ([System.IO.Path]::GetTempPath()) ("crypto10-test-logutc-" + [Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $fakeRepo -Force | Out-Null
+    try {
+        Write-Crypto10AutostartLog -RepoRoot $fakeRepo -Message "linha de teste utc" -Component "autostart" -NoConsole
+        $expectedUtcFolder = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+        $logPath = Join-Path (Join-Path $fakeRepo "logs") (Join-Path $expectedUtcFolder "autostart.log")
+        Assert-True (Test-Path -LiteralPath $logPath -PathType Leaf) "esperava a pasta de log com data UTC '$expectedUtcFolder', nao encontrada"
+
+        $line = Get-Content -LiteralPath $logPath -Raw
+        Assert-True ($line -match '^\[(?<ts>[^\]]+)\]') "linha nao tem o formato [<timestamp>] esperado: $line"
+        # Captura ANTES do proximo -match -- $Matches e sobrescrito pelo
+        # -match seguinte (achado real escrevendo este teste sob
+        # Set-StrictMode: acessar .ts depois disso lanca "propriedade nao
+        # encontrada" porque o padrao UTC abaixo nao tem grupo nomeado "ts").
+        $capturedTs = $Matches.ts
+        Assert-True ($capturedTs -match $Crypto10UtcIsoPattern) "timestamp '$capturedTs' deveria ser UTC ISO-8601 com Z"
+    } finally {
+        Remove-Item -LiteralPath $fakeRepo -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Test-Case "Get-Crypto10SupervisorRunLogPaths: stamp do nome de arquivo e UTC explicito (sufixo Z antes do sufixo aleatorio)" {
+    $fakeLogDir = Join-Path ([System.IO.Path]::GetTempPath()) ("crypto10-test-runlogsutc-" + [Guid]::NewGuid().ToString("N"))
+    try {
+        $paths = Get-Crypto10SupervisorRunLogPaths -LogDir $fakeLogDir
+        $outName = Split-Path -Leaf $paths.OutLog
+        Assert-True ($outName -match '^supervisor\.out\.\d{8}-\d{9}Z-[a-z0-9]{4}\.log$') "nome de arquivo '$outName' deveria conter um stamp UTC (Z) antes do sufixo aleatorio"
+    } finally {
+        Remove-Item -LiteralPath $fakeLogDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Test-Case "Get-Crypto10DashboardPortFromLog: pasta procurada e UTC explicito (bate com onde lib/logRotation.js escreve, nao a data local)" {
+    $fakeRepo = Join-Path ([System.IO.Path]::GetTempPath()) ("crypto10-test-portlogutc-" + [Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $fakeRepo -Force | Out-Null
+    try {
+        $paths = Get-Crypto10RuntimePaths -RepoRoot $fakeRepo
+        $expectedUtcFolder = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+        $logDir = Join-Path $paths.LogsDir $expectedUtcFolder
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $logDir "dashboard_server.log") -Value "Dashboard Operacional em http://127.0.0.1:4310"
+
+        $port = Get-Crypto10DashboardPortFromLog -RepoRoot $fakeRepo -TimeoutSec 2 -PollIntervalMs 50
+        Assert-Equal -Expected 4310 -Actual $port "esperava encontrar a porta na pasta UTC do dia, nao na pasta de data local"
+    } finally {
+        Remove-Item -LiteralPath $fakeRepo -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# ---------------------------------------------------------------------
 # Health check via HttpListener real, rodando num Start-Job (PROCESSO
 # separado -- evita o problema conhecido de scriptblocks do PowerShell
 # usados como callback .NET/Task no MESMO runspace, que nao tem acesso
@@ -497,7 +567,9 @@ Test-Case "Get-Crypto10SupervisorRunLogPaths: nomes de arquivo nunca contem nada
     try {
         $paths = Get-Crypto10SupervisorRunLogPaths -LogDir $fakeLogDir
         $outName = [System.IO.Path]::GetFileName($paths.OutLog)
-        Assert-True ($outName -match '^supervisor\.out\.\d{8}-\d{9}-[a-z0-9]{4}\.log$') "nome de arquivo fora do padrao esperado: $outName"
+        # Sufixo "Z" (rodada de UTC explicito) faz parte do stamp -- ainda
+        # assim sem espaco/caractere de path traversal, so timestamp+Z+sufixo.
+        Assert-True ($outName -match '^supervisor\.out\.\d{8}-\d{9}Z-[a-z0-9]{4}\.log$') "nome de arquivo fora do padrao esperado: $outName"
     } finally {
         Remove-Item -LiteralPath $fakeLogDir -Recurse -Force -ErrorAction SilentlyContinue
     }

@@ -101,7 +101,9 @@ if ($staleEntries.Count -gt 0) {
 # do proprio wrapper (mensagens ja controladas por Write-Crypto10AutostartLog,
 # nunca dump cru de excecao/segredo).
 $lastError = $null
-$today = Get-Date -Format "yyyy-MM-dd"
+# UTC explicito -- mesma convencao de Write-Crypto10AutostartLog (que grava
+# a pasta), senao esta leitura procura no dia errado perto da meia-noite.
+$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 $autostartLog = Join-Path $paths.LogsDir (Join-Path $today "autostart.log")
 if (Test-Path -LiteralPath $autostartLog -PathType Leaf) {
     $lines = Get-Content -LiteralPath $autostartLog -ErrorAction SilentlyContinue
