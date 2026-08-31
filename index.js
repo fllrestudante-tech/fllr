@@ -47,6 +47,7 @@ try {
 
 const config = require("./config");
 const bybit = require("./lib/bybit");
+const clockSync = require("./lib/clockSync");
 const { createOrderLinkId } = require("./lib/demoOrderGate");
 const { refreshDemoAccountSnapshot } = require("./lib/demoSnapshotRefresh");
 const demoObserveState = require("./lib/demoObserveState");
@@ -693,7 +694,22 @@ async function maybeConfigureLeverageOnBoot() {
   }
 }
 
+// Quarto gate de boot (depois de perfil/credenciais/endpoint em
+// validateDemoBoot e do modo em resolveDemoExecutionMode, ambos síncronos e
+// já resolvidos ANTES deste require) -- primeira linha de boot() porque é
+// o primeiro ponto do arquivo onde um runtime assíncrono já está disponível
+// (o topo do módulo é síncrono de propósito, pra sair rápido em qualquer
+// bloqueio sem esperar I/O nenhum) E porque boot() é estruturalmente
+// inatingível fora do perfil demo (o arquivo já teria saído lá em cima) --
+// logo, colocar aqui garante "só no perfil demo, antes de qualquer leitura
+// pública ou privada" sem precisar repetir a checagem de perfil. Lança (não
+// chama process.exit aqui dentro) pra propagar como rejeição -- o chamador
+// de boot() (bloco require.main===module, no fim do arquivo) decide como
+// encerrar; isso também é o que torna a falha testável em processo (ver
+// test/indexObserveMode.test.js), sem derrubar o runner de teste.
 async function boot() {
+  await clockSync.assertClockSynced({ baseUrl: bybit.BASE_URL });
+
   const envLabel = config.bybit.demo ? "DEMO TRADING (dinheiro fictício)" : config.bybit.testnet ? "TESTNET" : "⚠️  MAINNET (dinheiro real)";
   console.log(`🤖 Bot iniciando — ${envLabel} | símbolo ${config.symbol}`);
 
@@ -741,7 +757,10 @@ async function loop() {
 // deste projeto -- nunca uma rede real, nunca um timer de produção
 // disparando por conta própria).
 if (require.main === module) {
-  boot();
+  boot().catch((err) => {
+    console.error(`🔒 BLOQUEADO: (${err.code || "BOOT_FAILED"}) ${err.message}`);
+    process.exit(1);
+  });
 }
 
 module.exports = {

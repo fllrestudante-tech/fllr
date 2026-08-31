@@ -20,7 +20,14 @@ param(
     # aceito por este wrapper (reservado pra ativacao futura, mesmo
     # contrato de lib/demoExecutionMode.js) -- só "observe" e um valor
     # valido aqui hoje.
-    [Parameter(Mandatory = $false)][ValidateSet("observe")][string]$DemoExecutionMode
+    [Parameter(Mandatory = $false)][ValidateSet("observe")][string]$DemoExecutionMode,
+    # Só relevante com -SupervisorProfile demo. ValidateSet("SOLUSDT") --
+    # nesta rodada so o literal exato e aceito (PowerShell rejeita QUALQUER
+    # outro valor antes do corpo do script sequer rodar). Injetado
+    # EXPLICITAMENTE no ambiente do supervisor/filhos (bloco de spawn
+    # abaixo) -- nunca herdado do SYMBOL do .env, que e o que dotenv faria
+    # por conta propria se este parametro nao existisse.
+    [Parameter(Mandatory = $false)][ValidateSet("SOLUSDT")][string]$Symbol
 )
 
 Set-StrictMode -Version Latest
@@ -47,6 +54,14 @@ $RepoRootForLog = $null
 # lib/demoExecutionMode.js::resolveDemoExecutionMode).
 if ($SupervisorProfile -eq "demo" -and [string]::IsNullOrEmpty($DemoExecutionMode)) {
     Write-Host "BLOQUEADO: -SupervisorProfile demo exige -DemoExecutionMode explicito (hoje só 'observe' e aceito). Nada foi iniciado."
+    exit 1
+}
+# -Symbol obrigatorio no perfil demo -- mesma logica fail-closed acima,
+# checada ANTES de qualquer log/identidade/spawn. "SOLUSDT" e o unico valor
+# que o ValidateSet do parametro aceita (uma tentativa de -Symbol BTCUSDT,
+# por exemplo, ja teria sido rejeitada pelo PowerShell antes deste ponto).
+if ($SupervisorProfile -eq "demo" -and [string]::IsNullOrEmpty($Symbol)) {
+    Write-Host "BLOQUEADO: -SupervisorProfile demo exige -Symbol explicito (hoje só 'SOLUSDT' e aceito). Nada foi iniciado."
     exit 1
 }
 
@@ -113,9 +128,23 @@ try {
         # vez de invocado standalone).
         $previousSupervisorProfile = $env:SUPERVISOR_PROFILE
         $previousDemoExecutionMode = $env:DEMO_EXECUTION_MODE
+        $previousSymbol = $env:SYMBOL
         $previousTradingExecutionEnabled = $env:TRADING_EXECUTION_ENABLED
         $env:SUPERVISOR_PROFILE = $SupervisorProfile
-        if ($SupervisorProfile -eq "demo") { $env:DEMO_EXECUTION_MODE = $DemoExecutionMode } else { Remove-Item Env:\DEMO_EXECUTION_MODE -ErrorAction SilentlyContinue }
+        if ($SupervisorProfile -eq "demo") {
+            $env:DEMO_EXECUTION_MODE = $DemoExecutionMode
+            # Injetado explicitamente -- NUNCA deixa o processo Node herdar
+            # SYMBOL do .env (que hoje tem um valor diferente de SOLUSDT).
+            # dotenv (config.js) so preenche variaveis AUSENTES do
+            # process.env -- com isto ja setado aqui, o SYMBOL do .env e
+            # ignorado pelo filho, exatamente a garantia exigida.
+            $env:SYMBOL = $Symbol
+        } else {
+            Remove-Item Env:\DEMO_EXECUTION_MODE -ErrorAction SilentlyContinue
+            # Perfil safe nunca roda o "bot" (unico consumidor de SYMBOL) --
+            # nao toca em $env:SYMBOL de proposito aqui, pra preservar
+            # EXATAMENTE o comportamento de antes desta rodada.
+        }
         $env:TRADING_EXECUTION_ENABLED = "false"
 
         $today = Get-Date -Format "yyyy-MM-dd"
@@ -129,7 +158,9 @@ try {
         $outLog = Join-Path $logDir "supervisor.out.log"
         $errLog = Join-Path $logDir "supervisor.err.log"
 
-        $profileLabel = if ($SupervisorProfile -eq "demo") { "demo, modo $DemoExecutionMode" } else { "safe" }
+        # Log so cita o SIMBOLO -- nunca credenciais/chaves, mesma
+        # disciplina de todo log deste projeto.
+        $profileLabel = if ($SupervisorProfile -eq "demo") { "demo, modo $DemoExecutionMode, symbol $Symbol" } else { "safe" }
         Write-Crypto10AutostartLog -RepoRoot $RepoRoot -Message "Iniciando scripts\supervisor.js (perfil $profileLabel, gate financeiro desligado) -- stdout/stderr em '$outLog' / '$errLog'."
         try {
             $started = Start-Process -FilePath $NodeExe -ArgumentList @("`"$($paths.SupervisorScript)`"") -WorkingDirectory $RepoRoot -WindowStyle Hidden -RedirectStandardOutput $outLog -RedirectStandardError $errLog -PassThru
@@ -139,6 +170,7 @@ try {
             # ambiente deste processo com os valores forcados.
             if ($null -eq $previousSupervisorProfile) { Remove-Item Env:\SUPERVISOR_PROFILE -ErrorAction SilentlyContinue } else { $env:SUPERVISOR_PROFILE = $previousSupervisorProfile }
             if ($null -eq $previousDemoExecutionMode) { Remove-Item Env:\DEMO_EXECUTION_MODE -ErrorAction SilentlyContinue } else { $env:DEMO_EXECUTION_MODE = $previousDemoExecutionMode }
+            if ($null -eq $previousSymbol) { Remove-Item Env:\SYMBOL -ErrorAction SilentlyContinue } else { $env:SYMBOL = $previousSymbol }
             if ($null -eq $previousTradingExecutionEnabled) { Remove-Item Env:\TRADING_EXECUTION_ENABLED -ErrorAction SilentlyContinue } else { $env:TRADING_EXECUTION_ENABLED = $previousTradingExecutionEnabled }
         }
     }

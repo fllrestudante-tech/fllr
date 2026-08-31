@@ -358,6 +358,51 @@ Test-Case "varredura: Crypto10-Start.ps1 -- -DemoExecutionMode so aceita 'observ
     Assert-True ($content -match '\[ValidateSet\("observe"\)\]\[string\]\$DemoExecutionMode')
 }
 
+# =======================================================================
+# -Symbol -- item 1 desta rodada (falta identificada na auditoria: sem
+# isto, o perfil demo herdaria SYMBOL do .env, que hoje e BTCUSDT, nao
+# SOLUSDT).
+# =======================================================================
+
+Test-Case "varredura: Crypto10-Start.ps1 -- -Symbol so aceita 'SOLUSDT' (ValidateSet), nenhum outro valor -- rejeitado pelo PowerShell antes do corpo do script rodar" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    Assert-True ($content -match '\[ValidateSet\("SOLUSDT"\)\]\[string\]\$Symbol')
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 -- -SupervisorProfile demo SEM -Symbol e rejeitado explicitamente no codigo (nunca assume SOLUSDT por omissao)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    Assert-True ($content -match '\$SupervisorProfile\s*-eq\s*"demo"\s*-and\s*\[string\]::IsNullOrEmpty\(\$Symbol\)') "falta a checagem fail-closed de demo sem -Symbol explicito"
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 -- perfil demo injeta `$env:SYMBOL explicitamente a partir do parametro -Symbol (nunca deixa o filho herdar SYMBOL do .env por conta propria)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    $assignments = [regex]::Matches($content, '\$env:SYMBOL\s*=\s*\$Symbol\b')
+    Assert-Equal -Expected 1 -Actual $assignments.Count "deveria haver exatamente 1 atribuicao de `$env:SYMBOL = `$Symbol no arquivo inteiro, dentro do ramo demo"
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 -- perfil safe NAO tem nenhuma atribuicao incondicional de `$env:SYMBOL (retrocompatibilidade exata -- comportamento identico a antes desta rodada quando ninguem passa -Symbol)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    # A UNICA atribuicao (`$env:SYMBOL = `$Symbol, contada acima) precisa
+    # estar dentro do bloco `if (`$SupervisorProfile -eq "demo")` -- nunca
+    # fora dele. Confirma isso checando que a atribuicao aparece DEPOIS do
+    # "if" e ANTES do "} else {" correspondente na mesma vizinhanca de
+    # codigo (janela pequena, mesmo padrao usado pra DEMO_EXECUTION_MODE
+    # logo acima dela no arquivo real).
+    Assert-True ($content -match 'if\s*\(\$SupervisorProfile\s*-eq\s*"demo"\)\s*\{[\s\S]*?\$env:SYMBOL\s*=\s*\$Symbol[\s\S]*?\}\s*else\s*\{') "a atribuicao de `$env:SYMBOL precisa estar dentro do ramo demo, nunca incondicional"
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 salva e restaura `$env:SYMBOL no mesmo padrao ja usado pros outros 3 vars (previousSymbol / finally)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    Assert-True ($content -match '\$previousSymbol\s*=\s*\$env:SYMBOL') "nao salva o valor original de SYMBOL antes de sobrescrever"
+    Assert-True ($content -match 'finally\s*\{[\s\S]*?previousSymbol[\s\S]*?\}') "nao restaura SYMBOL num bloco finally"
+}
+
+Test-Case "varredura: Crypto10-Start.ps1 -- log do perfil demo cita o symbol, nunca uma credencial (BYBIT_API_KEY/SECRET nao aparecem em nenhuma mensagem de log)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
+    Assert-True ($content -match 'symbol \$Symbol') "o log do perfil demo deveria citar o symbol"
+    Assert-False ($content -match "BYBIT_API_KEY|BYBIT_API_SECRET") "o script nunca deveria referenciar credenciais"
+}
+
 Test-Case "varredura: Crypto10-Start.ps1 salva os valores originais de SUPERVISOR_PROFILE/TRADING_EXECUTION_ENABLED ANTES de sobrescrever e os restaura num 'finally' apos o spawn (nao executa o script real -- so confirma a estrutura de save/restore no codigo)" {
     $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Start.ps1")
     Assert-True ($content -match '\$previousSupervisorProfile\s*=\s*\$env:SUPERVISOR_PROFILE') "nao salva o valor original de SUPERVISOR_PROFILE antes de sobrescrever"
@@ -379,6 +424,60 @@ Test-Case "varredura: nenhum arquivo usa -ExecutionPolicy Bypass, Invoke-Express
 Test-Case "varredura: Crypto10-Stop.ps1 nunca CHAMA Stop-Process -Name (nome generico) no codigo real" {
     $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Stop.ps1")
     Assert-False ($content -match "Stop-Process\s+-Name")
+}
+
+# =======================================================================
+# Crypto10-Stop.ps1 -- item 2 desta rodada: "bot" agora e reconhecido e
+# validado pela MESMA logica generica (Test-Crypto10ManagedProcess) usada
+# pra todo outro PID, nunca um caminho especial, nunca "mata pra garantir".
+# =======================================================================
+
+Test-Case "varredura: Crypto10-Stop.ps1 -- 'bot' NAO e mais ignorado por nome (o skip antigo por `$childName -eq 'bot' foi removido)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Stop.ps1")
+    Assert-False ($content -match '\$childName\s*-eq\s*"bot"') "ainda existe um caminho especial que ignora 'bot' por nome"
+}
+
+Test-Case "varredura: Crypto10-Stop.ps1 -- todo PID orfao (bot incluido) passa por Test-Crypto10ManagedProcess ANTES de qualquer Stop-Crypto10ValidatedProcess no fluxo do codigo" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Stop.ps1")
+    Assert-True ($content -match 'Test-Crypto10ManagedProcess[\s\S]*?Stop-Crypto10ValidatedProcess') "a validacao precisa vir antes do encerramento no codigo"
+}
+
+Test-Case "varredura: Crypto10-Stop.ps1 -- identidade ambigua de um filho orfao (PID existe mas nao bate) e LOGADA e NUNCA encerrada -- fail-closed, nunca mata pra garantir" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Stop.ps1")
+    Assert-True ($content -match 'RECUSADO:.*existe mas NAO corresponde') "falta o log fail-closed pro caso de PID reaproveitado/ambiguo entre os filhos orfaos"
+}
+
+Test-Case "varredura: Crypto10-Stop.ps1 -- encerramento do supervisor acontece ANTES do loop de limpeza de filhos orfaos no arquivo (impede respawn -- o supervisor morto nao reinicia mais ninguem)" {
+    $content = Get-Crypto10SourceWithoutComments -Path (Join-Path $AutostartDir "Crypto10-Stop.ps1")
+    $supervisorIdx = $content.IndexOf('Get-Crypto10SupervisorLock -RepoRoot $RepoRoot')
+    $orphanLoopIdx = $content.IndexOf('$paths.PidsDir -PathType Container')
+    Assert-True ($supervisorIdx -ge 0) "nao encontrou o bloco de encerramento do supervisor"
+    Assert-True ($orphanLoopIdx -ge 0) "nao encontrou o loop de limpeza de filhos orfaos"
+    Assert-True ($supervisorIdx -lt $orphanLoopIdx) "o encerramento do supervisor precisa vir ANTES do loop de limpeza de filhos, senao o supervisor ainda vivo poderia recriar um filho que acabou de ser encerrado"
+}
+
+Test-Case "Test-Crypto10ManagedProcess: mesma validacao generica que protege o supervisor tambem protege 'bot' (index.js) -- PID reaproveitado por node.exe de OUTRO projeto -> MatchesScript=False, nunca seria encerrado por Stop.ps1" {
+    $fakeLookup = { param($ProcessId) return [PSCustomObject]@{ ProcessId = $ProcessId; Name = "node.exe"; CommandLine = 'node.exe "C:\outro-projeto-qualquer\index.js"' } }
+    $result = Test-Crypto10ManagedProcess -ProcessId 5050 -ExpectedScriptPath "C:\bot-cripto10\index.js" -Lookup $fakeLookup
+    Assert-True $result.Exists
+    Assert-True $result.IsNode
+    Assert-False $result.MatchesScript
+}
+
+Test-Case "Test-Crypto10ManagedProcess: 'bot' (index.js) DESTE repositorio de verdade -> Exists/IsNode/MatchesScript=True, validado normalmente" {
+    $fakeLookup = { param($ProcessId) return [PSCustomObject]@{ ProcessId = $ProcessId; Name = "node.exe"; CommandLine = 'node.exe "C:\bot-cripto10\index.js"' } }
+    $result = Test-Crypto10ManagedProcess -ProcessId 5050 -ExpectedScriptPath "C:\bot-cripto10\index.js" -Lookup $fakeLookup
+    Assert-True $result.Exists
+    Assert-True $result.IsNode
+    Assert-True $result.MatchesScript
+}
+
+Test-Case "Get-Crypto10SafeChildrenSummary: campo 'all' (real, nao fake) inclui 'bot' com script terminando em index.js -- fonte que Crypto10-Stop.ps1 agora usa pra validar o filho demo" {
+    $summary = Get-Crypto10SafeChildrenSummary -NodeExe $NodeExeForTests -RepoRoot $RepoRoot
+    Assert-NotNull $summary
+    $bot = $summary.all | Where-Object { $_.name -eq "bot" }
+    Assert-NotNull $bot
+    Assert-True ($bot.script -match "index\.js$")
 }
 
 Test-Case "varredura: Diagnose.ps1 nunca CHAMA Stop-Process/taskkill em processo no codigo real (somente leitura)" {

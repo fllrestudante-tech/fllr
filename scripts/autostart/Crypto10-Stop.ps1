@@ -110,8 +110,15 @@ if (-not $lock) {
 # fora do ar (caminho forcado pode ter pulado o shutdown() dele, que e
 # quem normalmente encerra os filhos). Cada PID em runtime\pids\*.pid e
 # validado INDIVIDUALMENTE contra a lista canonica (lib/supervisorProfile.js
-# via childrenSummaryCli.js) antes de qualquer acao -- "bot" e explicitamente
-# ignorado mesmo que apareca, este wrapper nunca toca nele.
+# via childrenSummaryCli.js, campo `all` -- que ja inclui "bot" com seu
+# `script` = index.js, mesma fonte unica de sempre) antes de qualquer acao.
+# "bot" NAO e mais ignorado por nome (era assim quando este wrapper so
+# sabia operar o perfil "safe", que nunca inclui o bot) -- agora passa pela
+# MESMA validacao Exists+IsNode+MatchesScript de qualquer outro filho, nunca
+# um caminho especial, nunca `Stop-Process -Name`/taskkill amplo. Um PID
+# que existe mas NAO bate (reaproveitado por outro processo, ou node.exe
+# rodando outra coisa) e LOGADO e IGNORADO -- fail-closed, nunca encerrado
+# "pra garantir".
 if (Test-Path -LiteralPath $paths.PidsDir -PathType Container) {
     $NodeExe = Find-Crypto10NodeExecutable
     $summary = $null
@@ -120,10 +127,6 @@ if (Test-Path -LiteralPath $paths.PidsDir -PathType Container) {
     $pidFiles = Get-ChildItem -LiteralPath $paths.PidsDir -Filter "*.pid" -File -ErrorAction SilentlyContinue
     foreach ($pidFile in $pidFiles) {
         $childName = [System.IO.Path]::GetFileNameWithoutExtension($pidFile.Name)
-        if ($childName -eq "bot") {
-            Write-Crypto10AutostartLog -RepoRoot $RepoRoot -Message "IGNORADO DE PROPOSITO: runtime\pids\bot.pid nunca e tocado por este wrapper (perfil seguro nunca inclui o bot)."
-            continue
-        }
         $childScript = $null
         if ($summary) {
             $match = $summary.all | Where-Object { $_.name -eq $childName }
@@ -145,6 +148,8 @@ if (Test-Path -LiteralPath $paths.PidsDir -PathType Container) {
             }
         } elseif (-not $childCheck.Exists) {
             Remove-Item -LiteralPath $pidFile.FullName -Force -ErrorAction SilentlyContinue
+        } else {
+            Write-Crypto10AutostartLog -RepoRoot $RepoRoot -Message "RECUSADO: $childName (PID $childPid) existe mas NAO corresponde a node.exe rodando '$childScript' (IsNode=$($childCheck.IsNode) MatchesScript=$($childCheck.MatchesScript)) -- pode ter sido reaproveitado por outro processo. Nada foi tocado, arquivo PID mantido pra investigacao."
         }
     }
 }

@@ -31,6 +31,7 @@ test.after(() => fs.rmSync(TEST_RUNTIME_DIR, { recursive: true, force: true }));
 const assert = require("node:assert/strict");
 const axios = require("axios");
 const bybit = require("../lib/bybit");
+const clockSync = require("../lib/clockSync");
 const logger = require("../lib/logger");
 const ledger = require("../lib/demoOrderLedger");
 const stateModule = require("../lib/state");
@@ -92,6 +93,73 @@ test("index.js require()ado em processo de teste: EXECUTION_MODE exportado é ex
 
 test("índice: TRADING_EXECUTION_ENABLED continua false/ausente no ambiente deste teste (precondição do modo observe)", () => {
   assert.notEqual(process.env.TRADING_EXECUTION_ENABLED, "true");
+});
+
+// =====================================================================
+// boot() -- gate de sincronização de relógio (lib/clockSync.js), quarto
+// gate do boot demo, primeira linha de boot(). Prova ATIVA de que NENHUMA
+// chamada a bybit.* (pública ou privada) acontece se o preflight de
+// relógio falhar -- mesmo padrão de prova já usado acima pra chamadas
+// mutáveis (mockAxiosNeverCalled). boot() nunca é chamado até o fim
+// (setInterval/loop) em nenhum destes testes -- cada um interrompe o
+// fluxo cedo (rejeição do próprio clock gate, ou um erro forçado logo
+// depois dele) de propósito, pra nunca deixar timer nenhum da produção
+// disparando sozinho depois que o teste termina.
+// =====================================================================
+
+test("boot(): clock preflight FALHA -> boot() rejeita, NENHUMA chamada a bybit.*/axios.*/setInterval acontece (prova ativa)", async (t) => {
+  const axiosSpy = mockAxiosNeverCalled(t);
+  let instrumentCalls = 0;
+  t.mock.method(bybit, "getInstrumentInfo", async () => {
+    instrumentCalls++;
+    return INSTRUMENT_INFO;
+  });
+  t.mock.method(clockSync, "assertClockSynced", async () => {
+    throw new clockSync.ClockSyncBlockedError("offset_exceeds_tolerance", "offset mediano=5000ms, tolerância=±1000ms (simulado no teste)");
+  });
+
+  await assert.rejects(idx.boot(), (err) => {
+    assert.equal(err.code, "CLOCK_SYNC_BLOCKED");
+    return true;
+  });
+
+  assert.equal(instrumentCalls, 0, "getInstrumentInfo (leitura PÚBLICA) nunca deveria ser chamado se o clock preflight falhou -- o gate é a primeira linha de boot(), antes de qualquer coisa");
+  assert.equal(axiosSpy.getCalls(), 0);
+  assert.equal(axiosSpy.postCalls(), 0);
+});
+
+test("boot(): clock preflight OK -> boot() prossegue e chama getInstrumentInfo em seguida (prova a ORDEM: clock antes de qualquer leitura)", async (t) => {
+  let clockCalls = 0;
+  let instrumentCalls = 0;
+  t.mock.method(clockSync, "assertClockSynced", async () => {
+    clockCalls++;
+    return { offsetMedianMs: 15, sampleCount: 3 };
+  });
+  // getInstrumentInfo lança de propósito -- interrompe boot() logo depois
+  // do gate de relógio, ANTES de qualquer setInterval/loop() ser alcançado
+  // (nunca deixa um timer de produção pendurado depois que este teste
+  // termina).
+  t.mock.method(bybit, "getInstrumentInfo", async () => {
+    instrumentCalls++;
+    throw new Error("interrompe boot() aqui de propósito -- só provando a ordem clock->leitura, nunca chega em setInterval/loop");
+  });
+  t.mock.method(stateModule, "load", () => ({ ...DEFAULT_STATE }));
+  t.mock.method(stateModule, "resetDailyLossIfNewDay", (s) => s);
+
+  await assert.rejects(idx.boot(), /interrompe boot\(\) aqui de propósito/);
+
+  assert.equal(clockCalls, 1, "o gate de relógio precisa ter rodado exatamente uma vez");
+  assert.equal(instrumentCalls, 1, "getInstrumentInfo só deveria ser tentado DEPOIS do clock preflight passar");
+});
+
+test("boot(): clock preflight recebe o mesmo bybit.BASE_URL já resolvido pro perfil demo (nunca um host separado/hardcoded)", async (t) => {
+  let receivedBaseUrl = null;
+  t.mock.method(clockSync, "assertClockSynced", async (opts) => {
+    receivedBaseUrl = opts && opts.baseUrl;
+    throw new clockSync.ClockSyncBlockedError("network_or_invalid_response", "simulado -- só quer capturar o baseUrl recebido");
+  });
+  await assert.rejects(idx.boot());
+  assert.equal(receivedBaseUrl, bybit.BASE_URL);
 });
 
 // =====================================================================
